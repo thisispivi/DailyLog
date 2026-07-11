@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 from dailylogbot.i18n import button
@@ -11,7 +13,8 @@ def main_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     """Build the default keyboard for idle users."""
     rows = [
         [_btn(language_code, "meal"), _btn(language_code, "training"), _btn(language_code, "sleep")],
-        [_btn(language_code, "today"), _btn(language_code, "last"), _btn(language_code, "export")],
+        [_btn(language_code, "weigh_in"), _btn(language_code, "today"), _btn(language_code, "last")],
+        [_btn(language_code, "manage"), _btn(language_code, "export"), _btn(language_code, "settings")],
     ]
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
@@ -54,9 +57,104 @@ def export_format_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
+def export_language_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build the independent report-language selection keyboard."""
+    rows = [[_btn(language_code, "english"), _btn(language_code, "italian")], [_btn(language_code, "cancel")]]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
 def export_range_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     """Build the export range selection keyboard."""
     rows = [[_btn(language_code, "all"), _btn(language_code, "range")], [_btn(language_code, "cancel")]]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def settings_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build settings choices."""
+    rows = [
+        [_btn(language_code, "english"), _btn(language_code, "italian")],
+        [_btn(language_code, "kg"), _btn(language_code, "lb")],
+        [_btn(language_code, "cancel")],
+    ]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def manage_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build top-level record-management choices."""
+    rows = [
+        [_btn(language_code, "entries"), _btn(language_code, "weigh_ins")],
+        [_btn(language_code, "trash")],
+        [_btn(language_code, "cancel")],
+    ]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def choose_date_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Offer a quick current-day choice while allowing typed ISO dates."""
+    return ReplyKeyboardMarkup(
+        [[_btn(language_code, "today"), _btn(language_code, "cancel")]], resize_keyboard=True, is_persistent=True
+    )
+
+
+def record_action_keyboard(language_code: str | None, *, deleted: bool = False) -> ReplyKeyboardMarkup:
+    """Build actions for a selected current or trashed record."""
+    action = "restore" if deleted else "edit"
+    rows = [
+        [_btn(language_code, action)],
+        [_btn(language_code, "delete")],
+        [_btn(language_code, "back"), _btn(language_code, "cancel")],
+    ]
+    if deleted:
+        rows = [[_btn(language_code, "restore")], [_btn(language_code, "back"), _btn(language_code, "cancel")]]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def edit_fields_keyboard(language_code: str | None, record_type: str) -> ReplyKeyboardMarkup:
+    """Build field-level edit choices for an entry or weigh-in."""
+    if record_type == "weigh_in":
+        rows = [[_btn(language_code, "value"), _btn(language_code, "recorded_at")]]
+    else:
+        rows = [
+            [_btn(language_code, "type"), _btn(language_code, "label")],
+            [_btn(language_code, "details")],
+            [_btn(language_code, "start"), _btn(language_code, "end")],
+        ]
+    rows.append([_btn(language_code, "back"), _btn(language_code, "cancel")])
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def entry_kind_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build selectable persisted entry kinds."""
+    rows = [
+        [_btn(language_code, "meal_kind_button"), _btn(language_code, "training_kind_button")],
+        [_btn(language_code, "sleep_kind_button")],
+        [_btn(language_code, "back"), _btn(language_code, "cancel")],
+    ]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def confirm_delete_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build a destructive-action confirmation keyboard."""
+    return ReplyKeyboardMarkup(
+        [[_btn(language_code, "confirm_delete")], [_btn(language_code, "back"), _btn(language_code, "cancel")]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+def record_list_keyboard(
+    language_code: str | None, labels: Sequence[str], *, has_previous: bool = False, has_next: bool = False
+) -> ReplyKeyboardMarkup:
+    """Build a compact dynamic record-selection keyboard."""
+    rows = [[KeyboardButton(label)] for label in labels]
+    navigation: list[KeyboardButton] = []
+    if has_previous:
+        navigation.append(KeyboardButton("◀"))
+    if has_next:
+        navigation.append(KeyboardButton("▶"))
+    if navigation:
+        rows.append(navigation)
+    rows.append([_btn(language_code, "back"), _btn(language_code, "cancel")])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 

@@ -109,8 +109,8 @@ def test_guided_workflows_use_emoji_buttons_and_lock_open_activity(tmp_path) -> 
     asyncio.run(scenario())
 
 
-def test_export_wizard_sends_all_data_after_format_and_range_steps(tmp_path) -> None:
-    """Drive the three-step emoji export wizard and assert it produces an XLSX document."""
+def test_export_wizard_sends_all_data_after_format_language_and_range_steps(tmp_path) -> None:
+    """Drive the localized four-step export wizard and assert it produces an XLSX document."""
 
     async def scenario() -> None:
         """Run the export interaction using the exact localized emoji button labels."""
@@ -127,11 +127,15 @@ def test_export_wizard_sends_all_data_after_format_and_range_steps(tmp_path) -> 
 
         update.effective_message.text = "📤 Export"
         await handlers.message(update, context)
-        assert update.effective_message.replies[-1][0].startswith("📤 Step 1 of 3")
+        assert update.effective_message.replies[-1][0].startswith("📤 Step 1 of 4")
 
         update.effective_message.text = "📊 XLSX"
         await handlers.message(update, context)
-        assert update.effective_message.replies[-1][0].startswith("📤 Step 2 of 3")
+        assert update.effective_message.replies[-1][0].startswith("📤 Step 2 of 4")
+
+        update.effective_message.text = "English"
+        await handlers.message(update, context)
+        assert update.effective_message.replies[-1][0].startswith("📤 Step 3 of 4")
 
         update.effective_message.text = "🗂 All data"
         await handlers.message(update, context)
@@ -154,7 +158,7 @@ def test_start_uses_telegram_language_for_messages_and_keyboard(tmp_path) -> Non
         await handlers.start(update, context)
 
         text, kwargs = update.effective_message.replies[-1]
-        assert "pronto in italiano" in text
+        assert "è pronto" in text
         assert kwargs["reply_markup"].keyboard[0][0].text == "🍽 Aggiungi pasto"
 
     asyncio.run(scenario())

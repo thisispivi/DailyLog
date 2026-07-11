@@ -1,30 +1,34 @@
 # DailyLog
 
-DailyLog is a private, single-user Telegram journal for meals, training, sleep, and clean personal reports. It is designed around guided conversations: every action has one clear next step, and open activities are safely protected from conflicting commands.
+DailyLog is a private, single-user Telegram journal for meals, training, sleep, body weight, and clean personal reports. It is designed around guided conversations: every action has one clear next step, and open activities are safely protected from conflicting commands.
 
 ## What It Does
 
-- Detects the user's Telegram language at `/start` and serves English or Italian; every user-facing label and message lives in JSON locale files.
+- Uses the user's Telegram language only on first use, then saves their English/Italian choice in Settings; every user-facing label and message lives in JSON locale files.
 - Records meals in a two-step flow: choose the meal type, then write the food and quantities.
 - Records training in a guided activity picker with walk, run, gym, tennis, and table-tennis suggestions, while accepting any custom activity name.
 - Starts and ends sleep or training sessions, with one database-enforced open activity at a time and unrestricted repeated sessions in a day.
-- Exports any date range or all saved data as an XLSX monthly report or a print-ready PDF.
+- Records body weight through a one-step flow. Values can use a decimal point or comma, are stored only as metric grams, and are displayed in the saved kg/lb preference.
+- Lets the user manage dated entries and weigh-ins, correct individual fields, move records to Trash, and restore them for 30 days.
+- Exports any date range or all saved data as a localized XLSX monthly report or print-ready PDF; document language is chosen independently for each export.
 - Keeps convenient text input available when idle, including `lunch pasta 120g`, `tennis 18:00-19:30`, and `sleep 23:30-07:10`.
 
 ## Guided Workflow
 
-1. Send `/start`. DailyLog reads the Telegram interface language and shows the idle keyboard.
-2. Select one action: `🍽 Add meal`, `🏃 Start training`, `😴 Start sleep`, `📅 Today`, `🕘 Last`, or `📤 Export`.
+1. Send `/start`. DailyLog seeds the saved locale from the Telegram interface language and shows the idle keyboard.
+2. Select an action: `🍽 Add meal`, `🏃 Start training`, `😴 Start sleep`, `⚖️ Weigh in`, `📅 Today`, `🕘 Last`, `🗂 Manage data`, `📤 Export`, or `⚙️ Settings`.
 3. For a meal, choose breakfast, snack 1, lunch, snack 2, or dinner, then send the meal details.
 4. For training, choose a suggestion or type an activity. For sleep, the session starts immediately.
 5. While training or sleep is open, the keyboard contains only the matching end control and `✖ Cancel`. Other commands and text entries are rejected until the activity is ended or cancelled.
-6. For an export, choose `📊 XLSX` or `📄 PDF`, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
+6. For a weigh-in, enter a positive number in the saved unit; Settings can switch between kg and lb without modifying saved readings.
+7. Manage data lists entries or weigh-ins for an ISO date (`YYYY-MM-DD`), then supports field-level editing, deletion confirmation, and Trash restore.
+8. For an export, choose `📊 XLSX` or `📄 PDF`, select English or Italian for the document, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
 
-`/cancel` works at every guided step. Cancelling an open activity deletes only that unfinished activity; it never removes an already completed entry.
+`/cancel` works at every guided step. Cancelling an open activity moves it to Trash; records in Trash are recoverable for 30 days.
 
 ## Reports
 
-Both export formats use the same visual system: a navy report header, color-coded meal/training/sleep categories, monthly metric cards, and chronological day sections.
+Both export formats use the same visual system: a navy report header, color-coded meal/training/sleep categories, monthly metric cards, chronological day sections, and a monthly body-weight summary when readings exist.
 
 - XLSX creates a polished worksheet for each month with print settings, frozen headers, filters, readable wrapped details, and safe literal handling for spreadsheet-formula-like user input.
 - PDF creates a print-ready A4 report with monthly summaries, repeated table headers, a page-number footer, and escaped user text.
@@ -97,7 +101,7 @@ The Compose configuration stores SQLite data in the durable `dailylogbot_data` v
 
 DailyLog processes updates sequentially to keep the guided conversation state deterministic. SQLite work and XLSX/PDF generation run in worker threads, so they do not block Telegram's asyncio event loop. Telegram HTTP clients are long-lived, bounded by the configured timeout and connection-pool values, and are closed by the framework during graceful polling shutdown.
 
-The database now normalizes existing aware ISO timestamps to UTC at startup, using SQLite's `user_version` marker. This is an automatic data migration: no schema or command change is required, and the bot continues to display timestamps in `TIMEZONE`. Back up the SQLite volume before deploying any production upgrade as normal operational practice.
+The database normalizes existing aware ISO timestamps to UTC and migrates existing installations to schema version 2 at startup. The migration preserves current entries and adds user settings plus metric-normalized weigh-ins. Back up the SQLite volume before deploying any production upgrade as normal operational practice.
 
 ## Commands
 
@@ -110,6 +114,9 @@ The database now normalizes existing aware ISO timestamps to UTC at startup, usi
 /end or /stop          End the open training or sleep activity
 /export                Open the export workflow
 /export <from> <to> pdf
+/weighin               Open the weigh-in flow
+/manage                Open entry and weigh-in management
+/settings              Change saved language or weight unit
 /delete_last
 /delete <id>
 /edit <id> key=value
@@ -122,7 +129,7 @@ The edit commands support `label=`, `text=`, `start=`, `end=`, and `kind=`. Use 
 
 - Bot tokens are read from environment variables and are never logged.
 - Every handler and every database query is scoped to the configured user ID.
-- SQLite uses parameterized statements, foreign keys, WAL mode, a busy timeout, soft deletion, and a partial unique index for the single-open-activity rule.
+- SQLite uses parameterized statements, foreign keys, WAL mode, a busy timeout, soft deletion with 30-day recovery, and a partial unique index for the single-open-activity rule.
 - Entry validation limits untrusted label and text sizes, while export code neutralizes XLSX formula injection and PDF markup injection.
 - Production modules use docstrings for API documentation; there are no inline implementation comments.
 
@@ -139,4 +146,4 @@ The edit commands support `label=`, `text=`, `start=`, `end=`, and `kind=`. Use 
 git diff --check
 ```
 
-The regression suite covers parsing, localization catalog behavior, database ownership and temporal invariants, safe report generation, the complete meal and export wizards, stale keyboard input, and the open-activity command lock.
+The regression suite covers parsing, persisted localization, metric weight conversion, trash retention, database ownership and temporal invariants, localized report generation, guided correction flows, stale keyboard input, and the open-activity command lock.

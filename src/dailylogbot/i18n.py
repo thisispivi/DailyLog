@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from functools import cache
 from importlib.resources import files
 from typing import Final
 
 SUPPORTED_LANGUAGES: Final = frozenset({"en", "it"})
-_REQUIRED_SECTIONS: Final = frozenset({"buttons", "button_aliases", "messages", "meal_types", "activity_labels"})
+_REQUIRED_SECTIONS: Final = frozenset(
+    {"buttons", "button_aliases", "messages", "meal_types", "activity_labels", "reports"}
+)
 
 
 class TranslationCatalogError(RuntimeError):
@@ -72,6 +75,22 @@ def is_activity_suggestion(language_code: str | None, key: str | None) -> bool:
 def kind_name(language_code: str | None, kind: str) -> str:
     """Return a short localized name for a persisted entry kind."""
     return t(language_code, f"{kind}_kind")
+
+
+def report(language_code: str | None, key: str, **kwargs: object) -> str:
+    """Return a localized static report string."""
+    return _value(language_code, "reports", key).format(**kwargs)
+
+
+def format_report_date(value: date, language_code: str | None, *, weekday: bool = False) -> str:
+    """Format a locale-stable report date without relying on host OS locales."""
+    language = lang_from_code(language_code)
+    month = _section(language, "reports")[f"month_{value.month:02d}"]
+    rendered = f"{value.day:02d} {month} {value.year}"
+    if not weekday:
+        return rendered
+    day_name = _section(language, "reports")[f"weekday_{value.weekday()}"]
+    return f"{day_name} · {rendered}"
 
 
 def t(language_code: str | None, key: str, **kwargs: object) -> str:

@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
-from dailylogbot.db import Entry, EntryFieldValue
+from dailylogbot.db import Entry, EntryFieldValue, UserSettings, WeighIn
 from dailylogbot.exporters import range_bounds
 
 
@@ -142,6 +142,23 @@ class EntryRepository(Protocol):
             Chronologically ordered entries.
         """
 
+    def get_or_create_settings(self, user_id: int, initial_locale: str) -> UserSettings:
+        """Return persisted settings, creating a default when missing."""
+
+    def update_settings(
+        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+    ) -> UserSettings:
+        """Persist one or both presentation preferences."""
+
+    def add_weigh_in(self, user_id: int, weight_grams: int, recorded_at: datetime) -> WeighIn:
+        """Persist one canonical-metric weigh-in."""
+
+    def list_weigh_ins_between(self, user_id: int, start_at: datetime, end_at: datetime) -> list[WeighIn]:
+        """List weigh-ins inside one half-open interval."""
+
+    def list_weigh_ins(self, user_id: int) -> list[WeighIn]:
+        """List all non-deleted weigh-ins."""
+
 
 @dataclass(frozen=True)
 class ExportPeriod:
@@ -158,6 +175,14 @@ class ExportPeriod:
         """
         if self.end_date < self.start_date:
             raise ValueError("The end date cannot precede the start date.")
+
+
+@dataclass(frozen=True)
+class ReportData:
+    """All reportable data selected for one inclusive period."""
+
+    entries: list[Entry]
+    weigh_ins: list[WeighIn]
 
 
 class LogbookService:
@@ -333,3 +358,41 @@ class LogbookService:
         start_date = min(entry.start_at.astimezone(timezone).date() for entry in entries)
         end_date = max((entry.end_at or entry.start_at).astimezone(timezone).date() for entry in entries)
         return ExportPeriod(start_date, end_date), entries
+
+    def get_or_create_settings(self, user_id: int, initial_locale: str) -> UserSettings:
+        """Load saved settings, using the Telegram locale only on first use."""
+        return self._repository.get_or_create_settings(user_id, initial_locale)
+
+    def update_settings(
+        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+    ) -> UserSettings:
+        """Save one or both user presentation preferences."""
+        return self._repository.update_settings(user_id, locale=locale, weight_unit=weight_unit)
+
+    def create_weigh_in(self, user_id: int, weight_grams: int, recorded_at: datetime) -> WeighIn:
+        """Create one metric-normalized body-weight reading."""
+        return self._repository.add_weigh_in(user_id, weight_grams, recorded_at)
+
+    def weigh_ins_in_period(self, user_id: int, period: ExportPeriod, timezone: ZoneInfo) -> list[WeighIn]:
+        """Return weigh-ins recorded during an inclusive local-date period."""
+        start_at, end_at = range_bounds(period.start_date, period.end_date, timezone)
+        return self._repository.list_weigh_ins_between(user_id, start_at, end_at)
+
+    def report_data_in_period(self, user_id: int, period: ExportPeriod, timezone: ZoneInfo) -> ReportData:
+        """Load entries and weigh-ins for a report in one consistent period."""
+        return ReportData(
+            entries=self.entries_in_period(user_id, period, timezone),
+            weigh_ins=self.weigh_ins_in_period(user_id, period, timezone),
+        )
+
+    def all_data_period(self, user_id: int, timezone: ZoneInfo) -> tuple[ExportPeriod, ReportData] | None:
+        """Find the narrowest local-date period containing all current data."""
+        entries = self._repository.list_entries(user_id)
+        weigh_ins = self._repository.list_weigh_ins(user_id)
+        if not entries and not weigh_ins:
+            return None
+        dates = [entry.start_at.astimezone(timezone).date() for entry in entries]
+        dates.extend((entry.end_at or entry.start_at).astimezone(timezone).date() for entry in entries)
+        dates.extend(weigh_in.recorded_at.astimezone(timezone).date() for weigh_in in weigh_ins)
+        period = ExportPeriod(min(dates), max(dates))
+        return period, ReportData(entries=entries, weigh_ins=weigh_ins)

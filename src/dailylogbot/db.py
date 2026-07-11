@@ -1,20 +1,23 @@
-"""SQLite persistence boundary for DailyLog entries."""
+"""SQLite persistence boundary for DailyLog records and user preferences."""
 
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Final, cast
 
 VALID_KINDS: Final = frozenset({"meal", "training", "sleep"})
 ACTIVITY_KINDS: Final = frozenset({"training", "sleep"})
+VALID_LOCALES: Final = frozenset({"en", "it"})
+VALID_WEIGHT_UNITS: Final = frozenset({"kg", "lb"})
+TRASH_RETENTION_DAYS: Final = 30
 type EntryFieldValue = str | datetime | None
 _EDITABLE_FIELDS: Final = frozenset({"kind", "label", "text", "start_at", "end_at"})
-_SCHEMA_VERSION: Final = 1
+_SCHEMA_VERSION: Final = 2
 
 
 class PersistenceError(RuntimeError):
@@ -27,7 +30,7 @@ class ActiveActivityError(PersistenceError):
 
 @dataclass(frozen=True)
 class Entry:
-    """Represent one validated and persisted DailyLog record."""
+    """One validated meal, training, or sleep record."""
 
     id: int
     user_id: int
@@ -41,32 +44,96 @@ class Entry:
 
     @property
     def is_open(self) -> bool:
-        """Return whether this record is an unfinished activity.
-
-        Returns:
-            ``True`` when a training or sleep activity has no end timestamp.
-        """
+        """Whether this is the user's unfinished activity."""
         return self.kind in ACTIVITY_KINDS and self.end_at is None
 
 
+@dataclass(frozen=True)
+class UserSettings:
+    """The persisted presentation choices for one Telegram user."""
+
+    user_id: int
+    locale: str
+    weight_unit: str
+
+
+@dataclass(frozen=True)
+class WeighIn:
+    """A body-weight reading, always stored as integer metric grams."""
+
+    id: int
+    user_id: int
+    weight_grams: int
+    recorded_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class TrashItem:
+    """A recoverable deleted entry or weigh-in."""
+
+    record_type: str
+    record_id: int
+    label: str
+    deleted_at: datetime
+
+
 class Database:
-    """Provide transactional SQLite access without leaking SQL into application code."""
+    """Provide transactional SQLite access without leaking SQL into handlers."""
 
     def __init__(self, path: Path) -> None:
-        """Prepare a database file and create or migrate its schema.
-
-        Args:
-            path: SQLite database location.
-
-        Raises:
-            PersistenceError: If schema creation or migration fails.
-
-        Side Effects:
-            Creates the parent directory and database schema when needed.
-        """
         self.path = path.expanduser()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize_schema()
+        self.purge_deleted_before(datetime.now(UTC) - timedelta(days=TRASH_RETENTION_DAYS))
+
+    def get_or_create_settings(self, user_id: int, initial_locale: str) -> UserSettings:
+        """Read a user's preferences, seeding them once from Telegram's locale."""
+        _validate_user_id(user_id)
+        locale = _validate_locale(initial_locale)
+        try:
+            with self._connection() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+                if row is None:
+                    connection.execute(
+                        "INSERT INTO user_settings (user_id, locale, weight_unit) VALUES (?, ?, 'kg')",
+                        (user_id, locale),
+                    )
+                    row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        except sqlite3.Error as error:
+            raise PersistenceError("User settings could not be loaded.") from error
+        if row is None:
+            raise PersistenceError("User settings could not be read after creation.")
+        return _row_to_settings(row)
+
+    def update_settings(
+        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+    ) -> UserSettings:
+        """Replace one or both saved presentation choices."""
+        _validate_user_id(user_id)
+        if locale is not None:
+            _validate_locale(locale)
+        if weight_unit is not None:
+            _validate_weight_unit(weight_unit)
+        try:
+            with self._connection() as connection:
+                existing = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+                if existing is None:
+                    raise PersistenceError("User settings must be initialized before they can be updated.")
+                next_locale = locale or str(existing["locale"])
+                next_unit = weight_unit or str(existing["weight_unit"])
+                connection.execute(
+                    "UPDATE user_settings SET locale = ?, weight_unit = ? WHERE user_id = ?",
+                    (next_locale, next_unit, user_id),
+                )
+                row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+        except sqlite3.Error as error:
+            raise PersistenceError("User settings could not be updated.") from error
+        if row is None:
+            raise PersistenceError("Updated user settings could not be read.")
+        return _row_to_settings(row)
 
     def add_entry(
         self,
@@ -78,24 +145,7 @@ class Database:
         start_at: datetime,
         end_at: datetime | None = None,
     ) -> Entry:
-        """Insert one validated entry atomically.
-
-        Args:
-            user_id: Telegram user that owns the entry.
-            kind: One of ``meal``, ``training``, or ``sleep``.
-            label: Non-empty activity or meal name.
-            text: Optional detail text.
-            start_at: Time at which the entry began.
-            end_at: Optional time at which an activity ended.
-
-        Returns:
-            The fully persisted entry.
-
-        Raises:
-            ActiveActivityError: If another activity is open for this user.
-            ValueError: If an entry value violates a domain invariant.
-            PersistenceError: If SQLite cannot create or retrieve the entry.
-        """
+        """Insert one validated log entry atomically."""
         _validate_user_id(user_id)
         _validate_entry_values(kind, label, text, start_at, end_at)
         recorded_at = datetime.now(UTC)
@@ -119,8 +169,7 @@ class Database:
                     ),
                 )
                 row = connection.execute(
-                    "SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL",
-                    (cursor.lastrowid,),
+                    "SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL", (cursor.lastrowid,)
                 ).fetchone()
         except sqlite3.IntegrityError as error:
             if kind in ACTIVITY_KINDS and end_at is None:
@@ -129,163 +178,51 @@ class Database:
         except sqlite3.Error as error:
             raise PersistenceError("The entry could not be saved.") from error
         if row is None:
-            raise PersistenceError("The created entry could not be read from the database.")
+            raise PersistenceError("The created entry could not be read.")
         return _row_to_entry(row)
 
     def get_entry(self, user_id: int, entry_id: int) -> Entry | None:
-        """Retrieve one non-deleted owned entry.
-
-        Args:
-            user_id: Telegram user that owns the entry.
-            entry_id: Database identifier of the entry.
-
-        Returns:
-            The matching entry, or ``None`` when it is unavailable.
-
-        Raises:
-            ValueError: If either identifier is not positive.
-            PersistenceError: If SQLite cannot complete the query.
-        """
+        """Retrieve one non-deleted owned entry."""
         _validate_user_id(user_id)
-        _validate_entry_id(entry_id)
+        _validate_record_id(entry_id)
         row = self._fetch_one(
-            "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
-            (user_id, entry_id),
+            "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL", (user_id, entry_id)
         )
         return _row_to_entry(row) if row is not None else None
 
     def get_last_entry(self, user_id: int) -> Entry | None:
-        """Retrieve the most recently created non-deleted entry for a user.
-
-        Args:
-            user_id: Telegram user that owns the entry.
-
-        Returns:
-            The latest entry, or ``None`` when no entry exists.
-
-        Raises:
-            ValueError: If ``user_id`` is not positive.
-            PersistenceError: If SQLite cannot complete the query.
-        """
+        """Retrieve the most recently created non-deleted entry."""
         _validate_user_id(user_id)
         row = self._fetch_one(
-            """
-            SELECT * FROM entries
-            WHERE user_id = ? AND deleted_at IS NULL
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-            """,
+            "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC, id DESC LIMIT 1",
             (user_id,),
         )
         return _row_to_entry(row) if row is not None else None
 
-    def get_active_entry(self, user_id: int, kind: str) -> Entry | None:
-        """Retrieve an unfinished activity of one requested kind.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-            kind: Activity kind to retrieve.
-
-        Returns:
-            The matching active entry, or ``None`` when none exists.
-
-        Raises:
-            ValueError: If ``user_id`` is not positive.
-            PersistenceError: If SQLite cannot complete the query.
-        """
-        _validate_user_id(user_id)
-        if kind not in ACTIVITY_KINDS:
-            return None
-        row = self._fetch_one(
-            """
-            SELECT * FROM entries
-            WHERE user_id = ? AND kind = ? AND end_at IS NULL AND deleted_at IS NULL
-            ORDER BY start_at ASC, id ASC
-            LIMIT 1
-            """,
-            (user_id, kind),
-        )
-        return _row_to_entry(row) if row is not None else None
-
     def get_open_activity(self, user_id: int) -> Entry | None:
-        """Retrieve the user's sole unfinished training or sleep activity.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-
-        Returns:
-            The active entry, or ``None`` when none exists.
-
-        Raises:
-            ValueError: If ``user_id`` is not positive.
-            PersistenceError: If SQLite cannot complete the query.
-        """
+        """Retrieve the user's sole unfinished training or sleep entry."""
         _validate_user_id(user_id)
         row = self._fetch_one(
             """
-            SELECT * FROM entries
-            WHERE user_id = ? AND deleted_at IS NULL AND end_at IS NULL
-              AND kind IN ('training', 'sleep')
-            ORDER BY start_at ASC, id ASC
-            LIMIT 1
+            SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL AND end_at IS NULL
+              AND kind IN ('training', 'sleep') ORDER BY start_at ASC, id ASC LIMIT 1
             """,
             (user_id,),
         )
         return _row_to_entry(row) if row is not None else None
 
     def end_active_entry(self, user_id: int, kind: str, end_at: datetime) -> Entry | None:
-        """Close an open activity of one requested kind atomically.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-            kind: Activity kind to close.
-            end_at: Time at which the activity ended.
-
-        Returns:
-            The completed activity, or ``None`` when no matching activity exists.
-
-        Raises:
-            ValueError: If an identifier, kind, or timestamp is invalid.
-            PersistenceError: If SQLite cannot complete the update.
-        """
-        _validate_user_id(user_id)
-        _validate_aware_datetime(end_at, "end_at")
+        """Close one requested kind of open activity."""
         if kind not in ACTIVITY_KINDS:
             raise ValueError("kind must be training or sleep")
         return self._end_activity(user_id, end_at, kind)
 
     def end_open_activity(self, user_id: int, end_at: datetime) -> Entry | None:
-        """Close the user's sole open training or sleep activity atomically.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-            end_at: Time at which the activity ended.
-
-        Returns:
-            The completed activity, or ``None`` when no activity is active.
-
-        Raises:
-            ValueError: If an identifier or timestamp is invalid.
-            PersistenceError: If SQLite cannot complete the update.
-        """
-        _validate_user_id(user_id)
-        _validate_aware_datetime(end_at, "end_at")
+        """Close the user's sole open activity."""
         return self._end_activity(user_id, end_at, None)
 
     def cancel_open_activity(self, user_id: int, cancelled_at: datetime) -> Entry | None:
-        """Soft-delete the user's sole open activity in one write transaction.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-            cancelled_at: Time at which the cancellation occurred.
-
-        Returns:
-            The removed activity, or ``None`` when no activity is active.
-
-        Raises:
-            ValueError: If an identifier or timestamp is invalid.
-            PersistenceError: If SQLite cannot complete the cancellation.
-        """
+        """Move the open activity to the recoverable trash."""
         _validate_user_id(user_id)
         _validate_aware_datetime(cancelled_at, "cancelled_at")
         try:
@@ -293,56 +230,26 @@ class Database:
                 connection.execute("BEGIN IMMEDIATE")
                 row = connection.execute(
                     """
-                    SELECT * FROM entries
-                    WHERE user_id = ? AND deleted_at IS NULL AND end_at IS NULL
-                      AND kind IN ('training', 'sleep')
-                    ORDER BY start_at ASC, id ASC
-                    LIMIT 1
+                    SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL AND end_at IS NULL
+                      AND kind IN ('training', 'sleep') ORDER BY start_at ASC, id ASC LIMIT 1
                     """,
                     (user_id,),
                 ).fetchone()
                 if row is None:
                     return None
-                active_entry = _row_to_entry(row)
+                entry = _row_to_entry(row)
                 connection.execute(
-                    """
-                    UPDATE entries
-                    SET deleted_at = ?, updated_at = ?
-                    WHERE id = ? AND deleted_at IS NULL
-                    """,
-                    (
-                        _serialize_datetime(cancelled_at),
-                        _serialize_datetime(cancelled_at),
-                        active_entry.id,
-                    ),
+                    "UPDATE entries SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+                    (_serialize_datetime(cancelled_at), _serialize_datetime(cancelled_at), entry.id),
                 )
         except sqlite3.Error as error:
             raise PersistenceError("The activity could not be cancelled.") from error
-        return active_entry
+        return entry
 
-    def update_entry(
-        self,
-        user_id: int,
-        entry_id: int,
-        fields: Mapping[str, EntryFieldValue],
-    ) -> Entry | None:
-        """Update approved values while preserving ownership and activity invariants.
-
-        Args:
-            user_id: Telegram user that owns the entry.
-            entry_id: Database identifier of the entry.
-            fields: Replacement values for editable entry attributes.
-
-        Returns:
-            The updated entry, unchanged entry, or ``None`` when unavailable.
-
-        Raises:
-            ActiveActivityError: If the edit would create a second open activity.
-            ValueError: If an identifier, field, or resulting entry is invalid.
-            PersistenceError: If SQLite cannot complete the update.
-        """
+    def update_entry(self, user_id: int, entry_id: int, fields: Mapping[str, EntryFieldValue]) -> Entry | None:
+        """Update allowed entry fields while preserving activity invariants."""
         _validate_user_id(user_id)
-        _validate_entry_id(entry_id)
+        _validate_record_id(entry_id)
         unsupported_fields = set(fields).difference(_EDITABLE_FIELDS)
         if unsupported_fields:
             raise ValueError(f"Unsupported editable fields: {', '.join(sorted(unsupported_fields))}")
@@ -350,16 +257,14 @@ class Database:
             with self._connection() as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 row = connection.execute(
-                    "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
-                    (user_id, entry_id),
+                    "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL", (user_id, entry_id)
                 ).fetchone()
                 if row is None:
                     return None
-                existing_entry = _row_to_entry(row)
+                entry = _row_to_entry(row)
                 if not fields:
-                    return existing_entry
-                candidate = _entry_candidate(existing_entry, fields)
-                _validate_entry_values(*candidate)
+                    return entry
+                _validate_entry_values(*_entry_candidate(entry, fields))
                 assignments, values = _update_assignments(fields)
                 assignments.append("updated_at = ?")
                 values.append(_serialize_datetime(datetime.now(UTC)))
@@ -369,85 +274,57 @@ class Database:
                     values,
                 )
                 updated_row = connection.execute(
-                    "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
-                    (user_id, entry_id),
+                    "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL", (user_id, entry_id)
                 ).fetchone()
         except sqlite3.IntegrityError as error:
             raise ActiveActivityError("An activity is already open for this user.") from error
         except sqlite3.Error as error:
             raise PersistenceError("The entry could not be updated.") from error
         if updated_row is None:
-            raise PersistenceError("The updated entry could not be read from the database.")
+            raise PersistenceError("The updated entry could not be read.")
         return _row_to_entry(updated_row)
 
     def delete_entry(self, user_id: int, entry_id: int, deleted_at: datetime) -> bool:
-        """Soft-delete an owned entry.
+        """Soft-delete one owned entry."""
+        return self._soft_delete("entries", user_id, entry_id, deleted_at)
 
-        Args:
-            user_id: Telegram user that owns the entry.
-            entry_id: Database identifier of the entry.
-            deleted_at: Time at which the deletion occurred.
-
-        Returns:
-            Whether a stored entry was deleted.
-
-        Raises:
-            ValueError: If an identifier or timestamp is invalid.
-            PersistenceError: If SQLite cannot complete the update.
-        """
+    def restore_entry(self, user_id: int, entry_id: int) -> Entry | None:
+        """Restore a deleted entry, respecting the one-open-activity rule."""
         _validate_user_id(user_id)
-        _validate_entry_id(entry_id)
-        _validate_aware_datetime(deleted_at, "deleted_at")
+        _validate_record_id(entry_id)
         try:
             with self._connection() as connection:
-                cursor = connection.execute(
-                    """
-                    UPDATE entries
-                    SET deleted_at = ?, updated_at = ?
-                    WHERE user_id = ? AND id = ? AND deleted_at IS NULL
-                    """,
-                    (
-                        _serialize_datetime(deleted_at),
-                        _serialize_datetime(deleted_at),
-                        user_id,
-                        entry_id,
-                    ),
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute(
+                    "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NOT NULL", (user_id, entry_id)
+                ).fetchone()
+                if row is None:
+                    return None
+                connection.execute(
+                    "UPDATE entries SET deleted_at = NULL, updated_at = ? "
+                    "WHERE user_id = ? AND id = ? AND deleted_at IS NOT NULL",
+                    (_serialize_datetime(datetime.now(UTC)), user_id, entry_id),
                 )
+                restored_row = connection.execute(
+                    "SELECT * FROM entries WHERE user_id = ? AND id = ?", (user_id, entry_id)
+                ).fetchone()
+        except sqlite3.IntegrityError as error:
+            raise ActiveActivityError("End or cancel the current activity before restoring this one.") from error
         except sqlite3.Error as error:
-            raise PersistenceError("The entry could not be deleted.") from error
-        return cursor.rowcount > 0
+            raise PersistenceError("The entry could not be restored.") from error
+        return _row_to_entry(restored_row) if restored_row is not None else None
 
     def list_entries_between(self, user_id: int, start_at: datetime, end_at: datetime) -> list[Entry]:
-        """List non-deleted entries overlapping a half-open UTC-normalized interval.
-
-        Args:
-            user_id: Telegram user that owns the entries.
-            start_at: Inclusive interval start.
-            end_at: Exclusive interval end.
-
-        Returns:
-            Chronologically ordered matching entries.
-
-        Raises:
-            ValueError: If an identifier or interval is invalid.
-            PersistenceError: If SQLite cannot complete the query.
-        """
+        """List entries overlapping a half-open local-period interval."""
         _validate_user_id(user_id)
-        _validate_aware_datetime(start_at, "start_at")
-        _validate_aware_datetime(end_at, "end_at")
-        if end_at <= start_at:
-            raise ValueError("end_at must be after start_at")
+        _validate_interval(start_at, end_at)
         try:
             with self._connection() as connection:
                 rows = connection.execute(
                     """
-                    SELECT * FROM entries
-                    WHERE user_id = ? AND deleted_at IS NULL
-                      AND start_at < ?
-                      AND (
-                        (kind = 'meal' AND start_at >= ?)
-                        OR (kind IN ('training', 'sleep') AND (end_at IS NULL OR end_at > ?))
-                      )
+                    SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL AND start_at < ?
+                      AND ((kind = 'meal' AND start_at >= ?)
+                        OR (kind IN ('training', 'sleep') AND (end_at IS NULL OR end_at > ?)))
                     ORDER BY start_at ASC, id ASC
                     """,
                     (
@@ -462,42 +339,210 @@ class Database:
         return [_row_to_entry(row) for row in rows]
 
     def list_entries(self, user_id: int) -> list[Entry]:
-        """List every non-deleted entry for one user.
-
-        Args:
-            user_id: Telegram user that owns the entries.
-
-        Returns:
-            Chronologically ordered entries.
-
-        Raises:
-            ValueError: If ``user_id`` is not positive.
-            PersistenceError: If SQLite cannot complete the query.
-        """
+        """List every non-deleted entry in chronological order."""
         _validate_user_id(user_id)
         try:
             with self._connection() as connection:
                 rows = connection.execute(
-                    """
-                    SELECT * FROM entries
-                    WHERE user_id = ? AND deleted_at IS NULL
-                    ORDER BY start_at ASC, id ASC
-                    """,
+                    "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL ORDER BY start_at ASC, id ASC",
                     (user_id,),
                 ).fetchall()
         except sqlite3.Error as error:
             raise PersistenceError("Entries could not be listed.") from error
         return [_row_to_entry(row) for row in rows]
 
+    def add_weigh_in(self, user_id: int, weight_grams: int, recorded_at: datetime) -> WeighIn:
+        """Store one validated metric body-weight reading."""
+        _validate_user_id(user_id)
+        _validate_weight_grams(weight_grams)
+        _validate_aware_datetime(recorded_at, "recorded_at")
+        now = datetime.now(UTC)
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO weigh_ins (user_id, weight_grams, recorded_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_id,
+                        weight_grams,
+                        _serialize_datetime(recorded_at),
+                        _serialize_datetime(now),
+                        _serialize_datetime(now),
+                    ),
+                )
+                row = connection.execute("SELECT * FROM weigh_ins WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        except sqlite3.Error as error:
+            raise PersistenceError("The weigh-in could not be saved.") from error
+        if row is None:
+            raise PersistenceError("The saved weigh-in could not be read.")
+        return _row_to_weigh_in(row)
+
+    def get_weigh_in(self, user_id: int, weigh_in_id: int) -> WeighIn | None:
+        """Retrieve one non-deleted owned weigh-in."""
+        _validate_user_id(user_id)
+        _validate_record_id(weigh_in_id)
+        row = self._fetch_one(
+            "SELECT * FROM weigh_ins WHERE user_id = ? AND id = ? AND deleted_at IS NULL", (user_id, weigh_in_id)
+        )
+        return _row_to_weigh_in(row) if row is not None else None
+
+    def update_weigh_in(
+        self, user_id: int, weigh_in_id: int, *, weight_grams: int | None = None, recorded_at: datetime | None = None
+    ) -> WeighIn | None:
+        """Update a body-weight value and/or its timestamp."""
+        _validate_user_id(user_id)
+        _validate_record_id(weigh_in_id)
+        if weight_grams is not None:
+            _validate_weight_grams(weight_grams)
+        if recorded_at is not None:
+            _validate_aware_datetime(recorded_at, "recorded_at")
+        try:
+            with self._connection() as connection:
+                row = connection.execute(
+                    "SELECT * FROM weigh_ins WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                    (user_id, weigh_in_id),
+                ).fetchone()
+                if row is None:
+                    return None
+                assignments = ["updated_at = ?"]
+                values: list[object] = [_serialize_datetime(datetime.now(UTC))]
+                if weight_grams is not None:
+                    assignments.append("weight_grams = ?")
+                    values.append(weight_grams)
+                if recorded_at is not None:
+                    assignments.append("recorded_at = ?")
+                    values.append(_serialize_datetime(recorded_at))
+                values.extend((user_id, weigh_in_id))
+                connection.execute(
+                    f"UPDATE weigh_ins SET {', '.join(assignments)} "
+                    "WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                    values,
+                )
+                updated_row = connection.execute(
+                    "SELECT * FROM weigh_ins WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                    (user_id, weigh_in_id),
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise PersistenceError("The weigh-in could not be updated.") from error
+        return _row_to_weigh_in(updated_row) if updated_row is not None else None
+
+    def delete_weigh_in(self, user_id: int, weigh_in_id: int, deleted_at: datetime) -> bool:
+        """Soft-delete one owned weigh-in."""
+        return self._soft_delete("weigh_ins", user_id, weigh_in_id, deleted_at)
+
+    def restore_weigh_in(self, user_id: int, weigh_in_id: int) -> WeighIn | None:
+        """Restore one deleted weigh-in."""
+        _validate_user_id(user_id)
+        _validate_record_id(weigh_in_id)
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE weigh_ins SET deleted_at = NULL, updated_at = ?
+                    WHERE user_id = ? AND id = ? AND deleted_at IS NOT NULL
+                    """,
+                    (_serialize_datetime(datetime.now(UTC)), user_id, weigh_in_id),
+                )
+                if cursor.rowcount == 0:
+                    return None
+                row = connection.execute(
+                    "SELECT * FROM weigh_ins WHERE user_id = ? AND id = ?", (user_id, weigh_in_id)
+                ).fetchone()
+        except sqlite3.Error as error:
+            raise PersistenceError("The weigh-in could not be restored.") from error
+        return _row_to_weigh_in(row) if row is not None else None
+
+    def list_weigh_ins_between(self, user_id: int, start_at: datetime, end_at: datetime) -> list[WeighIn]:
+        """List non-deleted readings in a half-open interval."""
+        _validate_user_id(user_id)
+        _validate_interval(start_at, end_at)
+        try:
+            with self._connection() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT * FROM weigh_ins WHERE user_id = ? AND deleted_at IS NULL
+                      AND recorded_at >= ? AND recorded_at < ? ORDER BY recorded_at ASC, id ASC
+                    """,
+                    (user_id, _serialize_datetime(start_at), _serialize_datetime(end_at)),
+                ).fetchall()
+        except sqlite3.Error as error:
+            raise PersistenceError("Weigh-ins could not be listed for the requested period.") from error
+        return [_row_to_weigh_in(row) for row in rows]
+
+    def list_weigh_ins(self, user_id: int) -> list[WeighIn]:
+        """List every non-deleted reading in chronological order."""
+        _validate_user_id(user_id)
+        try:
+            with self._connection() as connection:
+                rows = connection.execute(
+                    "SELECT * FROM weigh_ins WHERE user_id = ? AND deleted_at IS NULL ORDER BY recorded_at ASC, id ASC",
+                    (user_id,),
+                ).fetchall()
+        except sqlite3.Error as error:
+            raise PersistenceError("Weigh-ins could not be listed.") from error
+        return [_row_to_weigh_in(row) for row in rows]
+
+    def list_trash(self, user_id: int, *, limit: int = 100) -> list[TrashItem]:
+        """List recoverable user-owned records, newest deletion first."""
+        _validate_user_id(user_id)
+        if limit < 1 or limit > 100:
+            raise ValueError("limit must be between 1 and 100")
+        try:
+            with self._connection() as connection:
+                rows = connection.execute(
+                    """
+                    SELECT 'entry' AS record_type, id AS record_id, label, deleted_at FROM entries
+                    WHERE user_id = ? AND deleted_at IS NOT NULL
+                    UNION ALL
+                    SELECT 'weigh_in' AS record_type, id AS record_id,
+                           CAST(weight_grams AS TEXT) || ' g', deleted_at
+                    FROM weigh_ins
+                    WHERE user_id = ? AND deleted_at IS NOT NULL
+                    ORDER BY deleted_at DESC LIMIT ?
+                    """,
+                    (user_id, user_id, limit),
+                ).fetchall()
+        except sqlite3.Error as error:
+            raise PersistenceError("Trash could not be listed.") from error
+        return [_row_to_trash_item(row) for row in rows]
+
+    def purge_deleted_before(self, cutoff: datetime) -> int:
+        """Permanently remove data whose recovery window has expired."""
+        _validate_aware_datetime(cutoff, "cutoff")
+        try:
+            with self._connection() as connection:
+                entry_count = connection.execute(
+                    "DELETE FROM entries WHERE deleted_at IS NOT NULL AND deleted_at < ?",
+                    (_serialize_datetime(cutoff),),
+                ).rowcount
+                weigh_in_count = connection.execute(
+                    "DELETE FROM weigh_ins WHERE deleted_at IS NOT NULL AND deleted_at < ?",
+                    (_serialize_datetime(cutoff),),
+                ).rowcount
+        except sqlite3.Error as error:
+            raise PersistenceError("Expired deleted records could not be purged.") from error
+        return entry_count + weigh_in_count
+
+    def _soft_delete(self, table: str, user_id: int, record_id: int, deleted_at: datetime) -> bool:
+        if table not in {"entries", "weigh_ins"}:
+            raise ValueError("Unsupported record table")
+        _validate_user_id(user_id)
+        _validate_record_id(record_id)
+        _validate_aware_datetime(deleted_at, "deleted_at")
+        try:
+            with self._connection() as connection:
+                cursor = connection.execute(
+                    f"UPDATE {table} SET deleted_at = ?, updated_at = ? "
+                    "WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                    (_serialize_datetime(deleted_at), _serialize_datetime(deleted_at), user_id, record_id),
+                )
+        except sqlite3.Error as error:
+            raise PersistenceError("The record could not be deleted.") from error
+        return cursor.rowcount > 0
+
     def _connect(self) -> sqlite3.Connection:
-        """Open a scoped SQLite connection with resilient local settings.
-
-        Returns:
-            A connection configured for short transactions and row access.
-
-        Raises:
-            PersistenceError: If SQLite cannot open the database file.
-        """
         try:
             connection = sqlite3.connect(self.path, timeout=30.0)
             connection.row_factory = sqlite3.Row
@@ -510,14 +555,6 @@ class Database:
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
-        """Yield a scoped connection that always commits or rolls back and closes.
-
-        Yields:
-            Open SQLite connection configured by :meth:`_connect`.
-
-        Side Effects:
-            Opens and closes one database connection for the enclosing operation.
-        """
         connection = self._connect()
         try:
             yield connection
@@ -529,70 +566,64 @@ class Database:
             connection.close()
 
     def _initialize_schema(self) -> None:
-        """Create indexes and normalize pre-existing timestamp values to UTC.
-
-        Raises:
-            PersistenceError: If schema initialization or migration fails.
-
-        Side Effects:
-            Creates tables and indexes and may rewrite stored timestamps once.
-        """
         try:
             with self._connection() as connection:
                 connection.execute("PRAGMA journal_mode = WAL")
                 connection.execute(
                     """
                     CREATE TABLE IF NOT EXISTS entries (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
                         kind TEXT NOT NULL CHECK (kind IN ('meal', 'training', 'sleep')),
-                        label TEXT NOT NULL,
-                        text TEXT NOT NULL DEFAULT '',
-                        start_at TEXT NOT NULL,
-                        end_at TEXT,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        deleted_at TEXT
+                        label TEXT NOT NULL, text TEXT NOT NULL DEFAULT '', start_at TEXT NOT NULL, end_at TEXT,
+                        created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
                     )
                     """
                 )
-                self._migrate_timestamp_storage(connection)
+                version_row = connection.execute("PRAGMA user_version").fetchone()
+                version = int(version_row[0]) if version_row is not None else 0
+                if version < 1:
+                    self._migrate_timestamp_storage(connection)
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS user_settings (
+                        user_id INTEGER PRIMARY KEY, locale TEXT NOT NULL CHECK (locale IN ('en', 'it')),
+                        weight_unit TEXT NOT NULL CHECK (weight_unit IN ('kg', 'lb'))
+                    )
+                    """
+                )
+                connection.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS weigh_ins (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+                        weight_grams INTEGER NOT NULL CHECK (weight_grams > 0 AND weight_grams <= 1000000),
+                        recorded_at TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+                    )
+                    """
+                )
                 connection.execute("CREATE INDEX IF NOT EXISTS idx_entries_user_start ON entries(user_id, start_at)")
                 connection.execute(
                     "CREATE INDEX IF NOT EXISTS idx_entries_user_kind_end ON entries(user_id, kind, end_at)"
                 )
                 connection.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_weigh_ins_user_recorded ON weigh_ins(user_id, recorded_at)"
+                )
+                connection.execute(
                     """
-                    CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_one_open_activity
-                    ON entries(user_id)
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_one_open_activity ON entries(user_id)
                     WHERE deleted_at IS NULL AND end_at IS NULL AND kind IN ('training', 'sleep')
                     """
                 )
+                connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
         except sqlite3.Error as error:
             raise PersistenceError("The database schema could not be initialized.") from error
 
     def _migrate_timestamp_storage(self, connection: sqlite3.Connection) -> None:
-        """Normalize existing aware ISO timestamps to sortable UTC text once.
-
-        Args:
-            connection: Open connection participating in schema initialization.
-
-        Raises:
-            PersistenceError: If pre-existing timestamps are malformed.
-
-        Side Effects:
-            Rewrites timestamp columns and advances the SQLite user version.
-        """
-        version_row = connection.execute("PRAGMA user_version").fetchone()
-        version = int(version_row[0]) if version_row is not None else 0
-        if version >= _SCHEMA_VERSION:
-            return
         rows = connection.execute(
             "SELECT id, start_at, end_at, created_at, updated_at, deleted_at FROM entries"
         ).fetchall()
         for row in rows:
             try:
-                converted_values = tuple(
+                values = tuple(
                     _serialize_datetime(datetime.fromisoformat(str(row[column]))) if row[column] is not None else None
                     for column in ("start_at", "end_at", "created_at", "updated_at", "deleted_at")
                 )
@@ -600,120 +631,75 @@ class Database:
                 raise PersistenceError(f"Entry {row['id']} has an invalid timestamp.") from error
             connection.execute(
                 """
-                UPDATE entries
-                SET start_at = ?, end_at = ?, created_at = ?, updated_at = ?, deleted_at = ?
-                WHERE id = ?
+                UPDATE entries SET start_at = ?, end_at = ?, created_at = ?, updated_at = ?, deleted_at = ? WHERE id = ?
                 """,
-                (*converted_values, row["id"]),
+                (*values, row["id"]),
             )
-        connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
 
     def _fetch_one(self, query: str, parameters: tuple[object, ...]) -> sqlite3.Row | None:
-        """Run one read query and return at most one row.
-
-        Args:
-            query: Parameterized SQL select statement.
-            parameters: Bound query values.
-
-        Returns:
-            The selected row, or ``None`` when no record matches.
-
-        Raises:
-            PersistenceError: If SQLite cannot complete the query.
-        """
         try:
             with self._connection() as connection:
-                row = connection.execute(query, parameters).fetchone()
-                return cast(sqlite3.Row | None, row)
+                return cast(sqlite3.Row | None, connection.execute(query, parameters).fetchone())
         except sqlite3.Error as error:
             raise PersistenceError("The database query could not be completed.") from error
 
     def _end_activity(self, user_id: int, end_at: datetime, kind: str | None) -> Entry | None:
-        """Close an activity inside a single write transaction.
-
-        Args:
-            user_id: Telegram user that owns the activity.
-            end_at: Time at which the activity ended.
-            kind: Optional activity kind to restrict the lookup.
-
-        Returns:
-            The closed activity, or ``None`` when no activity matches.
-
-        Raises:
-            ValueError: If the activity would end before it started.
-            PersistenceError: If SQLite cannot complete the update.
-        """
-        activity_clause = "AND kind = ?" if kind is not None else "AND kind IN ('training', 'sleep')"
+        _validate_user_id(user_id)
+        _validate_aware_datetime(end_at, "end_at")
+        kind_clause = "AND kind = ?" if kind is not None else "AND kind IN ('training', 'sleep')"
         parameters: tuple[object, ...] = (user_id, kind) if kind is not None else (user_id,)
         try:
             with self._connection() as connection:
                 connection.execute("BEGIN IMMEDIATE")
                 row = connection.execute(
-                    f"""
-                    SELECT * FROM entries
-                    WHERE user_id = ? AND deleted_at IS NULL AND end_at IS NULL {activity_clause}
-                    ORDER BY start_at ASC, id ASC
-                    LIMIT 1
-                    """,
+                    "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL "
+                    f"AND end_at IS NULL {kind_clause} ORDER BY start_at ASC, id ASC LIMIT 1",
                     parameters,
                 ).fetchone()
                 if row is None:
                     return None
-                active_entry = _row_to_entry(row)
-                if end_at < active_entry.start_at:
+                entry = _row_to_entry(row)
+                if end_at < entry.start_at:
                     raise ValueError("An activity cannot end before it starts.")
-                completed_at = datetime.now(UTC)
+                now = datetime.now(UTC)
                 connection.execute(
                     "UPDATE entries SET end_at = ?, updated_at = ? WHERE id = ? AND end_at IS NULL",
-                    (_serialize_datetime(end_at), _serialize_datetime(completed_at), active_entry.id),
+                    (_serialize_datetime(end_at), _serialize_datetime(now), entry.id),
                 )
-                updated_row = connection.execute("SELECT * FROM entries WHERE id = ?", (active_entry.id,)).fetchone()
+                updated_row = connection.execute("SELECT * FROM entries WHERE id = ?", (entry.id,)).fetchone()
         except sqlite3.Error as error:
             raise PersistenceError("The activity could not be ended.") from error
-        if updated_row is None:
-            raise PersistenceError("The completed activity could not be read from the database.")
-        return _row_to_entry(updated_row)
+        return _row_to_entry(updated_row) if updated_row is not None else None
 
 
 def _validate_user_id(user_id: int) -> None:
-    """Reject invalid Telegram user identifiers.
-
-    Args:
-        user_id: Identifier to validate.
-
-    Raises:
-        ValueError: If the identifier is not a positive integer.
-    """
     if isinstance(user_id, bool) or user_id <= 0:
         raise ValueError("user_id must be a positive integer")
 
 
-def _validate_entry_id(entry_id: int) -> None:
-    """Reject invalid database entry identifiers.
+def _validate_record_id(record_id: int) -> None:
+    if isinstance(record_id, bool) or record_id <= 0:
+        raise ValueError("record id must be a positive integer")
 
-    Args:
-        entry_id: Identifier to validate.
 
-    Raises:
-        ValueError: If the identifier is not a positive integer.
-    """
-    if isinstance(entry_id, bool) or entry_id <= 0:
-        raise ValueError("entry_id must be a positive integer")
+def _validate_locale(locale: str) -> str:
+    if locale not in VALID_LOCALES:
+        raise ValueError("locale must be en or it")
+    return locale
+
+
+def _validate_weight_unit(weight_unit: str) -> str:
+    if weight_unit not in VALID_WEIGHT_UNITS:
+        raise ValueError("weight_unit must be kg or lb")
+    return weight_unit
+
+
+def _validate_weight_grams(weight_grams: int) -> None:
+    if isinstance(weight_grams, bool) or not isinstance(weight_grams, int) or not 0 < weight_grams <= 1_000_000:
+        raise ValueError("weight must be between 0.001 and 1000 kg")
 
 
 def _validate_entry_values(kind: object, label: object, text: object, start_at: object, end_at: object) -> None:
-    """Validate an entry's complete value set before it reaches SQLite.
-
-    Args:
-        kind: Proposed entry category.
-        label: Proposed activity or meal label.
-        text: Proposed free-form details.
-        start_at: Proposed start timestamp.
-        end_at: Proposed optional end timestamp.
-
-    Raises:
-        ValueError: If a value violates an entry invariant.
-    """
     if not isinstance(kind, str) or kind not in VALID_KINDS:
         raise ValueError("kind must be meal, training, or sleep")
     if not isinstance(label, str) or not label.strip() or len(label) > 120:
@@ -730,115 +716,94 @@ def _validate_entry_values(kind: object, label: object, text: object, start_at: 
 
 
 def _validate_aware_datetime(value: object, field_name: str) -> datetime:
-    """Validate that a supplied value is an offset-aware datetime.
-
-    Args:
-        value: Value to validate.
-        field_name: User-facing name of the timestamp field.
-
-    Raises:
-        Timezone-aware timestamp.
-
-    Raises:
-        ValueError: If the value is not timezone-aware.
-    """
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field_name} must be a timezone-aware datetime")
     return value
 
 
+def _validate_interval(start_at: datetime, end_at: datetime) -> None:
+    _validate_aware_datetime(start_at, "start_at")
+    _validate_aware_datetime(end_at, "end_at")
+    if end_at <= start_at:
+        raise ValueError("end_at must be after start_at")
+
+
 def _entry_candidate(
-    existing_entry: Entry, fields: Mapping[str, EntryFieldValue]
+    entry: Entry, fields: Mapping[str, EntryFieldValue]
 ) -> tuple[object, object, object, object, object]:
-    """Build a complete prospective entry from an existing record and replacements.
-
-    Args:
-        existing_entry: Persisted record being edited.
-        fields: Replacement values for supported entry fields.
-
-    Returns:
-        Candidate kind, label, details, start, and end values.
-    """
     return (
-        fields.get("kind", existing_entry.kind),
-        fields.get("label", existing_entry.label),
-        fields.get("text", existing_entry.text),
-        fields.get("start_at", existing_entry.start_at),
-        fields.get("end_at", existing_entry.end_at),
+        fields.get("kind", entry.kind),
+        fields.get("label", entry.label),
+        fields.get("text", entry.text),
+        fields.get("start_at", entry.start_at),
+        fields.get("end_at", entry.end_at),
     )
 
 
 def _update_assignments(fields: Mapping[str, EntryFieldValue]) -> tuple[list[str], list[object]]:
-    """Convert typed editable values into a safe static-column SQL update.
-
-    Args:
-        fields: Replacement values for supported entry fields.
-
-    Returns:
-        SQL assignments and their ordered bound values.
-    """
     assignments: list[str] = []
     values: list[object] = []
     for field_name in ("kind", "label", "text", "start_at", "end_at"):
-        if field_name not in fields:
-            continue
-        field_value = fields[field_name]
-        assignments.append(f"{field_name} = ?")
-        values.append(_serialize_datetime(field_value) if isinstance(field_value, datetime) else field_value)
+        if field_name in fields:
+            value = fields[field_name]
+            assignments.append(f"{field_name} = ?")
+            values.append(_serialize_datetime(value) if isinstance(value, datetime) else value)
     return assignments, values
 
 
 def _serialize_datetime(value: datetime) -> str:
-    """Serialize an aware datetime in lexicographically sortable UTC ISO format.
-
-    Args:
-        value: Offset-aware timestamp to persist.
-
-    Returns:
-        UTC ISO-8601 timestamp with a numeric offset.
-    """
     return _validate_aware_datetime(value, "timestamp").astimezone(UTC).isoformat(timespec="microseconds")
 
 
 def _row_to_entry(row: sqlite3.Row) -> Entry:
-    """Convert one SQLite row into an immutable application record.
-
-    Args:
-        row: Database row representing an entry.
-
-    Returns:
-        Typed immutable entry.
-
-    Raises:
-        PersistenceError: If the stored data is malformed.
-    """
     try:
         return Entry(
             id=int(row["id"]),
             user_id=int(row["user_id"]),
             kind=str(row["kind"]),
             label=str(row["label"]),
-            text=str(row["text"] or ""),
+            text=str(row["text"]),
             start_at=datetime.fromisoformat(str(row["start_at"])),
-            end_at=datetime.fromisoformat(str(row["end_at"])) if row["end_at"] else None,
+            end_at=datetime.fromisoformat(str(row["end_at"])) if row["end_at"] is not None else None,
             created_at=datetime.fromisoformat(str(row["created_at"])),
             updated_at=datetime.fromisoformat(str(row["updated_at"])),
         )
     except (KeyError, TypeError, ValueError) as error:
-        raise PersistenceError("The database contains an invalid entry.") from error
+        raise PersistenceError("An entry row is malformed.") from error
 
 
-def entries_by_month(entries: Iterable[Entry]) -> dict[str, list[Entry]]:
-    """Group entries by their display month while preserving input order.
+def _row_to_settings(row: sqlite3.Row) -> UserSettings:
+    try:
+        return UserSettings(
+            user_id=int(row["user_id"]),
+            locale=_validate_locale(str(row["locale"])),
+            weight_unit=_validate_weight_unit(str(row["weight_unit"])),
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        raise PersistenceError("A user settings row is malformed.") from error
 
-    Args:
-        entries: Entries to organize.
 
-    Returns:
-        Entries keyed by ``YYYY-MM`` display month.
-    """
-    grouped: dict[str, list[Entry]] = {}
-    for entry in entries:
-        timestamp = entry.end_at if entry.kind == "sleep" and entry.end_at is not None else entry.start_at
-        grouped.setdefault(timestamp.strftime("%Y-%m"), []).append(entry)
-    return grouped
+def _row_to_weigh_in(row: sqlite3.Row) -> WeighIn:
+    try:
+        return WeighIn(
+            id=int(row["id"]),
+            user_id=int(row["user_id"]),
+            weight_grams=int(row["weight_grams"]),
+            recorded_at=datetime.fromisoformat(str(row["recorded_at"])),
+            created_at=datetime.fromisoformat(str(row["created_at"])),
+            updated_at=datetime.fromisoformat(str(row["updated_at"])),
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        raise PersistenceError("A weigh-in row is malformed.") from error
+
+
+def _row_to_trash_item(row: sqlite3.Row) -> TrashItem:
+    try:
+        return TrashItem(
+            record_type=str(row["record_type"]),
+            record_id=int(row["record_id"]),
+            label=str(row["label"]),
+            deleted_at=datetime.fromisoformat(str(row["deleted_at"])),
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        raise PersistenceError("A trash row is malformed.") from error

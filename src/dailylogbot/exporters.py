@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from io import BytesIO
 from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
@@ -22,7 +22,9 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.platypus.doctemplate import BaseDocTemplate
 
-from dailylogbot.db import Entry
+from dailylogbot.db import Entry, WeighIn
+from dailylogbot.i18n import format_report_date, report
+from dailylogbot.measurements import format_weight
 
 NAVY = "16324F"
 TEAL = "1B998B"
@@ -36,25 +38,48 @@ LINE = "D8E1EB"
 WHITE = "FFFFFF"
 
 
-def export_xlsx(entries: list[Entry], start_date: date, end_date: date, tz: ZoneInfo) -> BytesIO:
+def export_xlsx(
+    entries: list[Entry],
+    start_date: date,
+    end_date: date,
+    tz: ZoneInfo,
+    *,
+    weigh_ins: list[WeighIn] | None = None,
+    locale: str = "en",
+    weight_unit: str = "kg",
+) -> BytesIO:
     """Create a polished, month-by-month Excel log with summaries and dated sections."""
     workbook = Workbook()
     workbook.properties.creator = "DailyLog"
-    workbook.properties.title = "Daily Log export"
+    workbook.properties.title = f"{report(locale, 'title')} export"
     workbook.properties.subject = f"{start_date.isoformat()} to {end_date.isoformat()}"
     first_sheet = workbook.active
     for index, (month_key, month_start, month_end) in enumerate(_month_ranges(start_date, end_date)):
         sheet = first_sheet if index == 0 else workbook.create_sheet()
         sheet.title = month_key
         month_entries = [entry for entry in entries if month_start <= _entry_day(entry, tz) <= month_end]
-        _write_month_sheet(sheet, month_entries, month_start, month_end, tz)
+        month_weigh_ins = [
+            weigh_in
+            for weigh_in in (weigh_ins or [])
+            if month_start <= weigh_in.recorded_at.astimezone(tz).date() <= month_end
+        ]
+        _write_month_sheet(sheet, month_entries, month_weigh_ins, month_start, month_end, tz, locale, weight_unit)
     stream = BytesIO()
     workbook.save(stream)
     stream.seek(0)
     return stream
 
 
-def export_pdf(entries: list[Entry], start_date: date, end_date: date, tz: ZoneInfo) -> BytesIO:
+def export_pdf(
+    entries: list[Entry],
+    start_date: date,
+    end_date: date,
+    tz: ZoneInfo,
+    *,
+    weigh_ins: list[WeighIn] | None = None,
+    locale: str = "en",
+    weight_unit: str = "kg",
+) -> BytesIO:
     """Create a print-ready PDF report with a clear hierarchy and coloured data table."""
     stream = BytesIO()
     document = SimpleDocTemplate(
@@ -64,21 +89,38 @@ def export_pdf(entries: list[Entry], start_date: date, end_date: date, tz: ZoneI
         leftMargin=10 * mm,
         topMargin=21 * mm,
         bottomMargin=17 * mm,
-        title="Daily Log export",
+        title=f"{report(locale, 'title')} export",
         author="DailyLog",
     )
     styles = _pdf_styles()
     story: list[object] = [
-        Paragraph("Daily Log", styles["title"]),
-        Paragraph(f"Activity and nutrition record | {start_date:%d %b %Y} - {end_date:%d %b %Y}", styles["subtitle"]),
+        Paragraph(report(locale, "title"), styles["title"]),
+        Paragraph(
+            report(
+                locale,
+                "subtitle",
+                start=format_report_date(start_date, locale),
+                end=format_report_date(end_date, locale),
+            ),
+            styles["subtitle"],
+        ),
         Spacer(1, 6 * mm),
     ]
     for index, (month_key, month_start, month_end) in enumerate(_month_ranges(start_date, end_date)):
         month_entries = [entry for entry in entries if month_start <= _entry_day(entry, tz) <= month_end]
-        story.extend(_pdf_month_section(month_key, month_entries, styles, tz))
+        month_weigh_ins = [
+            weigh_in
+            for weigh_in in (weigh_ins or [])
+            if month_start <= weigh_in.recorded_at.astimezone(tz).date() <= month_end
+        ]
+        story.extend(_pdf_month_section(month_key, month_entries, month_weigh_ins, styles, tz, locale, weight_unit))
         if index < len(_month_ranges(start_date, end_date)) - 1:
             story.append(PageBreak())
-    document.build(story, onFirstPage=_draw_pdf_page, onLaterPages=_draw_pdf_page)
+
+    def draw_page(canvas: Canvas, report_document: BaseDocTemplate) -> None:
+        _draw_pdf_page(canvas, report_document, locale)
+
+    document.build(story, onFirstPage=draw_page, onLaterPages=draw_page)
     stream.seek(0)
     return stream
 
@@ -94,9 +136,12 @@ def range_bounds(start_date: date, end_date: date, tz: ZoneInfo) -> tuple[dateti
 def _write_month_sheet(
     sheet: Worksheet,
     entries: list[Entry],
+    weigh_ins: list[WeighIn],
     month_start: date,
     month_end: date,
     tz: ZoneInfo,
+    locale: str,
+    weight_unit: str,
 ) -> None:
     """Lay out one Excel worksheet as a compact, readable monthly report."""
     sheet.sheet_view.showGridLines = False
@@ -115,19 +160,22 @@ def _write_month_sheet(
 
     sheet.merge_cells("A1:H1")
     title_cell = sheet["A1"]
-    title_cell.value = "DAILY LOG"
+    title_cell.value = report(locale, "title").upper()
     title_cell.font = Font(name="Aptos Display", size=22, bold=True, color=WHITE)
     title_cell.fill = PatternFill("solid", fgColor=NAVY)
     title_cell.alignment = Alignment(horizontal="left", vertical="center")
     sheet.row_dimensions[1].height = 38
     sheet.merge_cells("A2:H2")
     subtitle_cell = sheet["A2"]
-    subtitle_cell.value = f"{month_start:%B %Y}  |  {month_start:%d %b} - {month_end:%d %b %Y}"
+    subtitle_cell.value = (
+        f"{report(locale, f'month_{month_start.month:02d}')} {month_start.year}  |  "
+        f"{format_report_date(month_start, locale)} - {format_report_date(month_end, locale)}"
+    )
     subtitle_cell.font = Font(name="Aptos", size=11, color=MUTED)
     subtitle_cell.alignment = Alignment(horizontal="left", vertical="center")
     sheet.row_dimensions[2].height = 24
-    _write_metric_cards(sheet, entries)
-    headers = ["DATE", "TYPE", "ACTIVITY / MEAL", "START", "END", "DURATION", "DETAILS"]
+    _write_metric_cards(sheet, entries, locale)
+    headers = [report(locale, key) for key in ("date", "type", "activity", "start", "end", "duration", "details")]
     for column, value in enumerate(headers, start=1):
         cell = sheet.cell(row=8, column=column, value=value)
         cell.fill = PatternFill("solid", fgColor=NAVY)
@@ -138,7 +186,7 @@ def _write_month_sheet(
     row = 9
     for day, day_entries in _group_by_day(entries, tz).items():
         sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
-        day_cell = sheet.cell(row=row, column=1, value=day.strftime("%A · %d %B %Y").upper())
+        day_cell = sheet.cell(row=row, column=1, value=format_report_date(day, locale, weekday=True).upper())
         day_cell.fill = PatternFill("solid", fgColor="DCEAF7")
         day_cell.font = Font(name="Aptos", size=10, bold=True, color=BLUE)
         day_cell.alignment = Alignment(horizontal="left", vertical="center")
@@ -146,7 +194,7 @@ def _write_month_sheet(
         sheet.row_dimensions[row].height = 22
         row += 1
         for entry in _daily_order(day_entries):
-            values = _xlsx_row(entry, tz)
+            values = _xlsx_row(entry, tz, locale)
             for column, value in enumerate(values, start=1):
                 cell = sheet.cell(row=row, column=column, value=value)
                 cell.font = Font(name="Aptos", size=10, color=INK)
@@ -163,14 +211,15 @@ def _write_month_sheet(
     if row == 9:
         sheet.merge_cells("A9:G9")
         empty_cell = sheet["A9"]
-        empty_cell.value = "No entries recorded for this month."
+        empty_cell.value = report(locale, "empty")
         empty_cell.font = Font(name="Aptos", size=11, italic=True, color=MUTED)
         empty_cell.alignment = Alignment(horizontal="center", vertical="center")
         empty_cell.fill = PatternFill("solid", fgColor=MIST)
         sheet.row_dimensions[9].height = 30
         row = 10
+    row = _write_weight_section(sheet, row + 1, weigh_ins, tz, locale, weight_unit)
     sheet.merge_cells(start_row=row + 1, start_column=1, end_row=row + 1, end_column=7)
-    footer_cell = sheet.cell(row=row + 1, column=1, value="Generated by DailyLog · Private personal record")
+    footer_cell = sheet.cell(row=row + 1, column=1, value=report(locale, "footer"))
     footer_cell.font = Font(name="Aptos", size=9, italic=True, color=MUTED)
     footer_cell.alignment = Alignment(horizontal="right", vertical="center")
     sheet.row_dimensions[row + 1].height = 22
@@ -178,13 +227,13 @@ def _write_month_sheet(
     sheet.auto_filter.ref = f"A8:G{max(9, row - 1)}"
 
 
-def _write_metric_cards(sheet: Worksheet, entries: list[Entry]) -> None:
+def _write_metric_cards(sheet: Worksheet, entries: list[Entry], locale: str) -> None:
     """Write four visual metric cards above the sheet's detailed activity table."""
     metrics = [
-        ("ENTRIES", len(entries), BLUE),
-        ("MEALS", sum(entry.kind == "meal" for entry in entries), TEAL),
-        ("TRAINING", sum(entry.kind == "training" for entry in entries), AMBER),
-        ("SLEEP", sum(entry.kind == "sleep" for entry in entries), VIOLET),
+        (report(locale, "entries"), len(entries), BLUE),
+        (report(locale, "meals"), sum(entry.kind == "meal" for entry in entries), TEAL),
+        (report(locale, "training"), sum(entry.kind == "training" for entry in entries), AMBER),
+        (report(locale, "sleep"), sum(entry.kind == "sleep" for entry in entries), VIOLET),
     ]
     for index, (label, value, color) in enumerate(metrics):
         start_column = index * 2 + 1
@@ -201,6 +250,59 @@ def _write_metric_cards(sheet: Worksheet, entries: list[Entry]) -> None:
     sheet.row_dimensions[5].height = 31
 
 
+def _write_weight_section(
+    sheet: Worksheet,
+    start_row: int,
+    weigh_ins: list[WeighIn],
+    tz: ZoneInfo,
+    locale: str,
+    weight_unit: str,
+) -> int:
+    """Append a compact localized monthly body-weight table when readings exist."""
+    if not weigh_ins:
+        return start_row - 1
+    row = start_row
+    sheet.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
+    title = sheet.cell(row=row, column=1, value=report(locale, "weight_summary"))
+    title.fill = PatternFill("solid", fgColor=VIOLET)
+    title.font = Font(name="Aptos", size=11, bold=True, color=WHITE)
+    title.alignment = Alignment(horizontal="left", vertical="center")
+    sheet.row_dimensions[row].height = 22
+    row += 1
+    headers = [
+        report(locale, "date"),
+        report(locale, "time"),
+        report(locale, "weight"),
+        report(locale, "latest"),
+        report(locale, "average"),
+    ]
+    for column, value in enumerate(headers, start=1):
+        cell = sheet.cell(row=row, column=column, value=value)
+        cell.fill = PatternFill("solid", fgColor=NAVY)
+        cell.font = Font(name="Aptos", size=9, bold=True, color=WHITE)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    row += 1
+    average = round(sum(item.weight_grams for item in weigh_ins) / len(weigh_ins))
+    latest = max(weigh_ins, key=lambda item: (item.recorded_at, item.id))
+    for item in weigh_ins:
+        local = item.recorded_at.astimezone(tz)
+        values = [
+            format_report_date(local.date(), locale),
+            local.strftime("%H:%M"),
+            format_weight(item.weight_grams, weight_unit),
+            format_weight(latest.weight_grams, weight_unit),
+            format_weight(average, weight_unit),
+        ]
+        for column, value in enumerate(values, start=1):
+            cell = sheet.cell(row=row, column=column, value=value)
+            cell.font = Font(name="Aptos", size=10, color=INK)
+            cell.fill = PatternFill("solid", fgColor=WHITE if row % 2 else MIST)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = _bottom_border(LINE)
+        row += 1
+    return row - 1
+
+
 def _style_category_cell(cell: Cell, kind: str) -> None:
     """Apply a distinct colour treatment for an entry category in the Excel table."""
     color = {"meal": TEAL, "training": AMBER, "sleep": VIOLET}[kind]
@@ -214,17 +316,17 @@ def _bottom_border(color: str) -> Border:
     return Border(bottom=Side(style="thin", color=color))
 
 
-def _xlsx_row(entry: Entry, tz: ZoneInfo) -> list[str]:
+def _xlsx_row(entry: Entry, tz: ZoneInfo, locale: str) -> list[str]:
     """Return a sanitized presentation row for a single Excel entry."""
     start = entry.start_at.astimezone(tz)
     end = entry.end_at.astimezone(tz) if entry.end_at else None
     return [
-        start.strftime("%d %b"),
-        _kind_label(entry.kind),
+        format_report_date(start.date(), locale),
+        _kind_label(entry.kind, locale),
         _safe_excel_text(_entry_title(entry)),
         start.strftime("%H:%M"),
         end.strftime("%H:%M") if end and entry.kind != "meal" else "",
-        _duration(entry),
+        _duration(entry, locale),
         _safe_excel_text(entry.text),
     ]
 
@@ -331,20 +433,33 @@ def _pdf_styles() -> dict[str, ParagraphStyle]:
 def _pdf_month_section(
     month_key: str,
     entries: list[Entry],
+    weigh_ins: list[WeighIn],
     styles: dict[str, ParagraphStyle],
     tz: ZoneInfo,
+    locale: str,
+    weight_unit: str,
 ) -> list[object]:
     """Build one PDF month section with summary cards and a grouped data table."""
-    month_title = datetime.strptime(month_key, "%Y-%m").replace(tzinfo=UTC).strftime("%B %Y")
+    year, month = (int(value) for value in month_key.split("-", 1))
+    month_date = date(year, month, 1)
+    month_title = f"{report(locale, f'month_{month_date.month:02d}')} {month_date.year}"
     section: list[object] = [
         Paragraph(month_title, styles["month"]),
-        _pdf_metric_cards(entries, styles),
+        _pdf_metric_cards(entries, styles, locale),
         Spacer(1, 5 * mm),
     ]
-    if not entries:
-        section.append(Paragraph("No entries recorded for this month.", styles["empty"]))
-        return section
-    headers = ["DATE", "TYPE", "ACTIVITY / MEAL", "TIME", "DURATION", "DETAILS"]
+    if entries:
+        section.append(_pdf_entries_table(entries, styles, tz, locale))
+    if weigh_ins:
+        section.extend(_pdf_weight_section(weigh_ins, styles, tz, locale, weight_unit))
+    if not entries and not weigh_ins:
+        section.append(Paragraph(report(locale, "empty"), styles["empty"]))
+    return section
+
+
+def _pdf_entries_table(entries: list[Entry], styles: dict[str, ParagraphStyle], tz: ZoneInfo, locale: str) -> Table:
+    """Create the localized entry table for one PDF month section."""
+    headers = [report(locale, key) for key in ("date", "type", "activity", "time", "duration", "details")]
     data: list[list[object]] = [[Paragraph(header, styles["header"]) for header in headers]]
     commands: list[tuple[object, ...]] = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{NAVY}")),
@@ -359,33 +474,29 @@ def _pdf_month_section(
     ]
     for day, day_entries in _group_by_day(entries, tz).items():
         row = len(data)
-        data.append([Paragraph(day.strftime("%A | %d %B %Y").upper(), styles["day"]), "", "", "", "", ""])
+        data.append(
+            [Paragraph(format_report_date(day, locale, weekday=True).upper(), styles["day"]), "", "", "", "", ""]
+        )
         commands.extend(
-            [
-                ("SPAN", (0, row), (-1, row)),
-                ("BACKGROUND", (0, row), (-1, row), colors.HexColor("#E8F1F9")),
-                ("TOPPADDING", (0, row), (-1, row), 5),
-                ("BOTTOMPADDING", (0, row), (-1, row), 4),
-            ]
+            [("SPAN", (0, row), (-1, row)), ("BACKGROUND", (0, row), (-1, row), colors.HexColor("#E8F1F9"))]
         )
         for entry in _daily_order(day_entries):
             row = len(data)
-            data.append(_pdf_entry_row(entry, styles, tz))
+            data.append(_pdf_entry_row(entry, styles, tz, locale))
             commands.append(("BACKGROUND", (1, row), (1, row), colors.HexColor(f"#{_kind_color(entry.kind)}")))
             commands.append(("TEXTCOLOR", (1, row), (1, row), colors.white))
     table = Table(data, colWidths=[55, 57, 94, 83, 56, 181], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle(commands))
-    section.append(table)
-    return section
+    return table
 
 
-def _pdf_metric_cards(entries: list[Entry], styles: dict[str, ParagraphStyle]) -> Table:
+def _pdf_metric_cards(entries: list[Entry], styles: dict[str, ParagraphStyle], locale: str) -> Table:
     """Create a four-card visual summary for a PDF month section."""
     values = [
-        ("ENTRIES", len(entries), BLUE),
-        ("MEALS", sum(entry.kind == "meal" for entry in entries), TEAL),
-        ("TRAINING", sum(entry.kind == "training" for entry in entries), AMBER),
-        ("SLEEP", sum(entry.kind == "sleep" for entry in entries), VIOLET),
+        (report(locale, "entries"), len(entries), BLUE),
+        (report(locale, "meals"), sum(entry.kind == "meal" for entry in entries), TEAL),
+        (report(locale, "training"), sum(entry.kind == "training" for entry in entries), AMBER),
+        (report(locale, "sleep"), sum(entry.kind == "sleep" for entry in entries), VIOLET),
     ]
     data = [
         [Paragraph(label, styles["metric_label"]) for label, _, _ in values],
@@ -404,19 +515,82 @@ def _pdf_metric_cards(entries: list[Entry], styles: dict[str, ParagraphStyle]) -
     return table
 
 
-def _pdf_entry_row(entry: Entry, styles: dict[str, ParagraphStyle], tz: ZoneInfo) -> list[Paragraph]:
+def _pdf_entry_row(entry: Entry, styles: dict[str, ParagraphStyle], tz: ZoneInfo, locale: str) -> list[Paragraph]:
     """Render one entry into PDF-safe table cells without interpreting user text as markup."""
     return [
-        Paragraph(_entry_day(entry, tz).strftime("%d %b"), styles["cell"]),
-        Paragraph(_kind_label(entry.kind), styles["cell_bold"]),
+        Paragraph(format_report_date(_entry_day(entry, tz), locale), styles["cell"]),
+        Paragraph(_kind_label(entry.kind, locale), styles["cell_bold"]),
         Paragraph(_escape_pdf(_entry_title(entry)), styles["cell_bold"]),
-        Paragraph(_escape_pdf(_time_range(entry, tz)), styles["cell"]),
-        Paragraph(_duration(entry), styles["cell"]),
+        Paragraph(_escape_pdf(_time_range(entry, tz, locale)), styles["cell"]),
+        Paragraph(_duration(entry, locale), styles["cell"]),
         Paragraph(_escape_pdf(entry.text) if entry.text else "-", styles["cell"]),
     ]
 
 
-def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate) -> None:
+def _pdf_weight_section(
+    weigh_ins: list[WeighIn], styles: dict[str, ParagraphStyle], tz: ZoneInfo, locale: str, weight_unit: str
+) -> list[object]:
+    """Build a localized body-weight summary and readings table for a PDF month."""
+    latest = max(weigh_ins, key=lambda item: (item.recorded_at, item.id))
+    average = round(sum(item.weight_grams for item in weigh_ins) / len(weigh_ins))
+    summary = Table(
+        [
+            [
+                Paragraph(report(locale, "weigh_ins"), styles["metric_label"]),
+                Paragraph(report(locale, "latest"), styles["metric_label"]),
+                Paragraph(report(locale, "average"), styles["metric_label"]),
+            ],
+            [
+                Paragraph(str(len(weigh_ins)), styles["metric_value"]),
+                Paragraph(format_weight(latest.weight_grams, weight_unit), styles["metric_value"]),
+                Paragraph(format_weight(average, weight_unit), styles["metric_value"]),
+            ],
+        ],
+        colWidths=[179.66] * 3,
+        hAlign="LEFT",
+    )
+    summary.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(f"#{VIOLET}")),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
+    headers = [report(locale, key) for key in ("date", "time", "weight")]
+    data: list[list[object]] = [[Paragraph(header, styles["header"]) for header in headers]]
+    for item in weigh_ins:
+        local = item.recorded_at.astimezone(tz)
+        data.append(
+            [
+                Paragraph(format_report_date(local.date(), locale), styles["cell"]),
+                Paragraph(local.strftime("%H:%M"), styles["cell"]),
+                Paragraph(format_weight(item.weight_grams, weight_unit), styles["cell_bold"]),
+            ]
+        )
+    readings = Table(data, colWidths=[180, 180, 179], repeatRows=1, hAlign="LEFT")
+    readings.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{NAVY}")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LINEBELOW", (0, 0), (-1, -1), 0.35, colors.HexColor(f"#{LINE}")),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+    return [
+        Spacer(1, 5 * mm),
+        Paragraph(report(locale, "weight_summary"), styles["month"]),
+        summary,
+        Spacer(1, 4 * mm),
+        readings,
+    ]
+
+
+def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate, locale: str) -> None:
     """Draw the shared navy report header and quiet page-number footer on each page."""
     canvas.saveState()
     width, height = A4
@@ -424,10 +598,10 @@ def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate) -> None:
     canvas.rect(0, height - 14 * mm, width, 14 * mm, stroke=0, fill=1)
     canvas.setFillColor(colors.white)
     canvas.setFont("Helvetica-Bold", 8)
-    canvas.drawString(10 * mm, height - 8.5 * mm, "DAILY LOG")
+    canvas.drawString(10 * mm, height - 8.5 * mm, report(locale, "title").upper())
     canvas.setFillColor(colors.HexColor(f"#{MUTED}"))
     canvas.setFont("Helvetica", 7.5)
-    canvas.drawRightString(width - 10 * mm, 9 * mm, f"Private personal record | Page {document.page}")
+    canvas.drawRightString(width - 10 * mm, 9 * mm, report(locale, "page", page=document.page))
     canvas.restoreState()
 
 
@@ -467,9 +641,9 @@ def _entry_title(entry: Entry) -> str:
     return entry.label
 
 
-def _kind_label(kind: str) -> str:
-    """Return the human-readable English category used by portable exports."""
-    return {"meal": "Meal", "training": "Training", "sleep": "Sleep"}[kind]
+def _kind_label(kind: str, locale: str) -> str:
+    """Return the report-localized category label."""
+    return report(locale, f"{kind if kind != 'sleep' else 'sleep'}_kind" if kind != "meal" else "meal")
 
 
 def _kind_color(kind: str) -> str:
@@ -477,25 +651,27 @@ def _kind_color(kind: str) -> str:
     return {"meal": TEAL, "training": AMBER, "sleep": VIOLET}[kind]
 
 
-def _time_range(entry: Entry, tz: ZoneInfo) -> str:
+def _time_range(entry: Entry, tz: ZoneInfo, locale: str) -> str:
     """Format an activity's local start and end times, including overnight clarity."""
     start = entry.start_at.astimezone(tz)
     if entry.kind == "meal":
         return start.strftime("%H:%M")
     if entry.end_at is None:
-        return f"{start:%H:%M} - Open"
+        return f"{start:%H:%M} - {report(locale, 'open')}"
     end = entry.end_at.astimezone(tz)
     if start.date() != end.date():
-        return f"{start:%d %b %H:%M} - {end:%d %b %H:%M}"
+        start_text = f"{format_report_date(start.date(), locale)} {start:%H:%M}"
+        end_text = f"{format_report_date(end.date(), locale)} {end:%H:%M}"
+        return f"{start_text} - {end_text}"
     return f"{start:%H:%M} - {end:%H:%M}"
 
 
-def _duration(entry: Entry) -> str:
+def _duration(entry: Entry, locale: str) -> str:
     """Return a compact, non-negative elapsed duration for a closed activity."""
     if entry.kind == "meal":
         return "-"
     if entry.end_at is None:
-        return "Open"
+        return report(locale, "open")
     seconds = max(0, int((entry.end_at - entry.start_at).total_seconds()))
     hours, remainder = divmod(seconds, 3600)
     minutes = remainder // 60
