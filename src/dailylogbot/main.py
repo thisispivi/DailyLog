@@ -10,6 +10,7 @@ from dailylogbot.handlers import BotHandlers
 
 
 def main() -> None:
+    """Configure and run the private DailyLog Telegram polling application."""
     config = load_config()
     logging.basicConfig(
         level=getattr(logging, config.log_level, logging.INFO),
@@ -28,6 +29,9 @@ def main() -> None:
     application.add_handler(CommandHandler("export", handlers.export_command))
     application.add_handler(CommandHandler("edit", handlers.edit_command))
     application.add_handler(CommandHandler("edit_last", handlers.edit_last_command))
+    application.add_handler(CommandHandler("cancel", handlers.cancel))
+    application.add_handler(CommandHandler("end", handlers.end_activity))
+    application.add_handler(CommandHandler("stop", handlers.end_activity))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.message))
     application.add_error_handler(handlers.error)
     application.run_polling()
