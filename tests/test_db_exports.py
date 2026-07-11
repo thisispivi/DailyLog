@@ -1,11 +1,11 @@
-from datetime import date, datetime
+import sqlite3
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from openpyxl import load_workbook
 
 from dailylogbot.db import ActiveActivityError, Database
 from dailylogbot.exporters import export_pdf, export_xlsx, range_bounds
-
 
 TZ = ZoneInfo("Europe/Berlin")
 
@@ -45,7 +45,7 @@ def test_xlsx_export_uses_new_summary_and_safe_detail_layout(tmp_path) -> None:
         user_id=user_id,
         kind="meal",
         label="Breakfast",
-        text="=HYPERLINK(\"https://unsafe.example\")",
+        text='=HYPERLINK("https://unsafe.example")',
         start_at=datetime(2026, 7, 8, 8, 0, tzinfo=TZ),
     )
     start_at, end_at = range_bounds(date(2026, 7, 8), date(2026, 7, 8), TZ)
@@ -59,7 +59,7 @@ def test_xlsx_export_uses_new_summary_and_safe_detail_layout(tmp_path) -> None:
     assert sheet["A5"].value == 1
     assert sheet["A8"].value == "DATE"
     assert sheet["B10"].value == "Meal"
-    assert sheet["G10"].value == "'=HYPERLINK(\"https://unsafe.example\")"
+    assert sheet["G10"].value == '\'=HYPERLINK("https://unsafe.example")'
     assert sheet["G10"].data_type == "s"
 
 
@@ -109,3 +109,31 @@ def test_date_range_uses_half_open_activity_bounds(tmp_path) -> None:
     start_at, end_at = range_bounds(date(2026, 7, 8), date(2026, 7, 8), TZ)
 
     assert [entry.id for entry in db.list_entries_between(123, start_at, end_at)] == [meal.id]
+
+
+def test_startup_normalizes_legacy_timestamp_storage_to_utc(tmp_path) -> None:
+    """Migrate old offset-based timestamp strings before indexed range queries use them."""
+    database_path = tmp_path / "legacy.sqlite3"
+    database = Database(database_path)
+    entry = database.add_entry(
+        user_id=123,
+        kind="meal",
+        label="Breakfast",
+        text="coffee",
+        start_at=datetime(2026, 10, 25, 8, 0, tzinfo=TZ),
+    )
+    connection = sqlite3.connect(database_path)
+    try:
+        connection.execute(
+            "UPDATE entries SET start_at = ? WHERE id = ?",
+            ("2026-10-25T08:00:00+01:00", entry.id),
+        )
+        connection.execute("PRAGMA user_version = 0")
+        connection.commit()
+    finally:
+        connection.close()
+
+    migrated_entry = Database(database_path).get_entry(123, entry.id)
+
+    assert migrated_entry is not None
+    assert migrated_entry.start_at == datetime(2026, 10, 25, 7, 0, tzinfo=UTC)

@@ -1,3 +1,5 @@
+"""Telegram-safe presentation functions for persisted DailyLog entries."""
+
 from __future__ import annotations
 
 from datetime import datetime

@@ -1,3 +1,5 @@
+"""Localized Telegram reply-keyboard construction."""
+
 from __future__ import annotations
 
 from telegram import KeyboardButton, ReplyKeyboardMarkup

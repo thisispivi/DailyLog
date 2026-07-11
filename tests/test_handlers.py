@@ -2,7 +2,6 @@ import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
-from zoneinfo import ZoneInfo
 
 from dailylogbot.config import Config
 from dailylogbot.db import Database
@@ -62,6 +61,7 @@ def _handlers(path: Path) -> BotHandlers:
 
 def test_guided_workflows_use_emoji_buttons_and_lock_open_activity(tmp_path) -> None:
     """Complete meal, training, and repeated sleep flows while proving the activity lock."""
+
     async def scenario() -> None:
         """Run complete guided flows, including two sleep sessions in one local day."""
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
@@ -111,6 +111,7 @@ def test_guided_workflows_use_emoji_buttons_and_lock_open_activity(tmp_path) -> 
 
 def test_export_wizard_sends_all_data_after_format_and_range_steps(tmp_path) -> None:
     """Drive the three-step emoji export wizard and assert it produces an XLSX document."""
+
     async def scenario() -> None:
         """Run the export interaction using the exact localized emoji button labels."""
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
@@ -143,6 +144,7 @@ def test_export_wizard_sends_all_data_after_format_and_range_steps(tmp_path) -> 
 
 def test_start_uses_telegram_language_for_messages_and_keyboard(tmp_path) -> None:
     """Use Telegram's Italian language code for the welcome copy and first idle button."""
+
     async def scenario() -> None:
         """Start an Italian session and inspect the localized response boundary."""
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
@@ -160,6 +162,7 @@ def test_start_uses_telegram_language_for_messages_and_keyboard(tmp_path) -> Non
 
 def test_wizards_reject_stale_navigation_buttons_and_keep_the_expected_step(tmp_path) -> None:
     """Prevent an old reply-keyboard button from becoming saved meal text or a training name."""
+
     async def scenario() -> None:
         """Send stale navigation buttons during both input-only wizard states."""
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
@@ -195,6 +198,7 @@ def test_wizards_reject_stale_navigation_buttons_and_keep_the_expected_step(tmp_
 
 def test_open_activity_blocks_command_handlers_except_end_and_cancel(tmp_path) -> None:
     """Keep commands locked while an activity is open, even outside the text router."""
+
     async def scenario() -> None:
         """Open training, try an unrelated command, then cancel the active record."""
         handlers = _handlers(tmp_path / "dailylog.sqlite3")

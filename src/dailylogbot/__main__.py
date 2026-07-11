@@ -1,6 +1,6 @@
-from dailylogbot.main import main
+"""Run DailyLog as a Python module."""
 
+from dailylogbot.main import main
 
 if __name__ == "__main__":
     main()
-

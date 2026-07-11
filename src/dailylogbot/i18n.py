@@ -1,10 +1,11 @@
+"""Validated, cached localization catalogs for DailyLog's user interface."""
+
 from __future__ import annotations
 
 import json
 from functools import cache
 from importlib.resources import files
 from typing import Final
-
 
 SUPPORTED_LANGUAGES: Final = frozenset({"en", "it"})
 _REQUIRED_SECTIONS: Final = frozenset({"buttons", "button_aliases", "messages", "meal_types", "activity_labels"})
@@ -84,7 +85,9 @@ def _catalog(language: str) -> dict[str, dict[str, str]]:
     if language not in SUPPORTED_LANGUAGES:
         raise TranslationCatalogError(f"Unsupported translation catalog: {language}")
     try:
-        raw_catalog = json.loads(files("dailylogbot").joinpath("locales", f"{language}.json").read_text(encoding="utf-8"))
+        raw_catalog = json.loads(
+            files("dailylogbot").joinpath("locales", f"{language}.json").read_text(encoding="utf-8")
+        )
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         raise TranslationCatalogError(f"Unable to load the {language} translation catalog.") from exc
     if not isinstance(raw_catalog, dict) or set(raw_catalog) != _REQUIRED_SECTIONS:
@@ -92,8 +95,12 @@ def _catalog(language: str) -> dict[str, dict[str, str]]:
     catalog: dict[str, dict[str, str]] = {}
     for section_name in _REQUIRED_SECTIONS:
         section = raw_catalog[section_name]
-        if not isinstance(section, dict) or not section or not all(
-            isinstance(key, str) and isinstance(value, str) and key and value for key, value in section.items()
+        if (
+            not isinstance(section, dict)
+            or not section
+            or not all(
+                isinstance(key, str) and isinstance(value, str) and key and value for key, value in section.items()
+            )
         ):
             raise TranslationCatalogError(f"The {language} translation catalog has an invalid {section_name} section.")
         catalog[section_name] = section

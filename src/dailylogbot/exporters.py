@@ -1,13 +1,16 @@
+"""XLSX and PDF report generation isolated from Telegram delivery."""
+
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta
+from collections.abc import Iterable
+from datetime import UTC, date, datetime, time, timedelta
 from io import BytesIO
-from typing import Iterable
 from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import Cell
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.worksheet import Worksheet
 from reportlab.lib import colors
@@ -15,10 +18,11 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus.doctemplate import BaseDocTemplate
 
 from dailylogbot.db import Entry
-
 
 NAVY = "16324F"
 TEAL = "1B998B"
@@ -106,8 +110,8 @@ def _write_month_sheet(
     sheet.page_margins.bottom = 0.45
     sheet.freeze_panes = "A9"
     widths = {"A": 16, "B": 16, "C": 24, "D": 15, "E": 15, "F": 14, "G": 56, "H": 4}
-    for column, width in widths.items():
-        sheet.column_dimensions[column].width = width
+    for column_name, width in widths.items():
+        sheet.column_dimensions[column_name].width = width
 
     sheet.merge_cells("A1:H1")
     title_cell = sheet["A1"]
@@ -197,7 +201,7 @@ def _write_metric_cards(sheet: Worksheet, entries: list[Entry]) -> None:
     sheet.row_dimensions[5].height = 31
 
 
-def _style_category_cell(cell, kind: str) -> None:
+def _style_category_cell(cell: Cell, kind: str) -> None:
     """Apply a distinct colour treatment for an entry category in the Excel table."""
     color = {"meal": TEAL, "training": AMBER, "sleep": VIOLET}[kind]
     cell.fill = PatternFill("solid", fgColor=color)
@@ -331,8 +335,12 @@ def _pdf_month_section(
     tz: ZoneInfo,
 ) -> list[object]:
     """Build one PDF month section with summary cards and a grouped data table."""
-    month_title = datetime.strptime(month_key, "%Y-%m").strftime("%B %Y")
-    section: list[object] = [Paragraph(month_title, styles["month"]), _pdf_metric_cards(entries, styles), Spacer(1, 5 * mm)]
+    month_title = datetime.strptime(month_key, "%Y-%m").replace(tzinfo=UTC).strftime("%B %Y")
+    section: list[object] = [
+        Paragraph(month_title, styles["month"]),
+        _pdf_metric_cards(entries, styles),
+        Spacer(1, 5 * mm),
+    ]
     if not entries:
         section.append(Paragraph("No entries recorded for this month.", styles["empty"]))
         return section
@@ -408,7 +416,7 @@ def _pdf_entry_row(entry: Entry, styles: dict[str, ParagraphStyle], tz: ZoneInfo
     ]
 
 
-def _draw_pdf_page(canvas, document) -> None:
+def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate) -> None:
     """Draw the shared navy report header and quiet page-number footer on each page."""
     canvas.saveState()
     width, height = A4
@@ -513,7 +521,13 @@ def _month_ranges(start_date: date, end_date: date) -> list[tuple[str, date, dat
     ranges: list[tuple[str, date, date]] = []
     current = start_date.replace(day=1)
     while current <= end_date:
-        next_month = current.replace(year=current.year + 1, month=1) if current.month == 12 else current.replace(month=current.month + 1)
-        ranges.append((current.strftime("%Y-%m"), max(start_date, current), min(end_date, next_month - timedelta(days=1))))
+        next_month = (
+            current.replace(year=current.year + 1, month=1)
+            if current.month == 12
+            else current.replace(month=current.month + 1)
+        )
+        ranges.append(
+            (current.strftime("%Y-%m"), max(start_date, current), min(end_date, next_month - timedelta(days=1)))
+        )
         current = next_month
     return ranges

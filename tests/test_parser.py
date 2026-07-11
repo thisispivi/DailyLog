@@ -3,7 +3,6 @@ from zoneinfo import ZoneInfo
 
 from dailylogbot.parser import parse_date_range, parse_edit_fields, parse_message
 
-
 TZ = ZoneInfo("Europe/Berlin")
 NOW = datetime(2026, 7, 8, 9, 30, tzinfo=TZ)
 

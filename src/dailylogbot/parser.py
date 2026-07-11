@@ -1,3 +1,5 @@
+"""Side-effect-free parsing for DailyLog's compact text commands."""
+
 from __future__ import annotations
 
 import re
@@ -5,6 +7,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from dailylogbot.db import EntryFieldValue
 
 MEAL_ALIASES = {
     "breakfast": "Breakfast",
@@ -25,7 +28,9 @@ MEAL_ALIASES = {
     "cena": "Dinner",
 }
 SLEEP_START = frozenset({"sleep", "start sleep", "dormo", "vado a dormire", "inizia sonno"})
-SLEEP_END = frozenset({"wake", "wakeup", "wake up", "sleep end", "end sleep", "sveglia", "mi sono svegliato", "fine sonno"})
+SLEEP_END = frozenset(
+    {"wake", "wakeup", "wake up", "sleep end", "end sleep", "sveglia", "mi sono svegliato", "fine sonno"}
+)
 TRAINING_END = frozenset({"stop", "end", "done", "finish", "finished", "fine", "finito", "fine sport", "end training"})
 TRAINING_START_BUTTONS = frozenset({"start training", "inizia sport", "inizia allenamento"})
 DATE_RANGE_PATTERN = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})$")
@@ -88,9 +93,9 @@ def parse_date_range(raw_text: str) -> tuple[date, date]:
         raise ValueError("Invalid ISO date") from exc
 
 
-def parse_edit_fields(raw_fields: str, tz: ZoneInfo) -> dict[str, object]:
+def parse_edit_fields(raw_fields: str, tz: ZoneInfo) -> dict[str, EntryFieldValue]:
     """Extract supported key=value edit fields and convert date fields to local time."""
-    fields: dict[str, object] = {}
+    fields: dict[str, EntryFieldValue] = {}
     for key in ("kind", "label", "text", "start", "end"):
         match = re.search(rf"(?:^|\s){key}=((?:(?!\s(?:kind|label|text|start|end)=).)+)", raw_fields, re.IGNORECASE)
         if match is None:
@@ -99,7 +104,9 @@ def parse_edit_fields(raw_fields: str, tz: ZoneInfo) -> dict[str, object]:
         if key == "start":
             fields["start_at"] = parse_local_datetime(value, tz)
         elif key == "end":
-            fields["end_at"] = parse_local_datetime(value, tz) if value.casefold() not in {"none", "open", "-"} else None
+            fields["end_at"] = (
+                parse_local_datetime(value, tz) if value.casefold() not in {"none", "open", "-"} else None
+            )
         elif key == "kind":
             normalized = value.casefold()
             if normalized not in {"meal", "training", "sleep"}:
@@ -114,7 +121,7 @@ def parse_local_datetime(value: str, tz: ZoneInfo) -> datetime:
     """Parse a local ISO-like date or datetime into a timezone-aware value."""
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d"):
         try:
-            parsed = datetime.strptime(value.strip(), fmt)
+            parsed = datetime.strptime(value.strip(), fmt).replace(tzinfo=tz)
         except ValueError:
             continue
         if fmt == "%Y-%m-%d":
@@ -143,17 +150,21 @@ def _parse_export(lowered: str, now: datetime) -> ParsedAction | None:
     match = re.fullmatch(r"/?(?:export|esporta)\s+(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})(?:\s+(xlsx|pdf))?", lowered)
     if match is not None:
         start_date, end_date = parse_date_range(f"{match.group(1)} {match.group(2)}")
-        return ParsedAction(action="export", start_date=start_date, end_date=end_date, export_format=match.group(3) or "xlsx")
+        return ParsedAction(
+            action="export", start_date=start_date, end_date=end_date, export_format=match.group(3) or "xlsx"
+        )
     month_match = re.fullmatch(r"/?(?:export|esporta)(?:\s+(xlsx|pdf))?", lowered)
     if month_match is None:
         return None
     start_date, end_date = _month_bounds(now.date())
-    return ParsedAction(action="export", start_date=start_date, end_date=end_date, export_format=month_match.group(1) or "xlsx")
+    return ParsedAction(
+        action="export", start_date=start_date, end_date=end_date, export_format=month_match.group(1) or "xlsx"
+    )
 
 
 def _parse_sleep_range(lowered: str, now: datetime, tz: ZoneInfo) -> ParsedAction | None:
     """Parse an explicit sleep clock range, assigning a crossing start to yesterday."""
-    match = re.fullmatch(r"(?:sleep|sonno|dormito)\s+(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})", lowered)
+    match = re.fullmatch(r"(?:sleep|sonno|dormito)\s+(\d{1,2}:\d{2})\s*[-\N{EN DASH}]\s*(\d{1,2}:\d{2})", lowered)
     if match is None:
         return None
     start_clock = _parse_clock(match.group(1))
@@ -171,7 +182,7 @@ def _parse_sleep_range(lowered: str, now: datetime, tz: ZoneInfo) -> ParsedActio
 
 def _parse_training_range(text: str, now: datetime, tz: ZoneInfo) -> ParsedAction | None:
     """Parse an activity followed by a same-day or overnight clock range."""
-    match = re.fullmatch(r"(.+?)\s+(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})", text)
+    match = re.fullmatch(r"(.+?)\s+(\d{1,2}:\d{2})\s*[-\N{EN DASH}]\s*(\d{1,2}:\d{2})", text)
     if match is None:
         return None
     label = match.group(1).strip()
@@ -191,9 +202,11 @@ def _parse_clock(value: str) -> time:
 
 
 def _month_bounds(day: date) -> tuple[date, date]:
-    """Return the inclusive first and final dates of the supplied day’s month."""
+    """Return the inclusive first and final dates of the supplied day's month."""
     start = day.replace(day=1)
-    next_month = start.replace(year=start.year + 1, month=1) if start.month == 12 else start.replace(month=start.month + 1)
+    next_month = (
+        start.replace(year=start.year + 1, month=1) if start.month == 12 else start.replace(month=start.month + 1)
+    )
     return start, next_month - timedelta(days=1)
 
 

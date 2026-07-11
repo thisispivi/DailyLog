@@ -44,6 +44,7 @@ The application uses `python-telegram-bot`, SQLite, `openpyxl`, and ReportLab. L
 .
 ├── src
 │   └── dailylogbot
+│       ├── application     Framework-independent logbook use cases
 │       ├── config.py       Runtime configuration and validation
 │       ├── db.py           SQLite repository and data invariants
 │       ├── exporters.py    XLSX and PDF report generation
@@ -78,6 +79,8 @@ ALLOWED_USER_ID=123456789
 TIMEZONE=Europe/Berlin
 DATABASE_PATH=data/dailylogbot.sqlite3
 LOG_LEVEL=INFO
+TELEGRAM_NETWORK_TIMEOUT_SECONDS=10
+TELEGRAM_CONNECTION_POOL_SIZE=8
 ```
 
 `ALLOWED_USER_ID` is required; the bot rejects all other Telegram users.
@@ -89,6 +92,12 @@ docker compose up --build
 ```
 
 The Compose configuration stores SQLite data in the durable `dailylogbot_data` volume.
+
+## Runtime Operations
+
+DailyLog processes updates sequentially to keep the guided conversation state deterministic. SQLite work and XLSX/PDF generation run in worker threads, so they do not block Telegram's asyncio event loop. Telegram HTTP clients are long-lived, bounded by the configured timeout and connection-pool values, and are closed by the framework during graceful polling shutdown.
+
+The database now normalizes existing aware ISO timestamps to UTC at startup, using SQLite's `user_version` marker. This is an automatic data migration: no schema or command change is required, and the bot continues to display timestamps in `TIMEZONE`. Back up the SQLite volume before deploying any production upgrade as normal operational practice.
 
 ## Commands
 
@@ -121,6 +130,11 @@ The edit commands support `label=`, `text=`, `start=`, `end=`, and `kind=`. Use 
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff format --check .
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m mypy
+.\.venv\Scripts\python.exe -m pytest --cov
+.\.venv\Scripts\pip-audit.exe
 .\.venv\Scripts\python.exe -m compileall -q src
 git diff --check
 ```

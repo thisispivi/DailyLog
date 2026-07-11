@@ -82,6 +82,7 @@
     "edit_empty": "Nessun campo modificabile trovato. Usa label=, text=, start=, end=, kind=.",
     "updated": "✅ Aggiornato:\n{entry}",
     "invalid_entry": "⚠️ Impossibile salvare questa voce: {reason}",
+    "operation_failed": "⚠️ Qualcosa non ha funzionato. Riprova tra poco.",
     "language": "Italiano",
     "meal_kind": "pasto",
     "training_kind": "allenamento",

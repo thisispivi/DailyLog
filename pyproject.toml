@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dailylogbot"
-version = "0.2.0"
+version = "0.3.0"
 description = "Private Telegram bot with guided meals, activity tracking, and personal exports."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,7 +18,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "mypy>=1.15",
+  "pip-audit>=2.9",
   "pytest>=8.3.4",
+  "pytest-cov>=6.0",
+  "ruff>=0.11",
 ]
 
 [tool.setuptools.packages.find]
@@ -29,3 +33,31 @@ dailylogbot = ["locales/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--strict-config --strict-markers"
+
+[tool.coverage.run]
+branch = true
+source = ["dailylogbot"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/dailylogbot"]
+strict = true
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "truthy-bool", "redundant-self"]
+
+[[tool.mypy.overrides]]
+module = ["openpyxl.*", "reportlab.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "DTZ", "FA", "ISC", "PIE", "RET", "RUF", "SIM"]

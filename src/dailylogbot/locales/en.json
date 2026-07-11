@@ -81,6 +81,7 @@
     "edit_empty": "No editable fields found. Use label=, text=, start=, end=, kind=.",
     "updated": "✅ Updated:\n{entry}",
     "invalid_entry": "⚠️ That entry could not be saved: {reason}",
+    "operation_failed": "⚠️ Something went wrong. Please try again shortly.",
     "language": "English",
     "meal_kind": "meal",
     "training_kind": "training",
