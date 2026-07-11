@@ -156,3 +156,61 @@ def test_start_uses_telegram_language_for_messages_and_keyboard(tmp_path) -> Non
         assert kwargs["reply_markup"].keyboard[0][0].text == "🍽 Aggiungi pasto"
 
     asyncio.run(scenario())
+
+
+def test_wizards_reject_stale_navigation_buttons_and_keep_the_expected_step(tmp_path) -> None:
+    """Prevent an old reply-keyboard button from becoming saved meal text or a training name."""
+    async def scenario() -> None:
+        """Send stale navigation buttons during both input-only wizard states."""
+        handlers = _handlers(tmp_path / "dailylog.sqlite3")
+        context = SimpleNamespace(user_data={})
+        update = FakeUpdate(FakeMessage())
+
+        update.effective_message.text = "🍽 Add meal"
+        await handlers.message(update, context)
+        update.effective_message.text = "🍳 Breakfast"
+        await handlers.message(update, context)
+        update.effective_message.text = "📅 Today"
+        await handlers.message(update, context)
+        assert update.effective_message.replies[-1][0].startswith("Write the food and quantities")
+        assert handlers.db.list_entries(123) == []
+
+        update.effective_message.text = "/cancel"
+        await handlers.cancel(update, context)
+        update.effective_message.text = "🏃 Start training"
+        await handlers.message(update, context)
+        update.effective_message.text = "😴 Start sleep"
+        await handlers.message(update, context)
+        assert update.effective_message.replies[-1][0].startswith("Write an activity name")
+        assert handlers.db.get_open_activity(123) is None
+
+        update.effective_message.text = "bouldering"
+        await handlers.message(update, context)
+        active = handlers.db.get_open_activity(123)
+        assert active is not None
+        assert active.label == "bouldering"
+
+    asyncio.run(scenario())
+
+
+def test_open_activity_blocks_command_handlers_except_end_and_cancel(tmp_path) -> None:
+    """Keep commands locked while an activity is open, even outside the text router."""
+    async def scenario() -> None:
+        """Open training, try an unrelated command, then cancel the active record."""
+        handlers = _handlers(tmp_path / "dailylog.sqlite3")
+        context = SimpleNamespace(user_data={})
+        update = FakeUpdate(FakeMessage(text="🏃 Start training"))
+
+        await handlers.message(update, context)
+        update.effective_message.text = "🏃 Run"
+        await handlers.message(update, context)
+        update.effective_message.text = "/today"
+        await handlers.today(update, context)
+        assert update.effective_message.replies[-1][0].startswith("⚠️ An activity is already open")
+        assert handlers.db.get_open_activity(123) is not None
+
+        update.effective_message.text = "/cancel"
+        await handlers.cancel(update, context)
+        assert handlers.db.get_open_activity(123) is None
+
+    asyncio.run(scenario())

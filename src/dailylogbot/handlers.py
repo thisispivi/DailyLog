@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta
+from enum import StrEnum
 
 from telegram import InputFile, Update
 from telegram.constants import ChatAction
@@ -11,7 +12,16 @@ from dailylogbot.config import Config
 from dailylogbot.db import ActiveActivityError, Database, Entry
 from dailylogbot.exporters import export_pdf, export_xlsx, range_bounds
 from dailylogbot.formatting import entries_block, entry_line
-from dailylogbot.i18n import button, button_key, kind_name, meal_type_from_label, t
+from dailylogbot.i18n import (
+    activity_label,
+    button,
+    button_key,
+    is_activity_suggestion,
+    kind_name,
+    meal_type_button_key,
+    meal_type_from_label,
+    t,
+)
 from dailylogbot.keyboards import (
     active_keyboard,
     cancel_keyboard,
@@ -29,13 +39,17 @@ logger = logging.getLogger(__name__)
 FLOW_KEY = "dailylog_flow"
 MEAL_TYPE_KEY = "dailylog_meal_type"
 EXPORT_FORMAT_KEY = "dailylog_export_format"
-ACTIVITY_LABELS = {
-    "walk": "Walk",
-    "run": "Run",
-    "gym": "Gym",
-    "tennis": "Tennis",
-    "table_tennis": "Table tennis",
-}
+
+
+class Flow(StrEnum):
+    """Name the durable wizard states stored in Telegram user data."""
+
+    MEAL_TYPE = "meal_type"
+    MEAL_TEXT = "meal_text"
+    TRAINING_ACTIVITY = "training_activity"
+    EXPORT_FORMAT = "export_format"
+    EXPORT_RANGE = "export_range"
+    EXPORT_DATES = "export_dates"
 
 
 class BotHandlers:
@@ -267,7 +281,7 @@ class BotHandlers:
         """Advance exactly one active wizard step or keep the user on that step."""
         flow = self._flow(context)
         language_code = self._language(update)
-        if flow == "meal_type":
+        if flow is Flow.MEAL_TYPE:
             meal_type = meal_type_from_label(language_code, text)
             if meal_type is None:
                 await self._message(update).reply_text(
@@ -276,16 +290,20 @@ class BotHandlers:
                 )
                 return
             context.user_data[MEAL_TYPE_KEY] = meal_type
-            context.user_data[FLOW_KEY] = "meal_text"
+            context.user_data[FLOW_KEY] = Flow.MEAL_TEXT.value
             await self._message(update).reply_text(
-                t(language_code, "meal_text_prompt", meal_type=button(language_code, _meal_key(meal_type))),
+                t(language_code, "meal_text_prompt", meal_type=button(language_code, meal_type_button_key(language_code, meal_type))),
                 reply_markup=cancel_keyboard(language_code),
             )
             return
-        if flow == "meal_text":
+        if flow is Flow.MEAL_TEXT:
             meal_type = context.user_data.get(MEAL_TYPE_KEY)
-            if not isinstance(meal_type, str) or not text:
-                await self._message(update).reply_text(t(language_code, "meal_text_prompt", meal_type=""))
+            if not isinstance(meal_type, str) or not text or semantic_button is not None:
+                meal_label = button(language_code, meal_type_button_key(language_code, meal_type)) if isinstance(meal_type, str) else ""
+                await self._message(update).reply_text(
+                    t(language_code, "meal_text_invalid", meal_type=meal_label),
+                    reply_markup=cancel_keyboard(language_code),
+                )
                 return
             try:
                 entry = self.db.add_entry(
@@ -304,8 +322,14 @@ class BotHandlers:
                 reply_markup=main_keyboard(language_code),
             )
             return
-        if flow == "training_activity":
-            label = ACTIVITY_LABELS.get(semantic_button or "", text)
+        if flow is Flow.TRAINING_ACTIVITY:
+            if semantic_button is not None and not is_activity_suggestion(language_code, semantic_button):
+                await self._message(update).reply_text(
+                    t(language_code, "activity_invalid"),
+                    reply_markup=training_keyboard(language_code),
+                )
+                return
+            label = activity_label(language_code, semantic_button) if semantic_button else text
             label = " ".join(label.strip().split())
             if not label or len(label) > 120:
                 await self._message(update).reply_text(
@@ -315,7 +339,7 @@ class BotHandlers:
                 return
             await self._start_activity(update, context, "training", label)
             return
-        if flow == "export_format":
+        if flow is Flow.EXPORT_FORMAT:
             if semantic_button not in {"xlsx", "pdf"}:
                 await self._message(update).reply_text(
                     t(language_code, "export_format_prompt"),
@@ -323,20 +347,20 @@ class BotHandlers:
                 )
                 return
             context.user_data[EXPORT_FORMAT_KEY] = semantic_button
-            context.user_data[FLOW_KEY] = "export_range"
+            context.user_data[FLOW_KEY] = Flow.EXPORT_RANGE.value
             await self._message(update).reply_text(
                 t(language_code, "export_range_prompt"),
                 reply_markup=export_range_keyboard(language_code),
             )
             return
-        if flow == "export_range":
+        if flow is Flow.EXPORT_RANGE:
             if semantic_button == "all":
                 export_format = self._export_format(context)
                 self._clear_flow(context)
                 await self._send_all_export(update, export_format)
                 return
             if semantic_button == "range":
-                context.user_data[FLOW_KEY] = "export_dates"
+                context.user_data[FLOW_KEY] = Flow.EXPORT_DATES.value
                 await self._message(update).reply_text(
                     t(language_code, "export_dates_prompt"),
                     reply_markup=cancel_keyboard(language_code),
@@ -347,7 +371,7 @@ class BotHandlers:
                 reply_markup=export_range_keyboard(language_code),
             )
             return
-        if flow == "export_dates":
+        if flow is Flow.EXPORT_DATES:
             try:
                 start_date, end_date = parse_date_range(text)
             except ValueError:
@@ -412,7 +436,7 @@ class BotHandlers:
     async def _begin_meal(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Open the first step of the meal wizard."""
         self._clear_flow(context)
-        context.user_data[FLOW_KEY] = "meal_type"
+        context.user_data[FLOW_KEY] = Flow.MEAL_TYPE.value
         await self._message(update).reply_text(
             t(self._language(update), "meal_type_prompt"),
             reply_markup=meal_type_keyboard(self._language(update)),
@@ -421,7 +445,7 @@ class BotHandlers:
     async def _begin_training(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Open the activity-name step of the training wizard."""
         self._clear_flow(context)
-        context.user_data[FLOW_KEY] = "training_activity"
+        context.user_data[FLOW_KEY] = Flow.TRAINING_ACTIVITY.value
         await self._message(update).reply_text(
             t(self._language(update), "training_prompt"),
             reply_markup=training_keyboard(self._language(update)),
@@ -430,7 +454,7 @@ class BotHandlers:
     async def _begin_export(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Open the format-selection step of the export wizard."""
         self._clear_flow(context)
-        context.user_data[FLOW_KEY] = "export_format"
+        context.user_data[FLOW_KEY] = Flow.EXPORT_FORMAT.value
         await self._message(update).reply_text(
             t(self._language(update), "export_format_prompt"),
             reply_markup=export_format_keyboard(self._language(update)),
@@ -488,7 +512,7 @@ class BotHandlers:
             await self._message(update).reply_text(t(language_code, "invalid_entry", reason=str(exc)))
             return
         if entry is None:
-            await self._message(update).reply_text(t(language_code, "no_open", kind=kind_name(language_code, "training")))
+            await self._message(update).reply_text(t(language_code, "no_open"))
             return
         self._clear_flow(context)
         await self._message(update).reply_text(
@@ -600,10 +624,15 @@ class BotHandlers:
         logger.warning("Rejected update from an unauthorized Telegram user")
         return False
 
-    def _flow(self, context: ContextTypes.DEFAULT_TYPE) -> str | None:
-        """Return the current wizard name only when it is a valid string value."""
+    def _flow(self, context: ContextTypes.DEFAULT_TYPE) -> Flow | None:
+        """Return the current valid wizard state from user data or no active flow."""
         flow = context.user_data.get(FLOW_KEY)
-        return flow if isinstance(flow, str) else None
+        if not isinstance(flow, str):
+            return None
+        try:
+            return Flow(flow)
+        except ValueError:
+            return None
 
     def _clear_flow(self, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Remove only keys owned by this bot's guided workflow."""
@@ -634,14 +663,3 @@ class BotHandlers:
     def _now(self) -> datetime:
         """Return the current datetime in the configured user-facing timezone."""
         return datetime.now(self.config.timezone)
-
-
-def _meal_key(meal_type: str) -> str:
-    """Map a canonical stored meal type to its localized button key."""
-    return {
-        "Breakfast": "breakfast",
-        "Snack 1": "snack_1",
-        "Lunch": "lunch",
-        "Snack 2": "snack_2",
-        "Dinner": "dinner",
-    }[meal_type]

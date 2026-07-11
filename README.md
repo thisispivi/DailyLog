@@ -1,93 +1,76 @@
 # DailyLog
 
-DailyLog is a private Telegram bot for recording meals, training, sleep, and personal exports. It is designed around short guided flows so each interaction has one clear next step.
+DailyLog is a private, single-user Telegram journal for meals, training, sleep, and clean personal reports. It is designed around guided conversations: every action has one clear next step, and open activities are safely protected from conflicting commands.
 
-## Guided experience
+## What It Does
 
-The bot reads the Telegram interface language at `/start` and presents English or Italian buttons and messages. English is the fallback for every other language code.
+- Detects the user's Telegram language at `/start` and serves English or Italian; every user-facing label and message lives in JSON locale files.
+- Records meals in a two-step flow: choose the meal type, then write the food and quantities.
+- Records training in a guided activity picker with walk, run, gym, tennis, and table-tennis suggestions, while accepting any custom activity name.
+- Starts and ends sleep or training sessions, with one database-enforced open activity at a time and unrestricted repeated sessions in a day.
+- Exports any date range or all saved data as an XLSX monthly report or a print-ready PDF.
+- Keeps convenient text input available when idle, including `lunch pasta 120g`, `tennis 18:00-19:30`, and `sleep 23:30-07:10`.
 
-The idle keyboard is intentionally small:
+## Guided Workflow
 
-- `🍽 Add meal`
-- `🏃 Start training`
-- `😴 Start sleep`
-- `📅 Today`, `🕘 Last`, and `📤 Export`
+1. Send `/start`. DailyLog reads the Telegram interface language and shows the idle keyboard.
+2. Select one action: `🍽 Add meal`, `🏃 Start training`, `😴 Start sleep`, `📅 Today`, `🕘 Last`, or `📤 Export`.
+3. For a meal, choose breakfast, snack 1, lunch, snack 2, or dinner, then send the meal details.
+4. For training, choose a suggestion or type an activity. For sleep, the session starts immediately.
+5. While training or sleep is open, the keyboard contains only the matching end control and `✖ Cancel`. Other commands and text entries are rejected until the activity is ended or cancelled.
+6. For an export, choose `📊 XLSX` or `📄 PDF`, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
 
-Every guided step includes an emoji, a step number where useful, and a `✖ Cancel` button. `/cancel` works as well.
+`/cancel` works at every guided step. Cancelling an open activity deletes only that unfinished activity; it never removes an already completed entry.
 
-### Meals
+## Reports
 
-1. Choose `🍽 Add meal`.
-2. Choose breakfast, snack 1, lunch, snack 2, or dinner.
-3. Send the food and quantities, for example `pasta 120g chicken 200g`.
+Both export formats use the same visual system: a navy report header, color-coded meal/training/sleep categories, monthly metric cards, and chronological day sections.
 
-The bot confirms the saved entry and restores the main keyboard.
+- XLSX creates a polished worksheet for each month with print settings, frozen headers, filters, readable wrapped details, and safe literal handling for spreadsheet-formula-like user input.
+- PDF creates a print-ready A4 report with monthly summaries, repeated table headers, a page-number footer, and escaped user text.
 
-### Training and sleep
+## Stack
 
-1. Choose `🏃 Start training`, then select a suggestion (`🚶 Walk`, `🏃 Run`, `🏋️ Gym`, `🎾 Tennis`, or `🏓 Table tennis`) or write any activity name.
-2. The bot saves the start and shows only `⏹ End training` and `✖ Cancel`.
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
+![Telegram](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4?logo=telegram&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)
+![Testing](https://img.shields.io/badge/Tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 
-Sleep starts immediately from `😴 Start sleep` and shows only `⏹ End sleep` and `✖ Cancel`.
+The application uses `python-telegram-bot`, SQLite, `openpyxl`, and ReportLab. Locale catalogs are standard JSON resources packaged with the Python module.
 
-There can be exactly one open training or sleep activity per user. While one is open, every other flow and command is blocked. Ending it records the end time; cancelling it removes the unfinished entry. You can start and complete training or sleep as many times as you need in the same day.
-
-### Exports
-
-The export flow is always the same:
-
-1. Choose `📤 Export`.
-2. Choose `📊 XLSX` or `📄 PDF`.
-3. Choose `🗂 All data` or `📆 Date range`.
-4. For a range, send two dates: `2026-07-01 2026-07-31`.
-
-`All data` finds the first and final saved entries automatically. Empty exports are not generated.
-
-The XLSX export has a new monthly-report layout: a dark header, colour-coded summary cards, clear date sections, a readable detail table, filters, and print settings. The PDF uses the same visual language with a report header/footer, monthly summary cards, and grouped activity tables. User-entered text is stored as literal text in XLSX exports and safely escaped in PDFs.
-
-## Quick text entries
-
-The buttons are the recommended experience. These compact entries remain available when no activity is open:
+## Repository
 
 ```text
-lunch pasta 120g chicken 200g
-pranzo pasta 120g pollo 200g
-tennis 18:00-19:30
-sleep 23:30-07:10
-/export 2026-07-01 2026-07-31 pdf
+.
+├── src
+│   └── dailylogbot
+│       ├── config.py       Runtime configuration and validation
+│       ├── db.py           SQLite repository and data invariants
+│       ├── exporters.py    XLSX and PDF report generation
+│       ├── handlers.py     Telegram boundary and guided state machine
+│       ├── i18n.py         JSON catalog loader and localization helpers
+│       ├── keyboards.py    Semantic reply-keyboard builders
+│       ├── locales          English and Italian JSON catalogs
+│       └── parser.py       Side-effect-free compact input parsing
+├── tests                   Parser, database, export, i18n, and workflow tests
+├── Dockerfile
+├── docker-compose.yml
+└── pyproject.toml
 ```
 
-`sleep 23:30-07:10` is stored across midnight correctly. A short activity name such as `tennis` also starts a training session while the bot is idle.
-
-## Commands
-
-```text
-/start
-/help
-/today
-/last
-/cancel
-/end
-/stop
-/delete_last
-/delete 12
-/export
-/export 2026-07-01 2026-07-31 xlsx
-/edit 12 label=Lunch text=pasta 120g chicken 200g
-/edit_last text=pasta 120g chicken 200g
-```
-
-`/export` opens the guided export flow. The fully specified `/export` command is available for quick use. `/end` and `/stop` end the one open training or sleep activity.
-
-## Setup
-
-1. Create a Telegram bot using BotFather and copy its token.
-2. Find your numeric Telegram user ID.
-3. Copy the environment template and fill in the values.
+## Local Development
 
 ```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
+pytest -q
+python -m dailylogbot
 ```
+
+Set the following values in `.env` before starting the bot:
 
 ```env
 BOT_TOKEN=123456:your-token
@@ -97,42 +80,49 @@ DATABASE_PATH=data/dailylogbot.sqlite3
 LOG_LEVEL=INFO
 ```
 
-4. Create a virtual environment, install the package, run tests, then start the bot.
+`ALLOWED_USER_ID` is required; the bot rejects all other Telegram users.
 
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-pytest
-python -m dailylogbot
-```
-
-Docker is also supported:
+## Docker
 
 ```bash
 docker compose up --build
 ```
 
-The container maps the SQLite database to the durable Docker volume `dailylogbot_data`.
+The Compose configuration stores SQLite data in the durable `dailylogbot_data` volume.
 
-## Architecture and safeguards
+## Commands
 
-- `handlers.py` owns the guided state machine and Telegram interaction boundary.
-- `parser.py` provides side-effect-free parsing for compact input and edit fields.
-- `db.py` is the only persistence boundary. It uses parameterized SQL, foreign-key checks, WAL mode, a busy timeout, soft deletion, validation, and a database-level partial unique index that prevents concurrent open activities.
-- `exporters.py` keeps report generation separate from bot transport and sanitizes spreadsheet control characters, formula-like user text, and PDF markup.
-- `i18n.py` contains all localized user-facing strings and semantic button mapping.
+```text
+/start                 Show the localized home keyboard
+/help                  Explain the guided workflow
+/today                 List today’s entries
+/last                  Show the latest entry
+/cancel                Cancel the current wizard or open activity
+/end or /stop          End the open training or sleep activity
+/export                Open the export workflow
+/export <from> <to> pdf
+/delete_last
+/delete <id>
+/edit <id> key=value
+/edit_last key=value
+```
 
-The token is never logged. `ALLOWED_USER_ID` is mandatory and every handler verifies it before accessing data. Database queries are scoped by that user ID, including edit and delete operations.
+The edit commands support `label=`, `text=`, `start=`, `end=`, and `kind=`. Use local timestamps such as `start=2026-07-08 12:30`.
 
-Production modules and tests use docstrings rather than inline code comments.
+## Security and Data Design
 
-## Development
+- Bot tokens are read from environment variables and are never logged.
+- Every handler and every database query is scoped to the configured user ID.
+- SQLite uses parameterized statements, foreign keys, WAL mode, a busy timeout, soft deletion, and a partial unique index for the single-open-activity rule.
+- Entry validation limits untrusted label and text sizes, while export code neutralizes XLSX formula injection and PDF markup injection.
+- Production modules use docstrings for API documentation; there are no inline implementation comments.
 
-Run the complete regression suite:
+## Quality Checks
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m compileall -q src
+git diff --check
 ```
 
-The suite covers parser rules, database invariants, export safety and report structure, emoji-driven meal/training workflows, the open-activity lock, and the complete export wizard.
+The regression suite covers parsing, localization catalog behavior, database ownership and temporal invariants, safe report generation, the complete meal and export wizards, stale keyboard input, and the open-activity command lock.
