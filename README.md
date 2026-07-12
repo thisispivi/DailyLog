@@ -1,4 +1,10 @@
-# DailyLog
+<div align="center">
+   <div style="display: flex;padding-block:20px;margin-bottom:20px;background-color:#061b44">
+      <img alt="DailyLog banner" src="./assets/readme/dailylog-banner.png" width="100%">
+   </div>
+</div>
+
+# [DailyLog](https://github.com/thisispivi/DailyLog)
 
 DailyLog is a private, single-user Telegram journal for meals, training, sleep, body weight, and clean personal reports. It is designed around guided conversations: every action has one clear next step, and open activities are safely protected from conflicting commands.
 
@@ -12,6 +18,12 @@ DailyLog is a private, single-user Telegram journal for meals, training, sleep, 
 - Lets the user choose Today or up to eight recent record dates to edit or delete entries and weigh-ins, bulk-delete one day's entries, and restore records from Trash for 30 days.
 - Exports any date range or all saved data as a localized XLSX monthly report or print-ready PDF; document language is chosen independently for each export.
 - Keeps convenient text input available when idle, including `lunch pasta 120g`, `tennis 18:00-19:30`, and `sleep 23:30-07:10`.
+
+## Stack
+
+![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white) ![Telegram](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4?style=for-the-badge&logo=telegram&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=for-the-badge&logo=sqlite&logoColor=white) ![uv](https://img.shields.io/badge/uv-261230?style=for-the-badge&logo=uv&logoColor=white) ![Testing](https://img.shields.io/badge/Tests-pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
+The application uses `python-telegram-bot`, SQLite, `openpyxl`, and ReportLab. Locale catalogs are standard JSON resources packaged with the Python module.
 
 ## Guided Workflow
 
@@ -35,19 +47,13 @@ Both export formats use the same visual system: a navy report header, color-code
 - XLSX creates a polished worksheet for each month with print settings, frozen headers, filters, readable wrapped details, and safe literal handling for spreadsheet-formula-like user input.
 - PDF creates a print-ready A4 report with monthly summaries, repeated table headers, a page-number footer, and escaped user text.
 
-## Stack
-
-![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)
-![Telegram](https://img.shields.io/badge/Telegram-Bot%20API-26A5E4?logo=telegram&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)
-![Testing](https://img.shields.io/badge/Tests-pytest-0A9EDC?logo=pytest&logoColor=white)
-
-The application uses `python-telegram-bot`, SQLite, `openpyxl`, and ReportLab. Locale catalogs are standard JSON resources packaged with the Python module.
-
 ## Repository
 
 ```text
 .
+├── assets
+│   └── readme
+│       └── dailylog-banner.png
 ├── src
 │   └── dailylogbot
 │       ├── application     Framework-independent logbook use cases
