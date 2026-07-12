@@ -5,7 +5,14 @@
   "include-component-in-tag": false,
   "packages": {
     ".": {
-      "package-name": "dailylogbot"
+      "package-name": "dailylogbot",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='dailylogbot')].version"
+        }
+      ]
     }
   }
 }
