@@ -16,13 +16,20 @@ dependencies = [
   "tzdata>=2026.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+  "commitizen>=4.8",
+  "deptry>=0.25",
+  "detect-secrets>=1.5",
+  "import-linter>=2.8",
+  "interrogate>=1.7",
   "mypy>=1.15",
   "pip-audit>=2.9",
+  "pre-commit>=4.6",
   "pytest>=8.3.4",
   "pytest-cov>=6.0",
   "ruff>=0.11",
+  "vulture>=2.14",
 ]
 
 [tool.setuptools.packages.find]
@@ -30,6 +37,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 dailylogbot = ["locales/*.json"]
+
+[tool.uv]
+required-version = ">=0.11.14,<0.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -41,6 +51,7 @@ branch = true
 source = ["dailylogbot"]
 
 [tool.coverage.report]
+fail_under = 67
 show_missing = true
 skip_covered = true
 
@@ -60,4 +71,34 @@ target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "ASYNC", "DTZ", "FA", "ISC", "PIE", "RET", "RUF", "SIM"]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "DTZ", "FA", "ISC", "PIE", "RET", "RUF", "SIM", "D", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "S101", "S106"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.importlinter]
+root_package = "dailylogbot"
+
+[[tool.importlinter.contracts]]
+name = "DailyLog modules are acyclic"
+type = "acyclic_siblings"
+ancestors = ["dailylogbot"]
+
+[tool.deptry]
+known_first_party = ["dailylogbot"]
+
+[tool.deptry.package_module_name_map]
+python-dotenv = "dotenv"
+python-telegram-bot = "telegram"
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["tzdata"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_provider = "pep621"
+version_scheme = "pep440"

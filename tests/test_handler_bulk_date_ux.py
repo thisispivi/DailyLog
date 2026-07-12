@@ -56,9 +56,7 @@ def _keyboard_texts(message: FakeMessage) -> list[str]:
     return [button.text for row in keyboard for button in row]
 
 
-def test_delete_day_command_confirms_count_before_soft_deleting_only_that_days_entries(
-    tmp_path, monkeypatch
-) -> None:
+def test_delete_day_command_confirms_count_before_soft_deleting_only_that_days_entries(tmp_path, monkeypatch) -> None:
     async def scenario() -> None:
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
         monkeypatch.setattr(handlers, "_now", lambda: NOW)
@@ -227,9 +225,7 @@ def test_delete_day_rejects_invalid_arguments_and_empty_dates_can_be_cancelled(t
         for invalid_command in ("/delete_day not-a-date", "/delete_day 2026-07-08 extra"):
             message.text = invalid_command
             await handlers.delete_day_command(update, context)
-            assert message.replies[-1][0] == (
-                "Use: /delete_day 2026-07-08, or /delete_day to choose a date."
-            )
+            assert message.replies[-1][0] == ("Use: /delete_day 2026-07-08, or /delete_day to choose a date.")
 
         message.text = "/delete_day 2026-01-01"
         await handlers.delete_day_command(update, context)

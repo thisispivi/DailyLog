@@ -922,9 +922,7 @@ class BotHandlers:
         recent_dates = (
             [value for value in stored_dates if isinstance(value, date)] if isinstance(stored_dates, list) else []
         )
-        return choose_date_keyboard(
-            self._language(update), recent_dates, today=self._now().date()
-        )
+        return choose_date_keyboard(self._language(update), recent_dates, today=self._now().date())
 
     async def _show_manage_records(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: date
@@ -1478,8 +1476,10 @@ class BotHandlers:
         Args:
             update: Telegram event receiving the generated document.
             entries: Entries included in the requested report.
+            weigh_ins: Body-weight readings included in the requested report.
             period: Inclusive local-date period covered by the report.
             requested_format: Requested file format, defaulting safely to XLSX.
+            report_locale: Locale used for report labels and date formatting.
         """
         language_code = self._language(update)
         export_format = "pdf" if requested_format == "pdf" else "xlsx"

@@ -118,6 +118,7 @@ def export_pdf(
             story.append(PageBreak())
 
     def draw_page(canvas: Canvas, report_document: BaseDocTemplate) -> None:
+        """Draw the localized repeated header and footer for one report page."""
         _draw_pdf_page(canvas, report_document, locale)
 
     document.build(story, onFirstPage=draw_page, onLaterPages=draw_page)

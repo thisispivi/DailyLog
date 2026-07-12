@@ -120,9 +120,7 @@ class EntryRepository(Protocol):
             Whether an entry was deleted.
         """
 
-    def delete_entries_between(
-        self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime
-    ) -> int:
+    def delete_entries_between(self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime) -> int:
         """Soft-delete all entries overlapping a half-open interval."""
 
     def list_entries_between(self, user_id: int, start_at: datetime, end_at: datetime) -> list[Entry]:

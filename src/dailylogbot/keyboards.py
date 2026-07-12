@@ -95,9 +95,7 @@ def choose_date_keyboard(
 ) -> ReplyKeyboardMarkup:
     """Offer Today and recent record dates while allowing typed ISO dates."""
     date_buttons = [_btn(language_code, "today")]
-    date_buttons.extend(
-        KeyboardButton(value.isoformat()) for value in recent_dates if today is None or value != today
-    )
+    date_buttons.extend(KeyboardButton(value.isoformat()) for value in recent_dates if today is None or value != today)
     rows = [date_buttons[index : index + 3] for index in range(0, len(date_buttons), 3)]
     rows.append([_btn(language_code, "cancel")])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)

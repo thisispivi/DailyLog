@@ -17,7 +17,14 @@ VALID_WEIGHT_UNITS: Final = frozenset({"kg", "lb"})
 TRASH_RETENTION_DAYS: Final = 30
 type EntryFieldValue = str | datetime | None
 _EDITABLE_FIELDS: Final = frozenset({"kind", "label", "text", "start_at", "end_at"})
-_SCHEMA_VERSION: Final = 2
+_SOFT_DELETE_QUERIES: Final = {
+    "entries": (
+        "UPDATE entries SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ? AND deleted_at IS NULL"
+    ),
+    "weigh_ins": (
+        "UPDATE weigh_ins SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ? AND deleted_at IS NULL"
+    ),
+}
 
 
 class PersistenceError(RuntimeError):
@@ -83,6 +90,14 @@ class Database:
     """Provide transactional SQLite access without leaking SQL into handlers."""
 
     def __init__(self, path: Path) -> None:
+        """Initialize storage, schema, and expired-trash maintenance.
+
+        Args:
+            path: SQLite database file to create or open.
+
+        Side Effects:
+            Creates missing parent directories, initializes or migrates the schema, and removes expired trash.
+        """
         self.path = path.expanduser()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize_schema()
@@ -265,13 +280,34 @@ class Database:
                 if not fields:
                     return entry
                 _validate_entry_values(*_entry_candidate(entry, fields))
-                assignments, values = _update_assignments(fields)
-                assignments.append("updated_at = ?")
-                values.append(_serialize_datetime(datetime.now(UTC)))
-                values.extend((user_id, entry_id))
+                start_at = fields.get("start_at")
+                end_at = fields.get("end_at")
                 connection.execute(
-                    f"UPDATE entries SET {', '.join(assignments)} WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
-                    values,
+                    """
+                    UPDATE entries
+                    SET kind = CASE WHEN ? THEN ? ELSE kind END,
+                        label = CASE WHEN ? THEN ? ELSE label END,
+                        text = CASE WHEN ? THEN ? ELSE text END,
+                        start_at = CASE WHEN ? THEN ? ELSE start_at END,
+                        end_at = CASE WHEN ? THEN ? ELSE end_at END,
+                        updated_at = ?
+                    WHERE user_id = ? AND id = ? AND deleted_at IS NULL
+                    """,
+                    (
+                        "kind" in fields,
+                        fields.get("kind", ""),
+                        "label" in fields,
+                        fields.get("label", ""),
+                        "text" in fields,
+                        fields.get("text", ""),
+                        "start_at" in fields,
+                        _serialize_datetime(start_at) if isinstance(start_at, datetime) else "",
+                        "end_at" in fields,
+                        _serialize_datetime(end_at) if isinstance(end_at, datetime) else end_at,
+                        _serialize_datetime(datetime.now(UTC)),
+                        user_id,
+                        entry_id,
+                    ),
                 )
                 updated_row = connection.execute(
                     "SELECT * FROM entries WHERE user_id = ? AND id = ? AND deleted_at IS NULL", (user_id, entry_id)
@@ -288,9 +324,7 @@ class Database:
         """Soft-delete one owned entry."""
         return self._soft_delete("entries", user_id, entry_id, deleted_at)
 
-    def delete_entries_between(
-        self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime
-    ) -> int:
+    def delete_entries_between(self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime) -> int:
         """Atomically soft-delete entries overlapping a half-open interval."""
         _validate_user_id(user_id)
         _validate_interval(start_at, end_at)
@@ -436,19 +470,23 @@ class Database:
                 ).fetchone()
                 if row is None:
                     return None
-                assignments = ["updated_at = ?"]
-                values: list[object] = [_serialize_datetime(datetime.now(UTC))]
-                if weight_grams is not None:
-                    assignments.append("weight_grams = ?")
-                    values.append(weight_grams)
-                if recorded_at is not None:
-                    assignments.append("recorded_at = ?")
-                    values.append(_serialize_datetime(recorded_at))
-                values.extend((user_id, weigh_in_id))
                 connection.execute(
-                    f"UPDATE weigh_ins SET {', '.join(assignments)} "
-                    "WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
-                    values,
+                    """
+                    UPDATE weigh_ins
+                    SET weight_grams = CASE WHEN ? THEN ? ELSE weight_grams END,
+                        recorded_at = CASE WHEN ? THEN ? ELSE recorded_at END,
+                        updated_at = ?
+                    WHERE user_id = ? AND id = ? AND deleted_at IS NULL
+                    """,
+                    (
+                        weight_grams is not None,
+                        weight_grams if weight_grams is not None else 0,
+                        recorded_at is not None,
+                        _serialize_datetime(recorded_at) if recorded_at is not None else "",
+                        _serialize_datetime(datetime.now(UTC)),
+                        user_id,
+                        weigh_in_id,
+                    ),
                 )
                 updated_row = connection.execute(
                     "SELECT * FROM weigh_ins WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
@@ -556,6 +594,7 @@ class Database:
         return entry_count + weigh_in_count
 
     def _soft_delete(self, table: str, user_id: int, record_id: int, deleted_at: datetime) -> bool:
+        """Move one record from a fixed table into recoverable trash."""
         if table not in {"entries", "weigh_ins"}:
             raise ValueError("Unsupported record table")
         _validate_user_id(user_id)
@@ -564,8 +603,7 @@ class Database:
         try:
             with self._connection() as connection:
                 cursor = connection.execute(
-                    f"UPDATE {table} SET deleted_at = ?, updated_at = ? "
-                    "WHERE user_id = ? AND id = ? AND deleted_at IS NULL",
+                    _SOFT_DELETE_QUERIES[table],
                     (_serialize_datetime(deleted_at), _serialize_datetime(deleted_at), user_id, record_id),
                 )
         except sqlite3.Error as error:
@@ -573,6 +611,7 @@ class Database:
         return cursor.rowcount > 0
 
     def _connect(self) -> sqlite3.Connection:
+        """Open one SQLite connection with the required safety pragmas."""
         try:
             connection = sqlite3.connect(self.path, timeout=30.0)
             connection.row_factory = sqlite3.Row
@@ -585,6 +624,7 @@ class Database:
 
     @contextmanager
     def _connection(self) -> Iterator[sqlite3.Connection]:
+        """Yield a transaction that commits on success and rolls back on failure."""
         connection = self._connect()
         try:
             yield connection
@@ -596,6 +636,7 @@ class Database:
             connection.close()
 
     def _initialize_schema(self) -> None:
+        """Create current tables and indexes, then migrate legacy timestamp storage."""
         try:
             with self._connection() as connection:
                 connection.execute("PRAGMA journal_mode = WAL")
@@ -643,11 +684,12 @@ class Database:
                     WHERE deleted_at IS NULL AND end_at IS NULL AND kind IN ('training', 'sleep')
                     """
                 )
-                connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
+                connection.execute("PRAGMA user_version = 2")
         except sqlite3.Error as error:
             raise PersistenceError("The database schema could not be initialized.") from error
 
     def _migrate_timestamp_storage(self, connection: sqlite3.Connection) -> None:
+        """Normalize legacy entry timestamps to UTC ISO values in the active transaction."""
         rows = connection.execute(
             "SELECT id, start_at, end_at, created_at, updated_at, deleted_at FROM entries"
         ).fetchall()
@@ -667,6 +709,7 @@ class Database:
             )
 
     def _fetch_one(self, query: str, parameters: tuple[object, ...]) -> sqlite3.Row | None:
+        """Execute one parameterized lookup and translate SQLite failures."""
         try:
             with self._connection() as connection:
                 return cast(sqlite3.Row | None, connection.execute(query, parameters).fetchone())
@@ -674,18 +717,25 @@ class Database:
             raise PersistenceError("The database query could not be completed.") from error
 
     def _end_activity(self, user_id: int, end_at: datetime, kind: str | None) -> Entry | None:
+        """Close the earliest active activity, optionally restricted to one kind."""
         _validate_user_id(user_id)
         _validate_aware_datetime(end_at, "end_at")
-        kind_clause = "AND kind = ?" if kind is not None else "AND kind IN ('training', 'sleep')"
-        parameters: tuple[object, ...] = (user_id, kind) if kind is not None else (user_id,)
+        if kind is None:
+            query = (
+                "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL "
+                "AND end_at IS NULL AND kind IN ('training', 'sleep') ORDER BY start_at ASC, id ASC LIMIT 1"
+            )
+            parameters: tuple[object, ...] = (user_id,)
+        else:
+            query = (
+                "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL "
+                "AND end_at IS NULL AND kind = ? ORDER BY start_at ASC, id ASC LIMIT 1"
+            )
+            parameters = (user_id, kind)
         try:
             with self._connection() as connection:
                 connection.execute("BEGIN IMMEDIATE")
-                row = connection.execute(
-                    "SELECT * FROM entries WHERE user_id = ? AND deleted_at IS NULL "
-                    f"AND end_at IS NULL {kind_clause} ORDER BY start_at ASC, id ASC LIMIT 1",
-                    parameters,
-                ).fetchone()
+                row = connection.execute(query, parameters).fetchone()
                 if row is None:
                     return None
                 entry = _row_to_entry(row)
@@ -703,33 +753,39 @@ class Database:
 
 
 def _validate_user_id(user_id: int) -> None:
+    """Reject non-positive or boolean Telegram user identifiers."""
     if isinstance(user_id, bool) or user_id <= 0:
         raise ValueError("user_id must be a positive integer")
 
 
 def _validate_record_id(record_id: int) -> None:
+    """Reject non-positive or boolean database identifiers."""
     if isinstance(record_id, bool) or record_id <= 0:
         raise ValueError("record id must be a positive integer")
 
 
 def _validate_locale(locale: str) -> str:
+    """Return a supported locale or reject an unsupported value."""
     if locale not in VALID_LOCALES:
         raise ValueError("locale must be en or it")
     return locale
 
 
 def _validate_weight_unit(weight_unit: str) -> str:
+    """Return a supported presentation unit or reject an unsupported value."""
     if weight_unit not in VALID_WEIGHT_UNITS:
         raise ValueError("weight_unit must be kg or lb")
     return weight_unit
 
 
 def _validate_weight_grams(weight_grams: int) -> None:
+    """Reject body-weight values outside the supported persisted range."""
     if isinstance(weight_grams, bool) or not isinstance(weight_grams, int) or not 0 < weight_grams <= 1_000_000:
         raise ValueError("weight must be between 0.001 and 1000 kg")
 
 
 def _validate_entry_values(kind: object, label: object, text: object, start_at: object, end_at: object) -> None:
+    """Validate the complete set of user-controlled entry fields."""
     if not isinstance(kind, str) or kind not in VALID_KINDS:
         raise ValueError("kind must be meal, training, or sleep")
     if not isinstance(label, str) or not label.strip() or len(label) > 120:
@@ -746,12 +802,14 @@ def _validate_entry_values(kind: object, label: object, text: object, start_at: 
 
 
 def _validate_aware_datetime(value: object, field_name: str) -> datetime:
+    """Return an aware datetime or raise a field-specific validation error."""
     if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field_name} must be a timezone-aware datetime")
     return value
 
 
 def _validate_interval(start_at: datetime, end_at: datetime) -> None:
+    """Require an ordered, timezone-aware half-open interval."""
     _validate_aware_datetime(start_at, "start_at")
     _validate_aware_datetime(end_at, "end_at")
     if end_at <= start_at:
@@ -761,6 +819,7 @@ def _validate_interval(start_at: datetime, end_at: datetime) -> None:
 def _entry_candidate(
     entry: Entry, fields: Mapping[str, EntryFieldValue]
 ) -> tuple[object, object, object, object, object]:
+    """Combine an entry with a partial update for whole-record validation."""
     return (
         fields.get("kind", entry.kind),
         fields.get("label", entry.label),
@@ -770,22 +829,13 @@ def _entry_candidate(
     )
 
 
-def _update_assignments(fields: Mapping[str, EntryFieldValue]) -> tuple[list[str], list[object]]:
-    assignments: list[str] = []
-    values: list[object] = []
-    for field_name in ("kind", "label", "text", "start_at", "end_at"):
-        if field_name in fields:
-            value = fields[field_name]
-            assignments.append(f"{field_name} = ?")
-            values.append(_serialize_datetime(value) if isinstance(value, datetime) else value)
-    return assignments, values
-
-
 def _serialize_datetime(value: datetime) -> str:
+    """Convert an aware datetime to the canonical UTC persistence representation."""
     return _validate_aware_datetime(value, "timestamp").astimezone(UTC).isoformat(timespec="microseconds")
 
 
 def _row_to_entry(row: sqlite3.Row) -> Entry:
+    """Deserialize one SQLite entry row while enforcing expected value types."""
     try:
         return Entry(
             id=int(row["id"]),
@@ -803,6 +853,7 @@ def _row_to_entry(row: sqlite3.Row) -> Entry:
 
 
 def _row_to_settings(row: sqlite3.Row) -> UserSettings:
+    """Deserialize one SQLite user-settings row with value validation."""
     try:
         return UserSettings(
             user_id=int(row["user_id"]),
@@ -814,6 +865,7 @@ def _row_to_settings(row: sqlite3.Row) -> UserSettings:
 
 
 def _row_to_weigh_in(row: sqlite3.Row) -> WeighIn:
+    """Deserialize one SQLite weigh-in row while enforcing expected value types."""
     try:
         return WeighIn(
             id=int(row["id"]),
@@ -828,6 +880,7 @@ def _row_to_weigh_in(row: sqlite3.Row) -> WeighIn:
 
 
 def _row_to_trash_item(row: sqlite3.Row) -> TrashItem:
+    """Deserialize one SQLite recoverable-record row."""
     try:
         return TrashItem(
             record_type=str(row["record_type"]),
