@@ -9,3 +9,4 @@ def test_json_catalogs_localize_buttons_messages_and_canonical_values() -> None:
     assert meal_type_button_key("en", "Lunch") == "lunch"
     assert activity_label("it", "walk") == "Walk"
     assert t("fr", "language") == "English"
+    assert "Voci interessate: 2" in t("it", "delete_day_confirm", date="2026-07-08", count=2)

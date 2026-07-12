@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import cast
 
-from telegram import InputFile, Message, Update
+from telegram import InputFile, Message, ReplyKeyboardMarkup, Update
 from telegram.constants import ChatAction
 from telegram.error import TelegramError
 from telegram.ext import ContextTypes
@@ -66,6 +66,9 @@ MANAGE_EDIT_FIELD_KEY = "dailylog_manage_edit_field"
 MANAGE_ITEMS_KEY = "dailylog_manage_items"
 MANAGE_ALL_ITEMS_KEY = "dailylog_manage_all_items"
 MANAGE_PAGE_KEY = "dailylog_manage_page"
+MANAGE_DATE_OPTIONS_KEY = "dailylog_manage_date_options"
+DELETE_DAY_COUNT_KEY = "dailylog_delete_day_count"
+DATE_SHORTCUT_LIMIT = 9
 
 
 class Flow(StrEnum):
@@ -87,6 +90,8 @@ class Flow(StrEnum):
     MANAGE_EDIT_FIELD = "manage_edit_field"
     MANAGE_EDIT_VALUE = "manage_edit_value"
     DELETE_CONFIRM = "delete_confirm"
+    DELETE_DAY_DATE = "delete_day_date"
+    DELETE_DAY_CONFIRM = "delete_day_confirm"
     TRASH_LIST = "trash_list"
     TRASH_ACTION = "trash_action"
 
@@ -148,6 +153,21 @@ class BotHandlers:
             await self._message(update).reply_text(t(self._language(update), "delete_usage"))
             return
         await self._request_delete(update, context, "entry", int(parts[1]))
+
+    async def delete_day_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Choose or parse one local date before confirming a bulk entry deletion."""
+        if not await self._authorize(update) or await self._deny_when_activity_open(update):
+            return
+        parts = (self._message(update).text or "").split()
+        if len(parts) == 1:
+            await self._begin_delete_day(update, context)
+            return
+        selected_date = self._parse_manage_date(parts[1]) if len(parts) == 2 else None
+        if selected_date is None:
+            await self._message(update).reply_text(t(self._language(update), "delete_day_usage"))
+            return
+        self._clear_flow(context)
+        await self._request_delete_day(update, context, selected_date)
 
     async def export_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Start the export wizard or run a fully specified power-user export command."""
@@ -558,10 +578,12 @@ class BotHandlers:
             return
         if flow is Flow.MANAGE_CATEGORY:
             if semantic_button in {"entries", "weigh_ins"}:
-                flow_data[MANAGE_TYPE_KEY] = "entry" if semantic_button == "entries" else "weigh_in"
-                flow_data[FLOW_KEY] = Flow.MANAGE_DATE.value
-                await self._message(update).reply_text(
-                    t(language_code, "manage_date_prompt"), reply_markup=choose_date_keyboard(language_code)
+                await self._show_date_picker(
+                    update,
+                    context,
+                    record_type="entry" if semantic_button == "entries" else "weigh_in",
+                    flow=Flow.MANAGE_DATE,
+                    prompt_key="manage_date_prompt",
                 )
                 return
             if semantic_button == "trash":
@@ -575,17 +597,33 @@ class BotHandlers:
             selected_date = self._now().date() if semantic_button == "today" else self._parse_manage_date(text)
             if selected_date is None:
                 await self._message(update).reply_text(
-                    t(language_code, "invalid_manage_date"), reply_markup=choose_date_keyboard(language_code)
+                    t(language_code, "invalid_manage_date"), reply_markup=self._date_keyboard(update, flow_data)
                 )
                 return
             await self._show_manage_records(update, context, selected_date)
             return
+        if flow is Flow.DELETE_DAY_DATE:
+            selected_date = self._now().date() if semantic_button == "today" else self._parse_manage_date(text)
+            if selected_date is None:
+                await self._message(update).reply_text(
+                    t(language_code, "invalid_manage_date"), reply_markup=self._date_keyboard(update, flow_data)
+                )
+                return
+            await self._request_delete_day(update, context, selected_date)
+            return
         if flow is Flow.MANAGE_LIST:
             if semantic_button == "back":
-                flow_data[FLOW_KEY] = Flow.MANAGE_DATE.value
-                await self._message(update).reply_text(
-                    t(language_code, "manage_date_prompt"), reply_markup=choose_date_keyboard(language_code)
-                )
+                record_type = flow_data.get(MANAGE_TYPE_KEY)
+                if isinstance(record_type, str):
+                    await self._show_date_picker(
+                        update,
+                        context,
+                        record_type=record_type,
+                        flow=Flow.MANAGE_DATE,
+                        prompt_key="manage_date_prompt",
+                    )
+                else:
+                    await self._begin_manage(update, context)
                 return
             if text in {"◀", "▶"}:
                 await self._show_manage_page(update, context, -1 if text == "◀" else 1)
@@ -675,6 +713,31 @@ class BotHandlers:
                 return
             await self._message(update).reply_text(
                 t(language_code, "manage_delete_confirm", record=""),
+                reply_markup=confirm_delete_keyboard(language_code),
+            )
+            return
+        if flow is Flow.DELETE_DAY_CONFIRM:
+            if semantic_button == "confirm_delete":
+                await self._confirm_delete_day(update, context)
+                return
+            if semantic_button == "back":
+                await self._show_date_picker(
+                    update,
+                    context,
+                    record_type="entry",
+                    flow=Flow.DELETE_DAY_DATE,
+                    prompt_key="delete_day_prompt",
+                )
+                return
+            bulk_date = flow_data.get(MANAGE_DATE_KEY)
+            selected_count = flow_data.get(DELETE_DAY_COUNT_KEY)
+            await self._message(update).reply_text(
+                t(
+                    language_code,
+                    "delete_day_confirm",
+                    date=bulk_date.isoformat() if isinstance(bulk_date, date) else "",
+                    count=selected_count if isinstance(selected_count, int) else "?",
+                ),
                 reply_markup=confirm_delete_keyboard(language_code),
             )
             return
@@ -804,6 +867,65 @@ class BotHandlers:
             t(language_code, "manage_prompt"), reply_markup=manage_keyboard(language_code)
         )
 
+    async def _begin_delete_day(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Start a bulk entry-deletion flow with recent local-date shortcuts."""
+        self._clear_flow(context)
+        await self._show_date_picker(
+            update,
+            context,
+            record_type="entry",
+            flow=Flow.DELETE_DAY_DATE,
+            prompt_key="delete_day_prompt",
+        )
+
+    async def _show_date_picker(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        *,
+        record_type: str,
+        flow: Flow,
+        prompt_key: str,
+        **prompt_values: object,
+    ) -> None:
+        """Load type-specific recent dates and render a reusable date picker."""
+        recent_dates = await self._run_sync(
+            lambda: self.logbook.recent_record_dates(
+                self._user_id(update), record_type, self.config.timezone, limit=DATE_SHORTCUT_LIMIT
+            )
+        )
+        today = self._now().date()
+        flow_data = self._flow_data(context)
+        for key in (
+            MANAGE_DATE_KEY,
+            MANAGE_RECORD_ID_KEY,
+            MANAGE_EDIT_FIELD_KEY,
+            MANAGE_ITEMS_KEY,
+            MANAGE_ALL_ITEMS_KEY,
+            MANAGE_PAGE_KEY,
+            DELETE_DAY_COUNT_KEY,
+        ):
+            flow_data.pop(key, None)
+        flow_data[MANAGE_TYPE_KEY] = record_type
+        flow_data[MANAGE_DATE_OPTIONS_KEY] = [value for value in recent_dates if value != today][
+            : DATE_SHORTCUT_LIMIT - 1
+        ]
+        flow_data[FLOW_KEY] = flow.value
+        await self._message(update).reply_text(
+            t(self._language(update), prompt_key, **prompt_values),
+            reply_markup=self._date_keyboard(update, flow_data),
+        )
+
+    def _date_keyboard(self, update: Update, flow_data: dict[str, object]) -> ReplyKeyboardMarkup:
+        """Rebuild the current recent-date keyboard from validated flow state."""
+        stored_dates = flow_data.get(MANAGE_DATE_OPTIONS_KEY)
+        recent_dates = (
+            [value for value in stored_dates if isinstance(value, date)] if isinstance(stored_dates, list) else []
+        )
+        return choose_date_keyboard(
+            self._language(update), recent_dates, today=self._now().date()
+        )
+
     async def _show_manage_records(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: date
     ) -> None:
@@ -831,7 +953,7 @@ class BotHandlers:
             )
             await self._message(update).reply_text(
                 t(language_code, "manage_empty", record_type=record_name),
-                reply_markup=choose_date_keyboard(language_code),
+                reply_markup=self._date_keyboard(update, flow_data),
             )
             return
         flow_data[MANAGE_DATE_KEY] = selected_date
@@ -930,6 +1052,40 @@ class BotHandlers:
             reply_markup=confirm_delete_keyboard(language_code),
         )
 
+    async def _request_delete_day(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE, selected_date: date
+    ) -> None:
+        """Load one local day's entries and ask before moving all of them to Trash."""
+        period = ExportPeriod(selected_date, selected_date)
+        entries = await self._run_sync(
+            lambda: self.logbook.entries_in_period(self._user_id(update), period, self.config.timezone)
+        )
+        if not entries:
+            await self._show_date_picker(
+                update,
+                context,
+                record_type="entry",
+                flow=Flow.DELETE_DAY_DATE,
+                prompt_key="delete_day_empty",
+                date=selected_date.isoformat(),
+            )
+            return
+        flow_data = self._flow_data(context)
+        flow_data[MANAGE_TYPE_KEY] = "entry"
+        flow_data[MANAGE_DATE_KEY] = selected_date
+        flow_data[DELETE_DAY_COUNT_KEY] = len(entries)
+        flow_data[FLOW_KEY] = Flow.DELETE_DAY_CONFIRM.value
+        language_code = self._language(update)
+        await self._message(update).reply_text(
+            t(
+                language_code,
+                "delete_day_confirm",
+                date=selected_date.isoformat(),
+                count=len(entries),
+            ),
+            reply_markup=confirm_delete_keyboard(language_code),
+        )
+
     async def _confirm_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Move the selected record to trash only after an explicit confirmation."""
         flow_data = self._flow_data(context)
@@ -952,6 +1108,44 @@ class BotHandlers:
         self._clear_flow(context)
         await self._message(update).reply_text(
             t(language_code, "deleted_to_trash"), reply_markup=main_keyboard(language_code)
+        )
+
+    async def _confirm_delete_day(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Atomically soft-delete every entry overlapping the selected local date."""
+        flow_data = self._flow_data(context)
+        selected_date = flow_data.get(MANAGE_DATE_KEY)
+        if not isinstance(selected_date, date):
+            await self._begin_delete_day(update, context)
+            return
+        deleted_at = self._now()
+        deleted_count = await self._run_sync(
+            lambda: self.logbook.delete_entries_in_period(
+                self._user_id(update),
+                ExportPeriod(selected_date, selected_date),
+                self.config.timezone,
+                deleted_at,
+            )
+        )
+        if deleted_count == 0:
+            await self._show_date_picker(
+                update,
+                context,
+                record_type="entry",
+                flow=Flow.DELETE_DAY_DATE,
+                prompt_key="delete_day_empty",
+                date=selected_date.isoformat(),
+            )
+            return
+        language_code = self._language(update)
+        self._clear_flow(context)
+        await self._message(update).reply_text(
+            t(
+                language_code,
+                "delete_day_done",
+                date=selected_date.isoformat(),
+                count=deleted_count,
+            ),
+            reply_markup=main_keyboard(language_code),
         )
 
     async def _restore_selected_record(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1387,6 +1581,8 @@ class BotHandlers:
         flow_data.pop(MANAGE_ITEMS_KEY, None)
         flow_data.pop(MANAGE_ALL_ITEMS_KEY, None)
         flow_data.pop(MANAGE_PAGE_KEY, None)
+        flow_data.pop(MANAGE_DATE_OPTIONS_KEY, None)
+        flow_data.pop(DELETE_DAY_COUNT_KEY, None)
 
     def _export_format(self, context: ContextTypes.DEFAULT_TYPE) -> str:
         """Return a valid selected format, falling back safely to XLSX."""

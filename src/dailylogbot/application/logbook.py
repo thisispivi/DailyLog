@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Protocol
 from zoneinfo import ZoneInfo
 
@@ -119,6 +119,11 @@ class EntryRepository(Protocol):
         Returns:
             Whether an entry was deleted.
         """
+
+    def delete_entries_between(
+        self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime
+    ) -> int:
+        """Soft-delete all entries overlapping a half-open interval."""
 
     def list_entries_between(self, user_id: int, start_at: datetime, end_at: datetime) -> list[Entry]:
         """List user entries overlapping a half-open interval.
@@ -302,6 +307,27 @@ class LogbookService:
         """
         return self._repository.delete_entry(user_id, entry_id, deleted_at)
 
+    def delete_entries_in_period(
+        self,
+        user_id: int,
+        period: ExportPeriod,
+        timezone: ZoneInfo,
+        deleted_at: datetime,
+    ) -> int:
+        """Delete every entry overlapping an inclusive local-date period.
+
+        Args:
+            user_id: Telegram user that owns the entries.
+            period: Inclusive local-date period to delete.
+            timezone: Timezone used to derive the local-day boundaries.
+            deleted_at: Time at which the entries were deleted.
+
+        Returns:
+            Number of entries moved to recoverable trash.
+        """
+        start_at, end_at = range_bounds(period.start_date, period.end_date, timezone)
+        return self._repository.delete_entries_between(user_id, start_at, end_at, deleted_at)
+
     def update_entry(self, user_id: int, entry_id: int, fields: dict[str, EntryFieldValue]) -> Entry | None:
         """Update one owned entry.
 
@@ -341,6 +367,48 @@ class LogbookService:
             Matching entries in chronological order.
         """
         return self.entries_in_period(user_id, ExportPeriod(current_time.date(), current_time.date()), timezone)
+
+    def recent_record_dates(
+        self,
+        user_id: int,
+        record_type: str,
+        timezone: ZoneInfo,
+        *,
+        limit: int = 9,
+    ) -> list[date]:
+        """Return the newest unique local dates containing one record type.
+
+        Closed activities contribute every local day their half-open time range
+        overlaps. An open activity contributes its start date only.
+
+        Args:
+            user_id: Telegram user that owns the records.
+            record_type: Either ``entry`` or ``weigh_in``.
+            timezone: Timezone used to derive local dates.
+            limit: Maximum number of dates to return.
+
+        Returns:
+            Unique matching dates in newest-first order.
+
+        Raises:
+            ValueError: If the record type is unsupported or the limit is not positive.
+        """
+        if record_type not in {"entry", "weigh_in"}:
+            raise ValueError("record_type must be entry or weigh_in")
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        if record_type == "weigh_in":
+            dates = {
+                weigh_in.recorded_at.astimezone(timezone).date()
+                for weigh_in in self._repository.list_weigh_ins(user_id)
+            }
+        else:
+            dates = {
+                local_date
+                for entry in self._repository.list_entries(user_id)
+                for local_date in _entry_local_dates(entry, timezone, limit)
+            }
+        return sorted(dates, reverse=True)[:limit]
 
     def all_entries_period(self, user_id: int, timezone: ZoneInfo) -> tuple[ExportPeriod, list[Entry]] | None:
         """Return every entry with the smallest local-date period containing them.
@@ -396,3 +464,16 @@ class LogbookService:
         dates.extend(weigh_in.recorded_at.astimezone(timezone).date() for weigh_in in weigh_ins)
         period = ExportPeriod(min(dates), max(dates))
         return period, ReportData(entries=entries, weigh_ins=weigh_ins)
+
+
+def _entry_local_dates(entry: Entry, timezone: ZoneInfo, limit: int) -> list[date]:
+    """Return only the newest relevant local dates for one entry."""
+    start_date = entry.start_at.astimezone(timezone).date()
+    if entry.end_at is None:
+        return [start_date]
+    if entry.end_at <= entry.start_at:
+        return []
+    last_date = (entry.end_at - timedelta(microseconds=1)).astimezone(timezone).date()
+    first_relevant_date = max(start_date, last_date - timedelta(days=limit - 1))
+    date_count = (last_date - first_relevant_date).days + 1
+    return [first_relevant_date + timedelta(days=offset) for offset in range(date_count)]

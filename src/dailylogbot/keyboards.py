@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 
@@ -89,11 +90,17 @@ def manage_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
-def choose_date_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
-    """Offer a quick current-day choice while allowing typed ISO dates."""
-    return ReplyKeyboardMarkup(
-        [[_btn(language_code, "today"), _btn(language_code, "cancel")]], resize_keyboard=True, is_persistent=True
+def choose_date_keyboard(
+    language_code: str | None, recent_dates: Sequence[date] = (), *, today: date | None = None
+) -> ReplyKeyboardMarkup:
+    """Offer Today and recent record dates while allowing typed ISO dates."""
+    date_buttons = [_btn(language_code, "today")]
+    date_buttons.extend(
+        KeyboardButton(value.isoformat()) for value in recent_dates if today is None or value != today
     )
+    rows = [date_buttons[index : index + 3] for index in range(0, len(date_buttons), 3)]
+    rows.append([_btn(language_code, "cancel")])
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
 def record_action_keyboard(language_code: str | None, *, deleted: bool = False) -> ReplyKeyboardMarkup:

@@ -43,6 +43,7 @@ def main() -> None:
     application.add_handler(CommandHandler("last", bot_handlers.last))
     application.add_handler(CommandHandler("delete_last", bot_handlers.delete_last))
     application.add_handler(CommandHandler("delete", bot_handlers.delete_command))
+    application.add_handler(CommandHandler("delete_day", bot_handlers.delete_day_command))
     application.add_handler(CommandHandler("export", bot_handlers.export_command))
     application.add_handler(CommandHandler("edit", bot_handlers.edit_command))
     application.add_handler(CommandHandler("edit_last", bot_handlers.edit_last_command))

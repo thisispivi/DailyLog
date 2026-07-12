@@ -9,7 +9,7 @@ DailyLog is a private, single-user Telegram journal for meals, training, sleep, 
 - Records training in a guided activity picker with walk, run, gym, tennis, and table-tennis suggestions, while accepting any custom activity name.
 - Starts and ends sleep or training sessions, with one database-enforced open activity at a time and unrestricted repeated sessions in a day.
 - Records body weight through a one-step flow. Values can use a decimal point or comma, are stored only as metric grams, and are displayed in the saved kg/lb preference.
-- Lets the user manage dated entries and weigh-ins, correct individual fields, move records to Trash, and restore them for 30 days.
+- Lets the user choose Today or up to eight recent record dates to edit or delete entries and weigh-ins, bulk-delete one day's entries, and restore records from Trash for 30 days.
 - Exports any date range or all saved data as a localized XLSX monthly report or print-ready PDF; document language is chosen independently for each export.
 - Keeps convenient text input available when idle, including `lunch pasta 120g`, `tennis 18:00-19:30`, and `sleep 23:30-07:10`.
 
@@ -21,10 +21,12 @@ DailyLog is a private, single-user Telegram journal for meals, training, sleep, 
 4. For training, choose a suggestion or type an activity. For sleep, the session starts immediately.
 5. While training or sleep is open, the keyboard contains only the matching end control and `✖ Cancel`. Other commands and text entries are rejected until the activity is ended or cancelled.
 6. For a weigh-in, enter a positive number in the saved unit; Settings can switch between kg and lb without modifying saved readings.
-7. Manage data lists entries or weigh-ins for an ISO date (`YYYY-MM-DD`), then supports field-level editing, deletion confirmation, and Trash restore.
+7. Manage data offers Today plus eight recent dates containing the selected record type, while still accepting any typed ISO date (`YYYY-MM-DD`). It then supports field-level editing, deletion confirmation, and Trash restore.
 8. For an export, choose `📊 XLSX` or `📄 PDF`, select English or Italian for the document, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
 
 `/cancel` works at every guided step. Cancelling an open activity moves it to Trash; records in Trash are recoverable for 30 days.
+
+Use `/delete_day` to choose a date, or `/delete_day YYYY-MM-DD` as a shortcut. The bot shows the affected entry count and asks for confirmation; weigh-ins are left unchanged, and each deleted entry remains recoverable from Trash.
 
 ## Reports
 
@@ -119,6 +121,7 @@ The database normalizes existing aware ISO timestamps to UTC and migrates existi
 /settings              Change saved language or weight unit
 /delete_last
 /delete <id>
+/delete_day [YYYY-MM-DD]
 /edit <id> key=value
 /edit_last key=value
 ```

@@ -288,6 +288,36 @@ class Database:
         """Soft-delete one owned entry."""
         return self._soft_delete("entries", user_id, entry_id, deleted_at)
 
+    def delete_entries_between(
+        self, user_id: int, start_at: datetime, end_at: datetime, deleted_at: datetime
+    ) -> int:
+        """Atomically soft-delete entries overlapping a half-open interval."""
+        _validate_user_id(user_id)
+        _validate_interval(start_at, end_at)
+        _validate_aware_datetime(deleted_at, "deleted_at")
+        try:
+            with self._connection() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                cursor = connection.execute(
+                    """
+                    UPDATE entries SET deleted_at = ?, updated_at = ?
+                    WHERE user_id = ? AND deleted_at IS NULL AND start_at < ?
+                      AND ((kind = 'meal' AND start_at >= ?)
+                        OR (kind IN ('training', 'sleep') AND (end_at IS NULL OR end_at > ?)))
+                    """,
+                    (
+                        _serialize_datetime(deleted_at),
+                        _serialize_datetime(deleted_at),
+                        user_id,
+                        _serialize_datetime(end_at),
+                        _serialize_datetime(start_at),
+                        _serialize_datetime(start_at),
+                    ),
+                )
+        except sqlite3.Error as error:
+            raise PersistenceError("Entries could not be deleted for the requested period.") from error
+        return cursor.rowcount
+
     def restore_entry(self, user_id: int, entry_id: int) -> Entry | None:
         """Restore a deleted entry, respecting the one-open-activity rule."""
         _validate_user_id(user_id)
