@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/thisispivi/DailyLog/compare/v0.4.1...v0.5.0) (2026-07-13)
+
+
+### Features
+
+* **localization:** enhance Italian language support and document export settings ([aec5aba](https://github.com/thisispivi/DailyLog/commit/aec5aba08e94727d747bf4a6601573cfd6a9235b))
+
 ## [0.4.1](https://github.com/thisispivi/DailyLog/compare/v0.4.0...v0.4.1) (2026-07-13)
 
 
