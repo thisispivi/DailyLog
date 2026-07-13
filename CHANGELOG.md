@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/thisispivi/DailyLog/compare/v0.4.0...v0.4.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* sync lockfile version for release ([b8becd9](https://github.com/thisispivi/DailyLog/commit/b8becd9e953d7fabffdb10834fb34c284f246322))
+
 ## [0.4.0](https://github.com/thisispivi/DailyLog/compare/v0.3.0...v0.4.0) (2026-07-12)
 
 
