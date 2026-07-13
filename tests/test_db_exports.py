@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from openpyxl import load_workbook
 
 from dailylogbot.db import ActiveActivityError, Database
-from dailylogbot.exporters import export_pdf, export_xlsx, range_bounds
+from dailylogbot.exporters import _localized_entry_title, _pdf_details, export_pdf, export_xlsx, range_bounds
 
 TZ = ZoneInfo("Europe/Berlin")
 
@@ -35,6 +35,30 @@ def test_database_and_exports(tmp_path) -> None:
     assert len(entries) == 2
     assert export_xlsx(entries, date(2026, 7, 8), date(2026, 7, 8), TZ).getbuffer().nbytes > 0
     assert export_pdf(entries, date(2026, 7, 8), date(2026, 7, 8), TZ).getvalue().startswith(b"%PDF")
+
+
+def test_pdf_rows_localize_known_labels_and_fold_duration_into_details(tmp_path) -> None:
+    """Localize canonical report labels and keep duration out of its own PDF column."""
+    db = Database(tmp_path / "test.sqlite3")
+    snack = db.add_entry(
+        user_id=123,
+        kind="meal",
+        label="Snack 2",
+        text="yogurt",
+        start_at=datetime(2026, 7, 8, 16, 0, tzinfo=TZ),
+    )
+    training = db.add_entry(
+        user_id=123,
+        kind="training",
+        label="Walk",
+        text="park",
+        start_at=datetime(2026, 7, 8, 18, 0, tzinfo=TZ),
+        end_at=datetime(2026, 7, 8, 19, 30, tzinfo=TZ),
+    )
+
+    assert _localized_entry_title(snack, "it", generic_snack=True) == "Spuntino"
+    assert _localized_entry_title(training, "it") == "Camminata"
+    assert _pdf_details(training, "it") == "1h 30m | park"
 
 
 def test_xlsx_export_uses_new_summary_and_safe_detail_layout(tmp_path) -> None:
@@ -137,3 +161,28 @@ def test_startup_normalizes_legacy_timestamp_storage_to_utc(tmp_path) -> None:
 
     assert migrated_entry is not None
     assert migrated_entry.start_at == datetime(2026, 10, 25, 7, 0, tzinfo=UTC)
+
+
+def test_schema_v3_migrates_document_language_from_saved_interface_language(tmp_path) -> None:
+    """Add the document locale to a version-2 settings table without losing preferences."""
+    database_path = tmp_path / "legacy-v2.sqlite3"
+    connection = sqlite3.connect(database_path)
+    try:
+        connection.execute(
+            """
+            CREATE TABLE user_settings (
+                user_id INTEGER PRIMARY KEY,
+                locale TEXT NOT NULL CHECK (locale IN ('en', 'it')),
+                weight_unit TEXT NOT NULL CHECK (weight_unit IN ('kg', 'lb'))
+            )
+            """
+        )
+        connection.execute("INSERT INTO user_settings (user_id, locale, weight_unit) VALUES (123, 'it', 'lb')")
+        connection.execute("PRAGMA user_version = 2")
+        connection.commit()
+    finally:
+        connection.close()
+
+    settings = Database(database_path).get_or_create_settings(123, "en")
+
+    assert (settings.locale, settings.export_locale, settings.weight_unit) == ("it", "it", "lb")

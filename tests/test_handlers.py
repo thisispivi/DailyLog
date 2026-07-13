@@ -109,8 +109,8 @@ def test_guided_workflows_use_emoji_buttons_and_lock_open_activity(tmp_path) -> 
     asyncio.run(scenario())
 
 
-def test_export_wizard_sends_all_data_after_format_language_and_range_steps(tmp_path) -> None:
-    """Drive the localized four-step export wizard and assert it produces an XLSX document."""
+def test_export_wizard_uses_saved_document_language_without_an_extra_step(tmp_path) -> None:
+    """Persist document language in Settings, then drive the shorter export wizard."""
 
     async def scenario() -> None:
         """Run the export interaction using the exact localized emoji button labels."""
@@ -125,23 +125,105 @@ def test_export_wizard_sends_all_data_after_format_language_and_range_steps(tmp_
         context = SimpleNamespace(user_data={})
         update = FakeUpdate(FakeMessage())
 
+        update.effective_message.text = "⚙️ Settings"
+        await handlers.message(update, context)
+        update.effective_message.text = "Document: Italiano"
+        await handlers.message(update, context)
+        assert handlers.db.get_or_create_settings(123, "en").export_locale == "it"
+
         update.effective_message.text = "📤 Export"
         await handlers.message(update, context)
-        assert update.effective_message.replies[-1][0].startswith("📤 Step 1 of 4")
+        assert update.effective_message.replies[-1][0].startswith("📤 Step 1 of 3")
 
         update.effective_message.text = "📊 XLSX"
         await handlers.message(update, context)
-        assert update.effective_message.replies[-1][0].startswith("📤 Step 2 of 4")
-
-        update.effective_message.text = "English"
-        await handlers.message(update, context)
-        assert update.effective_message.replies[-1][0].startswith("📤 Step 3 of 4")
+        assert update.effective_message.replies[-1][0].startswith("📤 Step 2 of 3")
 
         update.effective_message.text = "🗂 All data"
         await handlers.message(update, context)
         assert update.effective_message.replies[-1][0].startswith("📤 Preparing your XLSX export")
         assert len(update.effective_message.documents) == 1
         assert update.effective_message.documents[0]["document"].filename.endswith(".xlsx")
+
+    asyncio.run(scenario())
+
+
+def test_compact_export_uses_the_saved_document_language(tmp_path, monkeypatch) -> None:
+    """Apply the persisted report locale to the non-wizard export entry point."""
+
+    async def scenario() -> None:
+        handlers = _handlers(tmp_path / "dailylog.sqlite3")
+        handlers.db.get_or_create_settings(123, "en")
+        handlers.db.update_settings(123, export_locale="it")
+        handlers.db.add_entry(
+            user_id=123,
+            kind="meal",
+            label="Lunch",
+            text="pasta",
+            start_at=handlers._now().replace(year=2026, month=7, day=8),
+        )
+        captured: dict[str, str] = {}
+
+        async def capture_upload(*args: object) -> None:
+            captured["locale"] = str(args[-1])
+
+        monkeypatch.setattr(handlers, "_upload_export", capture_upload)
+        update = FakeUpdate(FakeMessage(text="/export 2026-07-08 2026-07-08 pdf"))
+
+        await handlers.message(update, SimpleNamespace(user_data={}))
+
+        assert captured == {"locale": "it"}
+
+    asyncio.run(scenario())
+
+
+def test_entry_editing_separates_date_and_clock_then_returns_to_edit_options(tmp_path) -> None:
+    """Keep a selected meal in edit mode after changing its date and start clock."""
+
+    async def scenario() -> None:
+        handlers = _handlers(tmp_path / "dailylog.sqlite3")
+        entry = handlers.db.add_entry(
+            user_id=123,
+            kind="meal",
+            label="Lunch",
+            text="salad",
+            start_at=handlers._now(),
+        )
+        context = SimpleNamespace(user_data={})
+        update = FakeUpdate(FakeMessage())
+
+        for value in ("🗂 Manage data", "📝 Entries", "📅 Today"):
+            update.effective_message.text = value
+            await handlers.message(update, context)
+        selection = update.effective_message.replies[-1][1]["reply_markup"].keyboard[0][0].text
+        for value in (selection, "✏️ Edit"):
+            update.effective_message.text = value
+            await handlers.message(update, context)
+
+        edit_buttons = [
+            button.text for row in update.effective_message.replies[-1][1]["reply_markup"].keyboard for button in row
+        ]
+        assert "Date" in edit_buttons
+        assert "Start time" in edit_buttons
+        assert "End time" not in edit_buttons
+
+        for field_name, value in (("Date", "2026-07-12"), ("Start time", "09:15")):
+            update.effective_message.text = field_name
+            await handlers.message(update, context)
+            update.effective_message.text = value
+            await handlers.message(update, context)
+            assert update.effective_message.replies[-1][0].startswith("✅ Updated:")
+            buttons = [
+                button.text
+                for row in update.effective_message.replies[-1][1]["reply_markup"].keyboard
+                for button in row
+            ]
+            assert "Date" in buttons
+
+        edited = handlers.db.get_entry(123, entry.id)
+        assert edited is not None
+        local_start = edited.start_at.astimezone(handlers.config.timezone)
+        assert (local_start.date().isoformat(), local_start.strftime("%H:%M")) == ("2026-07-12", "09:15")
 
     asyncio.run(scenario())
 

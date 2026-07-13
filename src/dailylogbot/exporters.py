@@ -36,6 +36,17 @@ MUTED = "64748B"
 MIST = "F4F7FB"
 LINE = "D8E1EB"
 WHITE = "FFFFFF"
+REPORT_LABEL_KEYS = {
+    "Breakfast": "breakfast",
+    "Lunch": "lunch",
+    "Dinner": "dinner",
+    "Walk": "walk",
+    "Run": "run",
+    "Gym": "gym",
+    "Tennis": "tennis",
+    "Table tennis": "table_tennis",
+}
+SNACK_LABELS = frozenset({"Snack 1", "Snack 2"})
 
 
 def export_xlsx(
@@ -87,8 +98,8 @@ def export_pdf(
         pagesize=A4,
         rightMargin=10 * mm,
         leftMargin=10 * mm,
-        topMargin=21 * mm,
-        bottomMargin=17 * mm,
+        topMargin=10 * mm,
+        bottomMargin=13 * mm,
         title=f"{report(locale, 'title')} export",
         author="DailyLog",
     )
@@ -96,15 +107,10 @@ def export_pdf(
     story: list[object] = [
         Paragraph(report(locale, "title"), styles["title"]),
         Paragraph(
-            report(
-                locale,
-                "subtitle",
-                start=format_report_date(start_date, locale),
-                end=format_report_date(end_date, locale),
-            ),
-            styles["subtitle"],
+            f"{format_report_date(start_date, locale)} - {format_report_date(end_date, locale)}",
+            styles["range"],
         ),
-        Spacer(1, 6 * mm),
+        Spacer(1, 5 * mm),
     ]
     for index, (month_key, month_start, month_end) in enumerate(_month_ranges(start_date, end_date)):
         month_entries = [entry for entry in entries if month_start <= _entry_day(entry, tz) <= month_end]
@@ -117,11 +123,7 @@ def export_pdf(
         if index < len(_month_ranges(start_date, end_date)) - 1:
             story.append(PageBreak())
 
-    def draw_page(canvas: Canvas, report_document: BaseDocTemplate) -> None:
-        """Draw the localized repeated header and footer for one report page."""
-        _draw_pdf_page(canvas, report_document, locale)
-
-    document.build(story, onFirstPage=draw_page, onLaterPages=draw_page)
+    document.build(story, onFirstPage=_draw_pdf_page, onLaterPages=_draw_pdf_page)
     stream.seek(0)
     return stream
 
@@ -350,13 +352,14 @@ def _pdf_styles() -> dict[str, ParagraphStyle]:
             textColor=colors.HexColor(f"#{NAVY}"),
             spaceAfter=2,
         ),
-        "subtitle": ParagraphStyle(
-            "DailyLogSubtitle",
+        "range": ParagraphStyle(
+            "DailyLogRange",
             parent=base["Normal"],
             fontName="Helvetica",
             fontSize=10,
             leading=14,
             textColor=colors.HexColor(f"#{MUTED}"),
+            alignment=TA_CENTER,
         ),
         "month": ParagraphStyle(
             "DailyLogMonth",
@@ -407,7 +410,7 @@ def _pdf_styles() -> dict[str, ParagraphStyle]:
             parent=base["Normal"],
             fontName="Helvetica",
             fontSize=7.6,
-            leading=10,
+            leading=9,
             textColor=colors.HexColor(f"#{INK}"),
             alignment=TA_LEFT,
         ),
@@ -416,7 +419,7 @@ def _pdf_styles() -> dict[str, ParagraphStyle]:
             parent=base["Normal"],
             fontName="Helvetica-Bold",
             fontSize=7.6,
-            leading=10,
+            leading=9,
             textColor=colors.HexColor(f"#{INK}"),
         ),
         "empty": ParagraphStyle(
@@ -440,15 +443,11 @@ def _pdf_month_section(
     locale: str,
     weight_unit: str,
 ) -> list[object]:
-    """Build one PDF month section with summary cards and a grouped data table."""
+    """Build one compact PDF month section with entries and optional body weight."""
     year, month = (int(value) for value in month_key.split("-", 1))
     month_date = date(year, month, 1)
     month_title = f"{report(locale, f'month_{month_date.month:02d}')} {month_date.year}"
-    section: list[object] = [
-        Paragraph(month_title, styles["month"]),
-        _pdf_metric_cards(entries, styles, locale),
-        Spacer(1, 5 * mm),
-    ]
+    section: list[object] = [Paragraph(month_title, styles["month"])]
     if entries:
         section.append(_pdf_entries_table(entries, styles, tz, locale))
     if weigh_ins:
@@ -460,71 +459,47 @@ def _pdf_month_section(
 
 def _pdf_entries_table(entries: list[Entry], styles: dict[str, ParagraphStyle], tz: ZoneInfo, locale: str) -> Table:
     """Create the localized entry table for one PDF month section."""
-    headers = [report(locale, key) for key in ("date", "type", "activity", "time", "duration", "details")]
+    headers = [report(locale, key) for key in ("date", "activity", "time", "details")]
     data: list[list[object]] = [[Paragraph(header, styles["header"]) for header in headers]]
     commands: list[tuple[object, ...]] = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(f"#{NAVY}")),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, 0), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
-        ("TOPPADDING", (0, 1), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, 0), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+        ("TOPPADDING", (0, 1), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 3),
         ("LINEBELOW", (0, 0), (-1, -1), 0.35, colors.HexColor(f"#{LINE}")),
     ]
     for day, day_entries in _group_by_day(entries, tz).items():
         row = len(data)
-        data.append(
-            [Paragraph(format_report_date(day, locale, weekday=True).upper(), styles["day"]), "", "", "", "", ""]
-        )
+        data.append([Paragraph(format_report_date(day, locale, weekday=True).upper(), styles["day"]), "", "", ""])
         commands.extend(
             [("SPAN", (0, row), (-1, row)), ("BACKGROUND", (0, row), (-1, row), colors.HexColor("#E8F1F9"))]
         )
+        snack_count = sum(entry.kind == "meal" and entry.label in SNACK_LABELS for entry in day_entries)
         for entry in _daily_order(day_entries):
-            row = len(data)
-            data.append(_pdf_entry_row(entry, styles, tz, locale))
-            commands.append(("BACKGROUND", (1, row), (1, row), colors.HexColor(f"#{_kind_color(entry.kind)}")))
-            commands.append(("TEXTCOLOR", (1, row), (1, row), colors.white))
-    table = Table(data, colWidths=[55, 57, 94, 83, 56, 181], repeatRows=1, hAlign="LEFT")
+            data.append(_pdf_entry_row(entry, styles, tz, locale, generic_snack=snack_count == 1))
+    table = Table(data, colWidths=[68, 145, 102, 224], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle(commands))
     return table
 
 
-def _pdf_metric_cards(entries: list[Entry], styles: dict[str, ParagraphStyle], locale: str) -> Table:
-    """Create a four-card visual summary for a PDF month section."""
-    values = [
-        (report(locale, "entries"), len(entries), BLUE),
-        (report(locale, "meals"), sum(entry.kind == "meal" for entry in entries), TEAL),
-        (report(locale, "training"), sum(entry.kind == "training" for entry in entries), AMBER),
-        (report(locale, "sleep"), sum(entry.kind == "sleep" for entry in entries), VIOLET),
-    ]
-    data = [
-        [Paragraph(label, styles["metric_label"]) for label, _, _ in values],
-        [Paragraph(str(value), styles["metric_value"]) for _, value, _ in values],
-    ]
-    table = Table(data, colWidths=[134.75] * 4, hAlign="LEFT")
-    commands: list[tuple[object, ...]] = [
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]
-    for index, (_, _, color) in enumerate(values):
-        commands.append(("BACKGROUND", (index, 0), (index, -1), colors.HexColor(f"#{color}")))
-    table.setStyle(TableStyle(commands))
-    return table
-
-
-def _pdf_entry_row(entry: Entry, styles: dict[str, ParagraphStyle], tz: ZoneInfo, locale: str) -> list[Paragraph]:
+def _pdf_entry_row(
+    entry: Entry,
+    styles: dict[str, ParagraphStyle],
+    tz: ZoneInfo,
+    locale: str,
+    *,
+    generic_snack: bool = False,
+) -> list[Paragraph]:
     """Render one entry into PDF-safe table cells without interpreting user text as markup."""
     return [
         Paragraph(format_report_date(_entry_day(entry, tz), locale), styles["cell"]),
-        Paragraph(_kind_label(entry.kind, locale), styles["cell_bold"]),
-        Paragraph(_escape_pdf(_entry_title(entry)), styles["cell_bold"]),
+        Paragraph(_escape_pdf(_localized_entry_title(entry, locale, generic_snack)), styles["cell_bold"]),
         Paragraph(_escape_pdf(_time_range(entry, tz, locale)), styles["cell"]),
-        Paragraph(_duration(entry, locale), styles["cell"]),
-        Paragraph(_escape_pdf(entry.text) if entry.text else "-", styles["cell"]),
+        Paragraph(_escape_pdf(_pdf_details(entry, locale)), styles["cell"]),
     ]
 
 
@@ -591,18 +566,13 @@ def _pdf_weight_section(
     ]
 
 
-def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate, locale: str) -> None:
-    """Draw the shared navy report header and quiet page-number footer on each page."""
+def _draw_pdf_page(canvas: Canvas, document: BaseDocTemplate) -> None:
+    """Draw only a quiet page number; title and range belong to the first page."""
     canvas.saveState()
-    width, height = A4
-    canvas.setFillColor(colors.HexColor(f"#{NAVY}"))
-    canvas.rect(0, height - 14 * mm, width, 14 * mm, stroke=0, fill=1)
-    canvas.setFillColor(colors.white)
-    canvas.setFont("Helvetica-Bold", 8)
-    canvas.drawString(10 * mm, height - 8.5 * mm, report(locale, "title").upper())
+    width, _ = A4
     canvas.setFillColor(colors.HexColor(f"#{MUTED}"))
     canvas.setFont("Helvetica", 7.5)
-    canvas.drawRightString(width - 10 * mm, 9 * mm, report(locale, "page", page=document.page))
+    canvas.drawRightString(width - 10 * mm, 7 * mm, str(document.page))
     canvas.restoreState()
 
 
@@ -642,14 +612,29 @@ def _entry_title(entry: Entry) -> str:
     return entry.label
 
 
+def _localized_entry_title(entry: Entry, locale: str, generic_snack: bool = False) -> str:
+    """Localize canonical meal and suggested-activity labels for a report."""
+    if entry.kind == "sleep":
+        return report(locale, "sleep_kind")
+    key: str | None
+    if entry.label in SNACK_LABELS:
+        key = "snack" if generic_snack else entry.label.lower().replace(" ", "_")
+    else:
+        key = REPORT_LABEL_KEYS.get(entry.label)
+    return report(locale, key) if key is not None else entry.label
+
+
+def _pdf_details(entry: Entry, locale: str) -> str:
+    """Combine activity duration with user details in the compact PDF column."""
+    if entry.kind == "meal":
+        return entry.text or "-"
+    duration = _duration(entry, locale)
+    return f"{duration} | {entry.text}" if entry.text else duration
+
+
 def _kind_label(kind: str, locale: str) -> str:
     """Return the report-localized category label."""
     return report(locale, f"{kind if kind != 'sleep' else 'sleep'}_kind" if kind != "meal" else "meal")
-
-
-def _kind_color(kind: str) -> str:
-    """Return the visual category colour used consistently in PDF and XLSX exports."""
-    return {"meal": TEAL, "training": AMBER, "sleep": VIOLET}[kind]
 
 
 def _time_range(entry: Entry, tz: ZoneInfo, locale: str) -> str:

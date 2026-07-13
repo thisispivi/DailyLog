@@ -58,12 +58,6 @@ def export_format_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
-def export_language_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
-    """Build the independent report-language selection keyboard."""
-    rows = [[_btn(language_code, "english"), _btn(language_code, "italian")], [_btn(language_code, "cancel")]]
-    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
-
-
 def export_range_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     """Build the export range selection keyboard."""
     rows = [[_btn(language_code, "all"), _btn(language_code, "range")], [_btn(language_code, "cancel")]]
@@ -74,6 +68,7 @@ def settings_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     """Build settings choices."""
     rows = [
         [_btn(language_code, "english"), _btn(language_code, "italian")],
+        [_btn(language_code, "export_english"), _btn(language_code, "export_italian")],
         [_btn(language_code, "kg"), _btn(language_code, "lb")],
         [_btn(language_code, "cancel")],
     ]
@@ -114,7 +109,9 @@ def record_action_keyboard(language_code: str | None, *, deleted: bool = False) 
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 
 
-def edit_fields_keyboard(language_code: str | None, record_type: str) -> ReplyKeyboardMarkup:
+def edit_fields_keyboard(
+    language_code: str | None, record_type: str, entry_kind: str | None = None
+) -> ReplyKeyboardMarkup:
     """Build field-level edit choices for an entry or weigh-in."""
     if record_type == "weigh_in":
         rows = [[_btn(language_code, "value"), _btn(language_code, "recorded_at")]]
@@ -122,8 +119,10 @@ def edit_fields_keyboard(language_code: str | None, record_type: str) -> ReplyKe
         rows = [
             [_btn(language_code, "type"), _btn(language_code, "label")],
             [_btn(language_code, "details")],
-            [_btn(language_code, "start"), _btn(language_code, "end")],
+            [_btn(language_code, "date"), _btn(language_code, "start")],
         ]
+        if entry_kind in {"training", "sleep"}:
+            rows[-1].append(_btn(language_code, "end"))
     rows.append([_btn(language_code, "back"), _btn(language_code, "cancel")])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 

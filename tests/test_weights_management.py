@@ -50,7 +50,7 @@ def _handlers(path: Path) -> BotHandlers:
 def test_metric_weight_storage_settings_and_trash_retention(tmp_path) -> None:
     db = Database(tmp_path / "dailylog.sqlite3")
     settings = db.get_or_create_settings(123, "it")
-    assert (settings.locale, settings.weight_unit) == ("it", "kg")
+    assert (settings.locale, settings.export_locale, settings.weight_unit) == ("it", "it", "kg")
     assert db.update_settings(123, weight_unit="lb").weight_unit == "lb"
 
     recorded_at = datetime(2026, 7, 8, 8, 0, tzinfo=TZ)

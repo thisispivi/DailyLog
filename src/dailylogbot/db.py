@@ -61,6 +61,7 @@ class UserSettings:
 
     user_id: int
     locale: str
+    export_locale: str
     weight_unit: str
 
 
@@ -113,8 +114,9 @@ class Database:
                 row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
                 if row is None:
                     connection.execute(
-                        "INSERT INTO user_settings (user_id, locale, weight_unit) VALUES (?, ?, 'kg')",
-                        (user_id, locale),
+                        "INSERT INTO user_settings "
+                        "(user_id, locale, export_locale, weight_unit) VALUES (?, ?, ?, 'kg')",
+                        (user_id, locale, locale),
                     )
                     row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
         except sqlite3.Error as error:
@@ -124,12 +126,19 @@ class Database:
         return _row_to_settings(row)
 
     def update_settings(
-        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+        self,
+        user_id: int,
+        *,
+        locale: str | None = None,
+        export_locale: str | None = None,
+        weight_unit: str | None = None,
     ) -> UserSettings:
-        """Replace one or both saved presentation choices."""
+        """Replace any supplied saved presentation choices."""
         _validate_user_id(user_id)
         if locale is not None:
             _validate_locale(locale)
+        if export_locale is not None:
+            _validate_locale(export_locale)
         if weight_unit is not None:
             _validate_weight_unit(weight_unit)
         try:
@@ -138,10 +147,11 @@ class Database:
                 if existing is None:
                     raise PersistenceError("User settings must be initialized before they can be updated.")
                 next_locale = locale or str(existing["locale"])
+                next_export_locale = export_locale or str(existing["export_locale"])
                 next_unit = weight_unit or str(existing["weight_unit"])
                 connection.execute(
-                    "UPDATE user_settings SET locale = ?, weight_unit = ? WHERE user_id = ?",
-                    (next_locale, next_unit, user_id),
+                    "UPDATE user_settings SET locale = ?, export_locale = ?, weight_unit = ? WHERE user_id = ?",
+                    (next_locale, next_export_locale, next_unit, user_id),
                 )
                 row = connection.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
         except sqlite3.Error as error:
@@ -658,10 +668,21 @@ class Database:
                     """
                     CREATE TABLE IF NOT EXISTS user_settings (
                         user_id INTEGER PRIMARY KEY, locale TEXT NOT NULL CHECK (locale IN ('en', 'it')),
+                        export_locale TEXT NOT NULL CHECK (export_locale IN ('en', 'it')),
                         weight_unit TEXT NOT NULL CHECK (weight_unit IN ('kg', 'lb'))
                     )
                     """
                 )
+                if version < 3:
+                    setting_columns = {
+                        str(row[1]) for row in connection.execute("PRAGMA table_info(user_settings)").fetchall()
+                    }
+                    if "export_locale" not in setting_columns:
+                        connection.execute(
+                            "ALTER TABLE user_settings ADD COLUMN export_locale TEXT NOT NULL DEFAULT 'en' "
+                            "CHECK (export_locale IN ('en', 'it'))"
+                        )
+                        connection.execute("UPDATE user_settings SET export_locale = locale")
                 connection.execute(
                     """
                     CREATE TABLE IF NOT EXISTS weigh_ins (
@@ -684,7 +705,7 @@ class Database:
                     WHERE deleted_at IS NULL AND end_at IS NULL AND kind IN ('training', 'sleep')
                     """
                 )
-                connection.execute("PRAGMA user_version = 2")
+                connection.execute("PRAGMA user_version = 3")
         except sqlite3.Error as error:
             raise PersistenceError("The database schema could not be initialized.") from error
 
@@ -858,6 +879,7 @@ def _row_to_settings(row: sqlite3.Row) -> UserSettings:
         return UserSettings(
             user_id=int(row["user_id"]),
             locale=_validate_locale(str(row["locale"])),
+            export_locale=_validate_locale(str(row["export_locale"])),
             weight_unit=_validate_weight_unit(str(row["weight_unit"])),
         )
     except (KeyError, TypeError, ValueError) as error:

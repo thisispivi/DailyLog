@@ -38,7 +38,6 @@ from dailylogbot.keyboards import (
     edit_fields_keyboard,
     entry_kind_keyboard,
     export_format_keyboard,
-    export_language_keyboard,
     export_range_keyboard,
     main_keyboard,
     manage_keyboard,
@@ -56,9 +55,6 @@ logger = logging.getLogger(__name__)
 FLOW_KEY = "dailylog_flow"
 MEAL_TYPE_KEY = "dailylog_meal_type"
 EXPORT_FORMAT_KEY = "dailylog_export_format"
-EXPORT_LOCALE_KEY = "dailylog_export_locale"
-EXPORT_START_KEY = "dailylog_export_start"
-EXPORT_END_KEY = "dailylog_export_end"
 MANAGE_TYPE_KEY = "dailylog_manage_type"
 MANAGE_DATE_KEY = "dailylog_manage_date"
 MANAGE_RECORD_ID_KEY = "dailylog_manage_record_id"
@@ -78,7 +74,6 @@ class Flow(StrEnum):
     MEAL_TEXT = "meal_text"
     TRAINING_ACTIVITY = "training_activity"
     EXPORT_FORMAT = "export_format"
-    EXPORT_LANGUAGE = "export_language"
     EXPORT_RANGE = "export_range"
     EXPORT_DATES = "export_dates"
     WEIGH_IN = "weigh_in"
@@ -185,14 +180,10 @@ class BotHandlers:
             await self._message(update).reply_text(t(self._language(update), "export_prompt"))
             return
         self._clear_flow(context)
-        flow_data = self._flow_data(context)
-        flow_data[FLOW_KEY] = Flow.EXPORT_LANGUAGE.value
-        flow_data[EXPORT_FORMAT_KEY] = action.export_format or "xlsx"
-        flow_data[EXPORT_START_KEY] = action.start_date
-        flow_data[EXPORT_END_KEY] = action.end_date
-        await self._message(update).reply_text(
-            t(self._language(update), "export_language_prompt"),
-            reply_markup=export_language_keyboard(self._language(update)),
+        await self._send_export(
+            update,
+            action,
+            self._export_language(update),
         )
 
     async def edit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -489,6 +480,17 @@ class BotHandlers:
                 self._clear_flow(context)
                 await self._message(update).reply_text(t(locale, "language_saved"), reply_markup=main_keyboard(locale))
                 return
+            if semantic_button in {"export_english", "export_italian"}:
+                export_locale = "en" if semantic_button == "export_english" else "it"
+                settings = await self._run_sync(
+                    lambda: self.logbook.update_settings(self._user_id(update), export_locale=export_locale)
+                )
+                self._profiles[settings.user_id] = settings
+                self._clear_flow(context)
+                await self._message(update).reply_text(
+                    t(language_code, "export_language_saved"), reply_markup=main_keyboard(language_code)
+                )
+                return
             if semantic_button in {"kg", "lb"}:
                 settings = await self._run_sync(
                     lambda: self.logbook.update_settings(self._user_id(update), weight_unit=semantic_button)
@@ -510,32 +512,6 @@ class BotHandlers:
                 )
                 return
             flow_data[EXPORT_FORMAT_KEY] = semantic_button
-            flow_data[FLOW_KEY] = Flow.EXPORT_LANGUAGE.value
-            await self._message(update).reply_text(
-                t(language_code, "export_language_prompt"), reply_markup=export_language_keyboard(language_code)
-            )
-            return
-        if flow is Flow.EXPORT_LANGUAGE:
-            if semantic_button not in {"english", "italian"}:
-                await self._message(update).reply_text(
-                    t(language_code, "export_language_prompt"), reply_markup=export_language_keyboard(language_code)
-                )
-                return
-            report_locale = "en" if semantic_button == "english" else "it"
-            flow_data[EXPORT_LOCALE_KEY] = report_locale
-            start_value = flow_data.get(EXPORT_START_KEY)
-            end_value = flow_data.get(EXPORT_END_KEY)
-            if isinstance(start_value, date) and isinstance(end_value, date):
-                export_format = self._export_format(context)
-                self._clear_flow(context)
-                await self._send_export(
-                    update,
-                    ParsedAction(
-                        action="export", export_format=export_format, start_date=start_value, end_date=end_value
-                    ),
-                    report_locale,
-                )
-                return
             flow_data[FLOW_KEY] = Flow.EXPORT_RANGE.value
             await self._message(update).reply_text(
                 t(language_code, "export_range_prompt"), reply_markup=export_range_keyboard(language_code)
@@ -544,7 +520,7 @@ class BotHandlers:
         if flow is Flow.EXPORT_RANGE:
             if semantic_button == "all":
                 export_format = self._export_format(context)
-                report_locale = self._export_locale(context)
+                report_locale = self._export_language(update)
                 self._clear_flow(context)
                 await self._send_all_export(update, export_format, report_locale)
                 return
@@ -568,7 +544,7 @@ class BotHandlers:
                 await self._message(update).reply_text(t(language_code, "date_order"))
                 return
             export_format = self._export_format(context)
-            report_locale = self._export_locale(context)
+            report_locale = self._export_language(update)
             self._clear_flow(context)
             await self._send_export(
                 update,
@@ -660,10 +636,12 @@ class BotHandlers:
             if semantic_button == "edit":
                 record_type = flow_data.get(MANAGE_TYPE_KEY)
                 if isinstance(record_type, str):
+                    record = await self._current_record(update, flow_data)
+                    entry_kind = record.kind if isinstance(record, Entry) else None
                     flow_data[FLOW_KEY] = Flow.MANAGE_EDIT_FIELD.value
                     await self._message(update).reply_text(
                         t(language_code, "manage_edit_prompt"),
-                        reply_markup=edit_fields_keyboard(language_code, record_type),
+                        reply_markup=edit_fields_keyboard(language_code, record_type, entry_kind),
                     )
                     return
             await self._message(update).reply_text(t(language_code, "record_unavailable"))
@@ -676,13 +654,17 @@ class BotHandlers:
                 )
                 return
             record_type = flow_data.get(MANAGE_TYPE_KEY)
+            record = await self._current_record(update, flow_data)
+            entry_kind = record.kind if isinstance(record, Entry) else None
             allowed_fields = (
-                {"value", "recorded_at"} if record_type == "weigh_in" else {"type", "label", "details", "start", "end"}
+                {"value", "recorded_at"} if record_type == "weigh_in" else {"type", "label", "details", "date", "start"}
             )
+            if entry_kind in {"training", "sleep"}:
+                allowed_fields.add("end")
             if semantic_button not in allowed_fields:
                 await self._message(update).reply_text(
                     t(language_code, "manage_edit_prompt"),
-                    reply_markup=edit_fields_keyboard(language_code, str(record_type)),
+                    reply_markup=edit_fields_keyboard(language_code, str(record_type), entry_kind),
                 )
                 return
             flow_data[MANAGE_EDIT_FIELD_KEY] = semantic_button
@@ -807,7 +789,7 @@ class BotHandlers:
             await self._end_open_activity(update, context)
             return
         if action.action == "export":
-            await self._send_export(update, action)
+            await self._send_export(update, action, self._export_language(update))
             return
         if action.action == "prompt_training":
             await self._begin_training(update, context)
@@ -1209,6 +1191,10 @@ class BotHandlers:
                         lambda: self.db.update_weigh_in(self._user_id(update), record_id, recorded_at=recorded_at)
                     )
             else:
+                current_entry = await self._run_sync(lambda: self.db.get_entry(self._user_id(update), record_id))
+                if current_entry is None:
+                    await self._message(update).reply_text(t(language_code, "record_unavailable"))
+                    return
                 fields: dict[str, EntryFieldValue]
                 if field == "type":
                     kind_map = {
@@ -1225,13 +1211,20 @@ class BotHandlers:
                     fields = {"label": text}
                 elif field == "details":
                     fields = {"text": text}
+                elif field == "date":
+                    new_date = date.fromisoformat(text.strip())
+                    local_start = current_entry.start_at.astimezone(self.config.timezone)
+                    new_start = local_start.replace(year=new_date.year, month=new_date.month, day=new_date.day)
+                    fields = {"start_at": new_start}
+                    if current_entry.end_at is not None:
+                        fields["end_at"] = current_entry.end_at + (new_start - current_entry.start_at)
                 elif field == "start":
-                    fields = {"start_at": parse_local_datetime(text, self.config.timezone)}
+                    fields = {"start_at": self._replace_local_time(current_entry.start_at, text)}
                 else:
                     fields = {
                         "end_at": None
                         if text.casefold() in {"open", "none", "-"}
-                        else parse_local_datetime(text, self.config.timezone)
+                        else self._replace_local_time(current_entry.end_at or current_entry.start_at, text)
                     }
                 record = await self._run_sync(lambda: self.db.update_entry(self._user_id(update), record_id, fields))
         except (ActiveActivityError, ValueError) as exc:
@@ -1240,15 +1233,27 @@ class BotHandlers:
         if record is None:
             await self._message(update).reply_text(t(language_code, "record_unavailable"))
             return
-        self._clear_flow(context)
-        markup = (
-            active_keyboard(language_code, record.kind)
-            if isinstance(record, Entry) and record.is_open
-            else main_keyboard(language_code)
-        )
+        flow_data[FLOW_KEY] = Flow.MANAGE_EDIT_FIELD.value
+        flow_data.pop(MANAGE_EDIT_FIELD_KEY, None)
+        entry_kind = record.kind if isinstance(record, Entry) else None
         await self._message(update).reply_text(
-            t(language_code, "edit_saved", record=self._record_line(record, update)), reply_markup=markup
+            t(language_code, "edit_saved", record=self._record_line(record, update)),
+            reply_markup=edit_fields_keyboard(language_code, record_type, entry_kind),
         )
+
+    def _replace_local_time(self, value: datetime, raw_time: str) -> datetime:
+        """Replace only the local clock portion of a timestamp using HH:MM input."""
+        try:
+            hour_text, minute_text = raw_time.strip().split(":")
+            if len(hour_text) != 2 or len(minute_text) != 2:
+                raise ValueError
+            hour, minute = int(hour_text), int(minute_text)
+            if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+                raise ValueError
+        except ValueError as exc:
+            raise ValueError("Use a time like 08:30") from exc
+        local = value.astimezone(self.config.timezone)
+        return local.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     async def _current_record(self, update: Update, flow_data: dict[str, object]) -> Entry | WeighIn | None:
         """Reload a selected current record and re-check user ownership."""
@@ -1440,7 +1445,7 @@ class BotHandlers:
         period, data = export_data
         await self._upload_export(update, data.entries, data.weigh_ins, period, export_format, report_locale)
 
-    async def _send_export(self, update: Update, action: ParsedAction, report_locale: str | None = None) -> None:
+    async def _send_export(self, update: Update, action: ParsedAction, report_locale: str) -> None:
         """Build and upload a requested XLSX or PDF export without writing temporary files."""
         language_code = self._language(update)
         if action.start_date is None or action.end_date is None:
@@ -1458,9 +1463,7 @@ class BotHandlers:
                 t(language_code, "export_empty"), reply_markup=main_keyboard(language_code)
             )
             return
-        await self._upload_export(
-            update, data.entries, data.weigh_ins, period, action.export_format, report_locale or language_code
-        )
+        await self._upload_export(update, data.entries, data.weigh_ins, period, action.export_format, report_locale)
 
     async def _upload_export(
         self,
@@ -1571,9 +1574,6 @@ class BotHandlers:
         flow_data.pop(FLOW_KEY, None)
         flow_data.pop(MEAL_TYPE_KEY, None)
         flow_data.pop(EXPORT_FORMAT_KEY, None)
-        flow_data.pop(EXPORT_LOCALE_KEY, None)
-        flow_data.pop(EXPORT_START_KEY, None)
-        flow_data.pop(EXPORT_END_KEY, None)
         flow_data.pop(MANAGE_TYPE_KEY, None)
         flow_data.pop(MANAGE_DATE_KEY, None)
         flow_data.pop(MANAGE_RECORD_ID_KEY, None)
@@ -1588,10 +1588,10 @@ class BotHandlers:
         """Return a valid selected format, falling back safely to XLSX."""
         return "pdf" if self._flow_data(context).get(EXPORT_FORMAT_KEY) == "pdf" else "xlsx"
 
-    def _export_locale(self, context: ContextTypes.DEFAULT_TYPE) -> str:
-        """Return the explicitly selected report locale, defaulting safely to English."""
-        value = self._flow_data(context).get(EXPORT_LOCALE_KEY)
-        return value if value in {"en", "it"} else "en"
+    def _export_language(self, update: Update) -> str:
+        """Return the saved document locale independently of the bot interface."""
+        user = update.effective_user
+        return self._profiles[user.id].export_locale if user is not None and user.id in self._profiles else "en"
 
     def _language(self, update: Update) -> str:
         """Return the saved locale, falling back only before first profile initialization."""

@@ -149,9 +149,14 @@ class EntryRepository(Protocol):
         """Return persisted settings, creating a default when missing."""
 
     def update_settings(
-        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+        self,
+        user_id: int,
+        *,
+        locale: str | None = None,
+        export_locale: str | None = None,
+        weight_unit: str | None = None,
     ) -> UserSettings:
-        """Persist one or both presentation preferences."""
+        """Persist any supplied presentation preferences."""
 
     def add_weigh_in(self, user_id: int, weight_grams: int, recorded_at: datetime) -> WeighIn:
         """Persist one canonical-metric weigh-in."""
@@ -430,10 +435,17 @@ class LogbookService:
         return self._repository.get_or_create_settings(user_id, initial_locale)
 
     def update_settings(
-        self, user_id: int, *, locale: str | None = None, weight_unit: str | None = None
+        self,
+        user_id: int,
+        *,
+        locale: str | None = None,
+        export_locale: str | None = None,
+        weight_unit: str | None = None,
     ) -> UserSettings:
-        """Save one or both user presentation preferences."""
-        return self._repository.update_settings(user_id, locale=locale, weight_unit=weight_unit)
+        """Save any supplied user presentation preferences."""
+        return self._repository.update_settings(
+            user_id, locale=locale, export_locale=export_locale, weight_unit=weight_unit
+        )
 
     def create_weigh_in(self, user_id: int, weight_grams: int, recorded_at: datetime) -> WeighIn:
         """Create one metric-normalized body-weight reading."""
