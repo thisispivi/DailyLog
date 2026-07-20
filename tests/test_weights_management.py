@@ -152,7 +152,7 @@ def test_localized_weight_only_exports(tmp_path) -> None:
 def test_management_paginates_record_selection(tmp_path) -> None:
     async def scenario() -> None:
         handlers = _handlers(tmp_path / "dailylog.sqlite3")
-        timestamp = handlers._now()
+        timestamp = handlers._now().replace(hour=12, minute=0, second=0, microsecond=0)
         for offset in range(9):
             handlers.db.add_weigh_in(123, 70_000 + offset, timestamp + timedelta(minutes=offset))
         context = SimpleNamespace(user_data={})
