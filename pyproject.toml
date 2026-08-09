@@ -18,17 +18,17 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "commitizen>=4.8",
+  "commitizen>=4.17.0",
   "deptry>=0.25",
   "detect-secrets>=1.5",
   "import-linter>=2.8",
   "interrogate>=1.7",
-  "mypy>=1.15",
+  "mypy>=2.3.0",
   "pip-audit>=2.9",
-  "pre-commit>=4.6",
+  "pre-commit>=4.6.1",
   "pytest>=8.3.4",
   "pytest-cov>=6.0",
-  "ruff>=0.11",
+  "ruff>=0.16.1",
   "vulture>=2.14",
 ]
 
