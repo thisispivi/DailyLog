@@ -48,6 +48,8 @@ def main() -> None:
     application.add_handler(CommandHandler("edit", bot_handlers.edit_command))
     application.add_handler(CommandHandler("edit_last", bot_handlers.edit_last_command))
     application.add_handler(CommandHandler("weighin", bot_handlers.weighin))
+    application.add_handler(CommandHandler("add_past", bot_handlers.add_past))
+    application.add_handler(CommandHandler("quick_edit", bot_handlers.quick_edit))
     application.add_handler(CommandHandler("manage", bot_handlers.manage))
     application.add_handler(CommandHandler("settings", bot_handlers.settings))
     application.add_handler(CommandHandler("cancel", bot_handlers.cancel))

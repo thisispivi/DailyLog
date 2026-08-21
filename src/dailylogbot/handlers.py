@@ -42,6 +42,7 @@ from dailylogbot.keyboards import (
     main_keyboard,
     manage_keyboard,
     meal_type_keyboard,
+    past_category_keyboard,
     record_action_keyboard,
     record_list_keyboard,
     settings_keyboard,
@@ -64,6 +65,10 @@ MANAGE_ALL_ITEMS_KEY = "dailylog_manage_all_items"
 MANAGE_PAGE_KEY = "dailylog_manage_page"
 MANAGE_DATE_OPTIONS_KEY = "dailylog_manage_date_options"
 DELETE_DAY_COUNT_KEY = "dailylog_delete_day_count"
+BACKDATE_START_KEY = "dailylog_backdate_start"
+BACKDATE_KIND_KEY = "dailylog_backdate_kind"
+BACKDATE_LABEL_KEY = "dailylog_backdate_label"
+QUICK_EDIT_KEY = "dailylog_quick_edit"
 DATE_SHORTCUT_LIMIT = 9
 
 
@@ -77,6 +82,10 @@ class Flow(StrEnum):
     EXPORT_RANGE = "export_range"
     EXPORT_DATES = "export_dates"
     WEIGH_IN = "weigh_in"
+    BACKDATE_TIME = "backdate_time"
+    BACKDATE_CATEGORY = "backdate_category"
+    BACKDATE_END = "backdate_end"
+    QUICK_EDIT_LIST = "quick_edit_list"
     SETTINGS = "settings"
     MANAGE_CATEGORY = "manage_category"
     MANAGE_DATE = "manage_date"
@@ -264,6 +273,18 @@ class BotHandlers:
             return
         await self._begin_weigh_in(update, context)
 
+    async def add_past(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Open the guided backdated-record flow."""
+        if not await self._authorize(update) or await self._deny_when_activity_open(update):
+            return
+        await self._begin_backdate(update, context)
+
+    async def quick_edit(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Open the recent-record editing shortcut."""
+        if not await self._authorize(update) or await self._deny_when_activity_open(update):
+            return
+        await self._begin_quick_edit(update, context)
+
     async def manage(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Open the guided record-management flow."""
         if not await self._authorize(update) or await self._deny_when_activity_open(update):
@@ -307,6 +328,12 @@ class BotHandlers:
             return
         if semantic_button == "weigh_in":
             await self._begin_weigh_in(update, context)
+            return
+        if semantic_button == "add_past":
+            await self._begin_backdate(update, context)
+            return
+        if semantic_button == "quick_edit":
+            await self._begin_quick_edit(update, context)
             return
         if semantic_button == "today":
             await self._send_today(update)
@@ -419,9 +446,14 @@ class BotHandlers:
                 )
                 return
             try:
+                saved_at = flow_data.get(BACKDATE_START_KEY)
                 entry = await self._run_sync(
                     lambda: self.logbook.create_entry(
-                        user_id=self._user_id(update), kind="meal", label=meal_type, text=text, start_at=self._now()
+                        user_id=self._user_id(update),
+                        kind="meal",
+                        label=meal_type,
+                        text=text,
+                        start_at=saved_at if isinstance(saved_at, datetime) else self._now(),
                     )
                 )
             except ValueError as exc:
@@ -446,13 +478,25 @@ class BotHandlers:
                     t(language_code, "activity_invalid"), reply_markup=training_keyboard(language_code)
                 )
                 return
+            saved_at = flow_data.get(BACKDATE_START_KEY)
+            if isinstance(saved_at, datetime):
+                flow_data[BACKDATE_KIND_KEY] = "training"
+                flow_data[BACKDATE_LABEL_KEY] = label
+                flow_data[FLOW_KEY] = Flow.BACKDATE_END.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_end_prompt"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
             await self._start_activity(update, context, "training", label)
             return
         if flow is Flow.WEIGH_IN:
             try:
                 grams = parse_weight_grams(text, self._weight_unit(update))
+                saved_at = flow_data.get(BACKDATE_START_KEY)
                 weigh_in = await self._run_sync(
-                    lambda: self.logbook.create_weigh_in(self._user_id(update), grams, self._now())
+                    lambda: self.logbook.create_weigh_in(
+                        self._user_id(update), grams, saved_at if isinstance(saved_at, datetime) else self._now()
+                    )
                 )
             except ValueError:
                 await self._message(update).reply_text(
@@ -467,6 +511,110 @@ class BotHandlers:
                     "weigh_in_saved",
                     weight=format_weight(weigh_in.weight_grams, self._weight_unit(update)),
                 ),
+                reply_markup=main_keyboard(language_code),
+            )
+            return
+        if flow is Flow.BACKDATE_TIME:
+            try:
+                saved_at = parse_local_datetime(text, self.config.timezone)
+            except ValueError:
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_time_invalid"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            if saved_at > self._now():
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_future"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            flow_data[BACKDATE_START_KEY] = saved_at
+            flow_data[FLOW_KEY] = Flow.BACKDATE_CATEGORY.value
+            await self._message(update).reply_text(
+                t(language_code, "backdate_category_prompt"),
+                reply_markup=past_category_keyboard(language_code),
+            )
+            return
+        if flow is Flow.BACKDATE_CATEGORY:
+            if semantic_button == "back":
+                flow_data[FLOW_KEY] = Flow.BACKDATE_TIME.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_time_prompt"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            if semantic_button == "meal_kind_button":
+                flow_data[FLOW_KEY] = Flow.MEAL_TYPE.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_meal_prompt"), reply_markup=meal_type_keyboard(language_code)
+                )
+                return
+            if semantic_button == "training_kind_button":
+                flow_data[FLOW_KEY] = Flow.TRAINING_ACTIVITY.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_training_prompt"), reply_markup=training_keyboard(language_code)
+                )
+                return
+            if semantic_button == "sleep_kind_button":
+                flow_data[BACKDATE_KIND_KEY] = "sleep"
+                flow_data[BACKDATE_LABEL_KEY] = "Sleep"
+                flow_data[FLOW_KEY] = Flow.BACKDATE_END.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_end_prompt"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            if semantic_button == "weigh_in":
+                flow_data[FLOW_KEY] = Flow.WEIGH_IN.value
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_weight_prompt", unit=self._weight_unit(update)),
+                    reply_markup=cancel_keyboard(language_code),
+                )
+                return
+            await self._message(update).reply_text(
+                t(language_code, "backdate_category_prompt"), reply_markup=past_category_keyboard(language_code)
+            )
+            return
+        if flow is Flow.BACKDATE_END:
+            start_at = flow_data.get(BACKDATE_START_KEY)
+            kind = flow_data.get(BACKDATE_KIND_KEY)
+            stored_label = flow_data.get(BACKDATE_LABEL_KEY)
+            if not isinstance(start_at, datetime) or not isinstance(kind, str) or not isinstance(stored_label, str):
+                await self._begin_backdate(update, context)
+                return
+            try:
+                end_at = self._parse_backdate_end(text, start_at)
+            except ValueError:
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_end_invalid"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            if end_at <= start_at:
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_end_before"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            if end_at > self._now():
+                await self._message(update).reply_text(
+                    t(language_code, "backdate_end_future"), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            try:
+                entry = await self._run_sync(
+                    lambda: self.logbook.create_entry(
+                        user_id=self._user_id(update),
+                        kind=kind,
+                        label=stored_label,
+                        text="",
+                        start_at=start_at,
+                        end_at=end_at,
+                    )
+                )
+            except ValueError as exc:
+                await self._message(update).reply_text(
+                    t(language_code, "invalid_entry", reason=str(exc)), reply_markup=cancel_keyboard(language_code)
+                )
+                return
+            self._clear_flow(context)
+            await self._message(update).reply_text(
+                t(language_code, "saved", entry=entry_line(entry, self.config.timezone, language_code)),
                 reply_markup=main_keyboard(language_code),
             )
             return
@@ -619,6 +767,34 @@ class BotHandlers:
                 reply_markup=record_action_keyboard(language_code),
             )
             return
+        if flow is Flow.QUICK_EDIT_LIST:
+            if semantic_button == "back":
+                self._clear_flow(context)
+                await self._message(update).reply_text(
+                    t(language_code, "cancelled"), reply_markup=main_keyboard(language_code)
+                )
+                return
+            parsed = self._selected_trash_record(text, flow_data)
+            if parsed is None:
+                await self._message(update).reply_text(
+                    t(language_code, "quick_edit_prompt"), reply_markup=self._quick_edit_keyboard(update, flow_data)
+                )
+                return
+            record_type, record_id = parsed
+            flow_data[MANAGE_TYPE_KEY] = record_type
+            flow_data[MANAGE_RECORD_ID_KEY] = record_id
+            flow_data[QUICK_EDIT_KEY] = True
+            record = await self._current_record(update, flow_data)
+            if record is None:
+                await self._begin_quick_edit(update, context)
+                return
+            flow_data[FLOW_KEY] = Flow.MANAGE_EDIT_FIELD.value
+            entry_kind = record.kind if isinstance(record, Entry) else None
+            await self._message(update).reply_text(
+                t(language_code, "quick_edit_selected", record=self._record_line(record, update)),
+                reply_markup=edit_fields_keyboard(language_code, record_type, entry_kind),
+            )
+            return
         if flow is Flow.MANAGE_ACTION:
             if semantic_button == "back":
                 saved_date = flow_data.get(MANAGE_DATE_KEY)
@@ -648,6 +824,9 @@ class BotHandlers:
             return
         if flow is Flow.MANAGE_EDIT_FIELD:
             if semantic_button == "back":
+                if flow_data.get(QUICK_EDIT_KEY) is True:
+                    await self._begin_quick_edit(update, context)
+                    return
                 flow_data[FLOW_KEY] = Flow.MANAGE_ACTION.value
                 await self._message(update).reply_text(
                     t(language_code, "manage_item", record=""), reply_markup=record_action_keyboard(language_code)
@@ -830,6 +1009,62 @@ class BotHandlers:
             t(language_code, "weigh_in_prompt", unit=self._weight_unit(update)),
             reply_markup=cancel_keyboard(language_code),
         )
+
+    async def _begin_backdate(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Start a guided flow that saves a record at its original timestamp."""
+        self._clear_flow(context)
+        self._flow_data(context)[FLOW_KEY] = Flow.BACKDATE_TIME.value
+        language_code = self._language(update)
+        await self._message(update).reply_text(
+            t(language_code, "backdate_time_prompt"), reply_markup=cancel_keyboard(language_code)
+        )
+
+    async def _begin_quick_edit(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """List recently created records across all types without a date/category drill-down."""
+        self._clear_flow(context)
+        entries, weigh_ins = await self._run_sync(
+            lambda: (self.db.list_entries(self._user_id(update)), self.db.list_weigh_ins(self._user_id(update)))
+        )
+        recent: list[tuple[datetime, str, int, str]] = [
+            (
+                entry.created_at,
+                "entry",
+                entry.id,
+                f"E#{entry.id} · {entry.start_at.astimezone(self.config.timezone):%m-%d %H:%M} · {entry.label}",
+            )
+            for entry in entries
+        ]
+        recent.extend(
+            (
+                weigh_in.created_at,
+                "weigh_in",
+                weigh_in.id,
+                f"W#{weigh_in.id} · {weigh_in.recorded_at.astimezone(self.config.timezone):%m-%d %H:%M} · "
+                f"⚖️ {format_weight(weigh_in.weight_grams, self._weight_unit(update))}",
+            )
+            for weigh_in in weigh_ins
+        )
+        recent.sort(key=lambda item: (item[0], item[2]), reverse=True)
+        recent = recent[:8]
+        language_code = self._language(update)
+        if not recent:
+            await self._message(update).reply_text(
+                t(language_code, "quick_edit_empty"), reply_markup=main_keyboard(language_code)
+            )
+            return
+        flow_data = self._flow_data(context)
+        flow_data[MANAGE_ITEMS_KEY] = [(record_type, record_id) for _, record_type, record_id, _ in recent]
+        flow_data[MANAGE_ALL_ITEMS_KEY] = [label for _, _, _, label in recent]
+        flow_data[FLOW_KEY] = Flow.QUICK_EDIT_LIST.value
+        await self._message(update).reply_text(
+            t(language_code, "quick_edit_prompt"), reply_markup=self._quick_edit_keyboard(update, flow_data)
+        )
+
+    def _quick_edit_keyboard(self, update: Update, flow_data: dict[str, object]) -> ReplyKeyboardMarkup:
+        """Rebuild the recent-record selector from validated flow state."""
+        stored_labels = flow_data.get(MANAGE_ALL_ITEMS_KEY)
+        labels = [label for label in stored_labels if isinstance(label, str)] if isinstance(stored_labels, list) else []
+        return record_list_keyboard(self._language(update), labels)
 
     async def _begin_settings(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Show persisted language and body-weight unit controls."""
@@ -1255,6 +1490,16 @@ class BotHandlers:
         local = value.astimezone(self.config.timezone)
         return local.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
+    def _parse_backdate_end(self, raw_value: str, start_at: datetime) -> datetime:
+        """Parse a full end timestamp or a clock relative to the original start day."""
+        try:
+            return parse_local_datetime(raw_value, self.config.timezone)
+        except ValueError:
+            end_at = self._replace_local_time(start_at, raw_value)
+            if end_at <= start_at:
+                end_at += timedelta(days=1)
+            return end_at
+
     async def _current_record(self, update: Update, flow_data: dict[str, object]) -> Entry | WeighIn | None:
         """Reload a selected current record and re-check user ownership."""
         record_type = flow_data.get(MANAGE_TYPE_KEY)
@@ -1582,6 +1827,10 @@ class BotHandlers:
         flow_data.pop(MANAGE_ALL_ITEMS_KEY, None)
         flow_data.pop(MANAGE_PAGE_KEY, None)
         flow_data.pop(MANAGE_DATE_OPTIONS_KEY, None)
+        flow_data.pop(BACKDATE_START_KEY, None)
+        flow_data.pop(BACKDATE_KIND_KEY, None)
+        flow_data.pop(BACKDATE_LABEL_KEY, None)
+        flow_data.pop(QUICK_EDIT_KEY, None)
         flow_data.pop(DELETE_DAY_COUNT_KEY, None)
 
     def _export_format(self, context: ContextTypes.DEFAULT_TYPE) -> str:

@@ -15,6 +15,7 @@ def main_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
     rows = [
         [_btn(language_code, "meal"), _btn(language_code, "training"), _btn(language_code, "sleep")],
         [_btn(language_code, "weigh_in"), _btn(language_code, "today"), _btn(language_code, "last")],
+        [_btn(language_code, "add_past"), _btn(language_code, "quick_edit")],
         [_btn(language_code, "manage"), _btn(language_code, "export"), _btn(language_code, "settings")],
     ]
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
@@ -81,6 +82,16 @@ def manage_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
         [_btn(language_code, "entries"), _btn(language_code, "weigh_ins")],
         [_btn(language_code, "trash")],
         [_btn(language_code, "cancel")],
+    ]
+    return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
+
+
+def past_category_keyboard(language_code: str | None) -> ReplyKeyboardMarkup:
+    """Build record-type choices for logging an already-completed record."""
+    rows = [
+        [_btn(language_code, "meal_kind_button"), _btn(language_code, "training_kind_button")],
+        [_btn(language_code, "sleep_kind_button"), _btn(language_code, "weigh_in")],
+        [_btn(language_code, "back"), _btn(language_code, "cancel")],
     ]
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, is_persistent=True)
 

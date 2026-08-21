@@ -15,6 +15,8 @@ DailyLog is a private, single-user Telegram journal for meals, training, sleep, 
 - Records training in a guided activity picker with walk, run, gym, tennis, and table-tennis suggestions, while accepting any custom activity name.
 - Starts and ends sleep or training sessions, with one database-enforced open activity at a time and unrestricted repeated sessions in a day.
 - Records body weight through a one-step flow. Values can use a decimal point or comma, are stored only as metric grams, and are displayed in the saved kg/lb preference.
+- Backfills forgotten meals, completed training or sleep, and weigh-ins directly at their original local timestamp, without first creating a current record and editing it.
+- Opens the eight most recently added records across entries and weigh-ins in one Quick edit list, skipping the category and date screens.
 - Lets the user choose Today or up to eight recent record dates to edit or delete entries and weigh-ins, bulk-delete one day's entries, and restore records from Trash for 30 days.
 - Exports any date range or all saved data as a localized XLSX monthly report or print-ready PDF; document language is saved independently in Settings.
 - Keeps convenient text input available when idle, including `lunch pasta 120g`, `tennis 18:00-19:30`, and `sleep 23:30-07:10`.
@@ -28,13 +30,15 @@ The application uses `python-telegram-bot`, SQLite, `openpyxl`, and ReportLab. L
 ## Guided Workflow
 
 1. Send `/start`. DailyLog seeds the saved locale from the Telegram interface language and shows the idle keyboard.
-2. Select an action: `🍽 Add meal`, `🏃 Start training`, `😴 Start sleep`, `⚖️ Weigh in`, `📅 Today`, `🕘 Last`, `🗂 Manage data`, `📤 Export`, or `⚙️ Settings`.
+2. Select an action: `🍽 Add meal`, `🏃 Start training`, `😴 Start sleep`, `⚖️ Weigh in`, `🕰 Log past`, `✏️ Quick edit`, `📅 Today`, `🕘 Last`, `🗂 Manage data`, `📤 Export`, or `⚙️ Settings`.
 3. For a meal, choose breakfast, snack 1, lunch, snack 2, or dinner, then send the meal details.
 4. For training, choose a suggestion or type an activity. For sleep, the session starts immediately.
 5. While training or sleep is open, the keyboard contains only the matching end control and `✖ Cancel`. Other commands and text entries are rejected until the activity is ended or cancelled.
 6. For a weigh-in, enter a positive number in the saved unit; Settings can switch between kg and lb without modifying saved readings.
-7. Manage data offers Today plus eight recent dates containing the selected record type, while still accepting any typed ISO date (`YYYY-MM-DD`). It then supports field-level editing, deletion confirmation, and Trash restore.
-8. Set the document language once in Settings. For an export, choose `📊 XLSX` or `📄 PDF`, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
+7. To add something you forgot, choose Log past, send its original local timestamp as `YYYY-MM-DD HH:MM`, then choose the record type. Completed training and sleep also ask for the end; use just `HH:MM` when the suggested start date is sufficient.
+8. Quick edit shows the eight records added most recently, including backfilled records and weigh-ins, and opens field choices immediately after selection.
+9. Manage data offers Today plus eight recent dates containing the selected record type, while still accepting any typed ISO date (`YYYY-MM-DD`). It supports the complete correction flow, deletion confirmation, and Trash restore.
+10. Set the document language once in Settings. For an export, choose `📊 XLSX` or `📄 PDF`, then choose `🗂 All data` or `📆 Date range`. A date range uses `YYYY-MM-DD YYYY-MM-DD`.
 
 `/cancel` works at every guided step. Cancelling an open activity moves it to Trash; records in Trash are recoverable for 30 days.
 
@@ -124,6 +128,8 @@ The database normalizes existing aware ISO timestamps to UTC and migrates existi
 /export                Open the export workflow
 /export <from> <to> pdf
 /weighin               Open the weigh-in flow
+/add_past              Add a forgotten record at its original time
+/quick_edit            Edit one of the eight most recently added records
 /manage                Open entry and weigh-in management
 /settings              Change saved language or weight unit
 /delete_last
