@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
-import { apiFailure, ApiError } from "@/core/http/api";
+import { apiFailure, ApiError, verifyRequestOrigin } from "@/core/http/api";
 import { log } from "@/core/observability/logger";
 import { clearLoginAttempts, consumeLoginAttempt } from "@/core/security/rate-limit";
 import { createSession, verifyPassword } from "@/core/security/session";
@@ -12,10 +12,7 @@ const loginSchema = z.object({ password: z.string().min(1).max(256) });
 export async function POST(request: NextRequest) {
     const requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
     try {
-        const origin = request.headers.get("origin");
-        if (!origin || new URL(origin).origin !== request.nextUrl.origin) {
-            throw new ApiError(403, "INVALID_ORIGIN", "Cross-origin requests are not allowed.");
-        }
+        verifyRequestOrigin(request);
         if (!getEnvironment().appPassword) {
             throw new ApiError(503, "AUTH_NOT_CONFIGURED", "Authentication is not configured.");
         }

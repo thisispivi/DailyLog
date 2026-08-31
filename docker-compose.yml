@@ -7,7 +7,7 @@ services:
       DATABASE_PATH: /data/dailylog.sqlite3
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "14141:3000"
     volumes:
       - dailylog_data:/data
     restart: unless-stopped

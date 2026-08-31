@@ -69,11 +69,25 @@ export function apiFailure(error: unknown, requestId: string = randomUUID()): Ne
     );
 }
 
-function verifyRequestOrigin(request: NextRequest): void {
+/**
+ * The standalone Next.js server reports `request.nextUrl.origin` as
+ * `http://${HOSTNAME}:${PORT}` (e.g. "http://0.0.0.0:3000") regardless of the
+ * Host header the client actually sent, so it can never match a real
+ * browser's Origin header. Compare against the forwarded/Host header instead.
+ */
+function resolveRequestOrigin(request: NextRequest): string {
+    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    if (!host) return request.nextUrl.origin;
+    const protocol =
+        request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
+    return `${protocol}://${host}`;
+}
+
+export function verifyRequestOrigin(request: NextRequest): void {
     if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
     const origin = request.headers.get("origin");
     if (!origin) throw new ApiError(403, "INVALID_ORIGIN", "Request origin could not be verified.");
-    if (new URL(origin).origin !== request.nextUrl.origin) {
+    if (new URL(origin).origin !== resolveRequestOrigin(request)) {
         throw new ApiError(403, "INVALID_ORIGIN", "Cross-origin requests are not allowed.");
     }
 }
