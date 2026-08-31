@@ -3,35 +3,39 @@
 ## Prerequisites
 
 - Git
-- Python 3.12
-- [uv](https://docs.astral.sh/uv/)
+- Node.js 20.9 or newer
+- npm 10 or newer
 
 ## Local setup
 
 ```powershell
-uv python install 3.12
-uv sync --locked
+npm ci
 Copy-Item .env.example .env
-uv run pre-commit install --install-hooks
+npm run db:migrate
+npm run dev
 ```
 
-The installed hooks format Python files, sort imports, run strict type checking, check dependency usage and import cycles, scan for dead code and secrets, validate the lockfile, compile the package, and run the complete unit suite. Do not bypass them; CI runs the same mandatory gates.
+Use a disposable database path for development when production-like data is not required. Never commit `.env`, database files, backups, journal content, exports, or session cookies.
 
-## Daily commands
+## Engineering rules
+
+Read [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) before changing architecture, security, persistence, localization, or UI. Keep changes inside the owning feature and add English and Italian strings together.
+
+## Validation
+
+Run the complete local gate before opening a pull request:
 
 ```powershell
-uv run pre-commit run --all-files
-uv run pytest -q --cov=dailylogbot --cov-report=term-missing
-uv run mypy
-uv lock --check
+npm run quality
+npm audit --audit-level=moderate
 ```
 
-Run `uv lock` after changing dependencies and commit the resulting `uv.lock`. The repository has no generated documentation site; docstrings are validated directly by the quality gate.
+Run `npm run test:e2e` when a user workflow, responsive layout, authentication, form, navigation, or theme changes. Run `npm install` after dependency changes and commit `package-lock.json`.
 
 ## Pull requests
 
-Create a focused branch, make conventional commits such as `feat: add export filter` or `fix: preserve timezone`, and open a pull request against `main`. Include tests for behavior changes and explain any user-visible or operational impact. Do not include `.env`, bot tokens, database files, exports, or other user data.
+Create a focused branch and use a Conventional Commit title such as `feat: add report filter` or `fix: preserve local day at DST`. Describe the user-visible outcome, migration/operational impact, security impact, and commands actually run. Include deterministic tests for behavior changes and screenshots only when they materially help review UI changes.
 
-## Maintainer merge policy
+## Merge policy
 
-Protect `main` with required CI checks (`Validate environment and lockfile`, `Quality gates`, `Strict type checking`, `Tests and coverage`, `Python 3.13 compatibility`, `Build package`, `Dependency security`, and `Secret scan`), one approving review, required CODEOWNERS review, resolved conversations, up-to-date branches, linear history, and blocked direct pushes and force pushes. Require signed commits when every regular contributor can use verified signing; otherwise enable vigilant mode and introduce signing after documenting the migration. A sole owner should add a second maintainer before enabling a mandatory approval rule that would block all solo merges.
+Protect `main` with the quality and browser CI jobs, required resolved conversations, up-to-date branches, linear history, and blocked force pushes. Require CODEOWNERS review when the maintainer team can satisfy it without blocking emergency security work.

@@ -15,6 +15,14 @@ htmlcov/
 .env
 .env.*
 !.env.example
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
+data/*.bak
+data/*-e2e.sqlite3*
 data/
 exports/
 *.sqlite3

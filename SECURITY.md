@@ -1,14 +1,26 @@
-# Security Policy
+# Security policy
 
 ## Supported versions
 
-| Version | Supported |
-| --- | --- |
-| 0.3.x | Yes |
-| Older releases | No |
+Security fixes are applied to the current `main` branch and latest release.
 
 ## Reporting a vulnerability
 
-Do not open a public issue for a suspected vulnerability. Use [GitHub private vulnerability reporting](https://github.com/thisispivi/DailyLog/security/advisories/new) and include a clear reproduction, impact assessment, and any proposed mitigation. If private reporting is unavailable, contact the repository owner through GitHub without disclosing exploit details publicly.
+Do not open a public issue. Use GitHub’s private vulnerability reporting for this repository and include the affected version, impact, reproduction steps, and any suggested mitigation. Avoid including real passwords, session cookies, database contents, journal details, or exported reports.
 
-Reports receive an acknowledgement within five business days. The maintainer will assess severity, coordinate a fix, and publish a release note after a remedy is available.
+## Deployment baseline
+
+DailyLog is a private, single-owner application. A production operator must:
+
+- set a unique 12+ character `APP_PASSWORD` and distinct 32+ character `SESSION_SECRET` through a secret manager;
+- preserve the existing owner ID with `APP_USER_ID` when migrating data;
+- terminate HTTPS before the application and keep production secure cookies enabled;
+- expose the service only to intended networks/users;
+- mount the SQLite database on durable storage with restrictive filesystem permissions;
+- back up the database and test restoration;
+- run one application instance for the supported SQLite/in-memory limiter architecture;
+- apply dependency and application updates promptly;
+- run `npm audit --audit-level=moderate` and the full quality suite before deployment;
+- retain structured operational logs without collecting private journal data.
+
+DailyLog does not provide public registration, password recovery, multi-user tenancy, cloud synchronization, or encrypted-at-rest database storage. Use disk or volume encryption when the threat model requires it.

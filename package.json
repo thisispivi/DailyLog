@@ -1,0 +1,53 @@
+{
+  "name": "dailylog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A private, bilingual web journal for meals, activity, sleep, and body weight.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3",
+    "lucide-react": "1.38.0",
+    "next": "16.3.3",
+    "pdfkit": "0.20.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "write-excel-file": "4.1.1",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.4.0",
+    "@types/pdfkit": "0.17.6",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.3",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true
+  }
+}

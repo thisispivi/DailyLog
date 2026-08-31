@@ -1,18 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "bootstrap-sha": "72770d610748549ad8de56ae71812b591c3fbc0f",
-  "release-type": "python",
+  "release-type": "node",
   "include-component-in-tag": false,
   "packages": {
     ".": {
-      "package-name": "dailylogbot",
-      "extra-files": [
-        {
-          "type": "toml",
-          "path": "uv.lock",
-          "jsonpath": "$.package[?(@.name.value=='dailylogbot')].version"
-        }
-      ]
+      "package-name": "dailylog"
     }
   }
 }

@@ -1,1 +1,0 @@
-"""DailyLogBot package."""

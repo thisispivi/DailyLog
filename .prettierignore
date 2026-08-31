@@ -1,0 +1,8 @@
+.next
+coverage
+dist
+legacy
+node_modules
+package-lock.json
+assets/readme/*.png
+data/*.sqlite3

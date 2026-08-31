@@ -4,7 +4,13 @@
 .pre-commit-cache
 .pytest_cache
 .ruff_cache
-.venv
+.venv*
+.next
+node_modules
+coverage
+playwright-report
+test-results
+tsconfig.tsbuildinfo
 __pycache__
 *.py[cod]
 .coverage
@@ -16,3 +22,4 @@ data
 exports
 .env
 .env.*
+!.env.example

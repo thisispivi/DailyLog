@@ -1,0 +1,110 @@
+.login-page {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: clamp(18px, 5vw, 64px);
+}
+
+.login-panel {
+    display: grid;
+    width: min(100%, 1060px);
+    min-height: min(680px, calc(100vh - 80px));
+    grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+    overflow: hidden;
+    border-radius: 36px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-soft);
+}
+
+.login-brand-crop {
+    position: relative;
+    min-height: 560px;
+    overflow: hidden;
+    background: #061b44;
+}
+
+.login-brand-crop img {
+    width: 200% !important;
+    max-width: none !important;
+    object-fit: cover;
+    object-position: 85% center;
+    transform: translateX(-43%);
+}
+
+.login-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(36px, 6vw, 76px);
+}
+
+.login-content h1 {
+    max-width: 520px;
+    font-size: clamp(38px, 5vw, 64px);
+}
+
+.login-tagline {
+    margin: 24px 0 46px;
+    color: var(--text-muted);
+    font-size: 17px;
+}
+
+.login-form {
+    display: grid;
+    max-width: 380px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field svg {
+    position: absolute;
+    z-index: 1;
+    top: 14px;
+    left: 14px;
+    color: var(--text-muted);
+}
+
+.password-field .input {
+    padding-left: 43px;
+}
+
+.login-submit {
+    margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+    .login-page {
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .login-panel {
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+        border-radius: 0;
+    }
+
+    .login-brand-crop {
+        min-height: 210px;
+    }
+
+    .login-brand-crop img {
+        width: 140% !important;
+        transform: translateX(-25%);
+    }
+
+    .login-content {
+        justify-content: start;
+        padding: 42px 24px;
+    }
+
+    .login-content h1 {
+        font-size: 40px;
+    }
+
+    .login-tagline {
+        margin: 18px 0 34px;
+    }
+}
