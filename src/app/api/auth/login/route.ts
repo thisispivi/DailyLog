@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
             throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials.");
         }
         clearLoginAttempts(identifier);
-        await createSession();
+        await createSession(request);
         log("info", "auth.login_succeeded", { requestId });
         return NextResponse.json({ data: { authenticated: true } });
     } catch (error) {

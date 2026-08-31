@@ -1,11 +1,26 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 
 import { getEnvironment } from "@/core/config/env";
 
 const COOKIE_NAME = "dailylog_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
+
+/**
+ * NODE_ENV alone can't tell us whether this request actually arrived over
+ * HTTPS (e.g. a plain HTTP deployment behind no TLS-terminating proxy still
+ * runs with NODE_ENV=production). Marking the cookie Secure when the
+ * connection isn't HTTPS makes browsers silently refuse to store it, which
+ * looks like a login that "accepts the password but stays on the login
+ * page." Base the flag on the request's real scheme instead.
+ */
+function isSecureRequest(request: NextRequest): boolean {
+    const forwardedProto = request.headers.get("x-forwarded-proto");
+    if (forwardedProto) return forwardedProto.split(",")[0]?.trim() === "https";
+    return request.nextUrl.protocol === "https:";
+}
 
 type SessionPayload = Readonly<{
     expiresAt: number;
@@ -30,7 +45,7 @@ export function verifyPassword(candidate: string): boolean {
     return timingSafeEqual(actualDigest, expectedDigest);
 }
 
-export async function createSession(): Promise<void> {
+export async function createSession(request: NextRequest): Promise<void> {
     const environment = getEnvironment();
     if (!environment.sessionSecret) throw new Error("Authentication is not configured.");
 
@@ -47,18 +62,18 @@ export async function createSession(): Promise<void> {
         maxAge: SESSION_DURATION_SECONDS,
         path: "/",
         sameSite: "strict",
-        secure: environment.nodeEnv === "production",
+        secure: isSecureRequest(request),
     });
 }
 
-export async function destroySession(): Promise<void> {
+export async function destroySession(request: NextRequest): Promise<void> {
     const cookieStore = await cookies();
     cookieStore.set(COOKIE_NAME, "", {
         httpOnly: true,
         maxAge: 0,
         path: "/",
         sameSite: "strict",
-        secure: getEnvironment().nodeEnv === "production",
+        secure: isSecureRequest(request),
     });
 }
 

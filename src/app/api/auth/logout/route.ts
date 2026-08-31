@@ -6,7 +6,7 @@ import { destroySession } from "@/core/security/session";
 export async function POST(request: NextRequest) {
     try {
         const context = await requireApiSession(request);
-        await destroySession();
+        await destroySession(request);
         return ok({ authenticated: false, requestId: context.requestId });
     } catch (error) {
         return apiFailure(error);
