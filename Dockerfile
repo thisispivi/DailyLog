@@ -1,23 +1,28 @@
-FROM node:24.19.0-alpine AS dependencies
+FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS dependencies
 WORKDIR /app
 RUN apk add --no-cache g++ make python3
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:24.19.0-alpine AS builder
+FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:24.19.0-alpine AS runner
+FROM node:24.19.0-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 dailylog
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/corepack /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/corepack /usr/local/bin/npm /usr/local/bin/npx \
+        /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+    && addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 dailylog
 COPY --from=builder --chown=dailylog:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=dailylog:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=dailylog:nodejs /app/assets ./assets
