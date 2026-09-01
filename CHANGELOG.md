@@ -2,21 +2,19 @@
 
 ## [1.1.0](https://github.com/thisispivi/DailyLog/compare/v1.0.0...v1.1.0) (2026-09-01)
 
-
 ### Features
 
-* add Gitleaks configuration for secret detection ([93539d9](https://github.com/thisispivi/DailyLog/commit/93539d9ba942d920773cbfe984d5a9f82a0e3ad8))
-* **bot:** streamline backdated logging and edits ([492c7d3](https://github.com/thisispivi/DailyLog/commit/492c7d3d5f115735367107e39b937b1e9d77b831))
-* **localization:** enhance Italian language support and document export settings ([aec5aba](https://github.com/thisispivi/DailyLog/commit/aec5aba08e94727d747bf4a6601573cfd6a9235b))
-* **web:** replace Telegram bot with DailyLog app ([07aa18b](https://github.com/thisispivi/DailyLog/commit/07aa18beaae340ef83a69079e5b5d1c92de041e7))
-
+- add Gitleaks configuration for secret detection ([93539d9](https://github.com/thisispivi/DailyLog/commit/93539d9ba942d920773cbfe984d5a9f82a0e3ad8))
+- **bot:** streamline backdated logging and edits ([492c7d3](https://github.com/thisispivi/DailyLog/commit/492c7d3d5f115735367107e39b937b1e9d77b831))
+- **localization:** enhance Italian language support and document export settings ([aec5aba](https://github.com/thisispivi/DailyLog/commit/aec5aba08e94727d747bf4a6601573cfd6a9235b))
+- **web:** replace Telegram bot with DailyLog app ([07aa18b](https://github.com/thisispivi/DailyLog/commit/07aa18beaae340ef83a69079e5b5d1c92de041e7))
 
 ### Bug Fixes
 
-* **ci:** keep release pull requests buildable ([68dbcd3](https://github.com/thisispivi/DailyLog/commit/68dbcd39e4e945a233287768fa4d69024fcecce3))
-* **ci:** keep release pull requests buildable ([a6821a8](https://github.com/thisispivi/DailyLog/commit/a6821a83f94ec72765eecd17283d27108bee794c))
-* **ci:** restore secure pull request checks ([#33](https://github.com/thisispivi/DailyLog/issues/33)) ([05484d8](https://github.com/thisispivi/DailyLog/commit/05484d899de38a88147e9a60acfff947ea7d3e49))
-* sync lockfile version for release ([b8becd9](https://github.com/thisispivi/DailyLog/commit/b8becd9e953d7fabffdb10834fb34c284f246322))
+- **ci:** keep release pull requests buildable ([68dbcd3](https://github.com/thisispivi/DailyLog/commit/68dbcd39e4e945a233287768fa4d69024fcecce3))
+- **ci:** keep release pull requests buildable ([a6821a8](https://github.com/thisispivi/DailyLog/commit/a6821a83f94ec72765eecd17283d27108bee794c))
+- **ci:** restore secure pull request checks ([#33](https://github.com/thisispivi/DailyLog/issues/33)) ([05484d8](https://github.com/thisispivi/DailyLog/commit/05484d899de38a88147e9a60acfff947ea7d3e49))
+- sync lockfile version for release ([b8becd9](https://github.com/thisispivi/DailyLog/commit/b8becd9e953d7fabffdb10834fb34c284f246322))
 
 ## 1.0.0 (2026-08-31)
 
