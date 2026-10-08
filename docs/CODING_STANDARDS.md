@@ -1,187 +1,123 @@
-# DailyLog Coding Standards
+# DailyLog coding standards
 
-## Purpose
+The single source of truth for how code is organized and written here. Rules marked **(enforced)** fail lint, typecheck, or CI.
 
-This document is the canonical engineering standard for DailyLog. New code must preserve the product’s private, single-owner model, bilingual interface, data compatibility, and direct daily-use experience.
-
-## Architecture and boundaries
-
-- Organize product code by feature under `src/features/<feature>`. A feature owns its domain types, schemas, UI, application logic, and tests.
-- Put cross-feature policy in `src/core` only when at least two features consume it. Keep security, time, i18n, HTTP contracts, configuration, and observability in named core modules; never create a catch-all `utils` directory.
-- Put framework and vendor adapters in `src/infrastructure`. Domain and feature modules must not import Next.js or SQLite types unless they are explicitly transport or persistence code.
-- Keep route handlers thin: authenticate, validate, call one repository/application operation, and serialize a stable result.
-- Do not import from another feature’s UI directory. Shared domain imports must come from the owning feature’s public domain or schema module.
-- Avoid barrel files. Import from the file that owns the symbol so dependencies remain visible.
-- Do not add repository patterns, factories, dependency containers, or generic abstractions until two concrete implementations need the boundary.
-
-## Folder organization
+## Where things go
 
 ```text
 src/
-├── app/                         Next.js routes and route handlers
-├── core/<concern>/              Cross-feature policy
-├── features/<feature>/          Domain, application logic, UI, and tests
-└── infrastructure/<adapter>/    SQLite and other external adapters
+├── app/                      Next.js routes only: pages, layouts, route handlers, page CSS
+├── features/<feature>/       Domain logic, schemas, and UI for one product area
+│   ├── <name>.ts             Pure logic, next to its <name>.test.ts
+│   └── ui/                   React components owned by the feature
+├── ui/                       Presentational pieces shared by features (brand, badges)
+├── core/<concern>/           Cross-cutting policy: config, http, i18n, preferences, security, time, logging
+└── infrastructure/<adapter>/ SQLite and any future external adapter
 ```
 
-Place a test beside the source it protects using `*.test.ts`. Browser workflows live in `tests/e2e`.
+Adding a feature:
 
-## Naming and files
+| You are adding…                      | Put it in                                                   |
+| ------------------------------------ | ----------------------------------------------------------- |
+| A page                               | `src/app/(app)/<route>/page.tsx` plus `<route>.css`         |
+| An API endpoint                      | `src/app/api/<resource>/route.ts`, using the route wrappers |
+| A request schema                     | The owning feature's `schemas.ts`                           |
+| Business logic                       | `src/features/<feature>/<name>.ts`                          |
+| A component used by one feature      | `src/features/<feature>/ui/`                                |
+| A component used by several features | `src/ui/` (presentational only)                             |
+| A database query                     | A method on `LogbookRepository`                             |
+| A new environment variable           | `core/config/env.ts`, `.env.example`, and the README table  |
+| UI text                              | `core/i18n/catalogs.ts`, English and Italian together       |
 
-- Use `kebab-case.ts` and `kebab-case.tsx` filenames.
-- Use `PascalCase` for React components and exported types; use `camelCase` for functions and values.
-- Name booleans as facts or capabilities: `isOpen`, `hasActiveActivity`, `canRestore`.
-- Name handlers by outcome: `finishActivity`, not `handleThing`.
-- Name constants in `UPPER_SNAKE_CASE` only when they are module-level invariants.
-- Keep files focused. Split a file when it contains multiple unrelated reasons to change, not at an arbitrary line count.
+There is no `utils/` directory. If a helper has no obvious home, it probably belongs to the feature that uses it.
+
+### Import direction (enforced)
+
+```text
+app → features → ui → core
+ └──→ infrastructure → core
+```
+
+- Only `app/` may import `infrastructure/`. Pages and routes read data and pass it down.
+- `core/` never imports from `app/`, `infrastructure/`, or any feature's `ui/`.
+- `ui/` never imports from `app/`, `infrastructure/`, or a feature's `ui/`.
+- `features/logbook` holds the shared domain (record types, schemas, domain errors). Everything may import it.
+- Inside `src`, import with `@/`, never `../` (enforced).
+- No barrel files. Import from the file that owns the symbol.
+
+## Runtime validation
+
+TypeScript types vanish at runtime. Anything from outside the process is `unknown` until Zod has parsed it.
+
+- **Validate at the boundary, once.** Request bodies, query strings, route params, cookies, and environment variables are parsed before they reach domain code. Domain and repository code trust their typed inputs and do not re-validate.
+- **Use the route helpers.** `readJson(request, schema)` and `readQuery(request, schema)` turn malformed JSON and schema failures into a 400 response. Never call `request.json()` directly.
+- **Strict request schemas.** Use `z.strictObject` so unknown keys are rejected rather than silently dropped. Update schemas list exactly the fields a client may change.
+- **One contract per shape.** Define the schema and derive the type with `z.infer`. Do not write a matching interface by hand.
+- **No casts on external data.** `as SomeType` on parsed JSON, cookies, or env is a bug. Casts are acceptable for database rows, whose shape the schema's `CHECK` constraints guarantee, and for widening a literal type.
+- **Keep transforms simple.** Trimming and coercing query numbers is fine. Business rules belong in domain code.
+- **Validation is not authorization.** A valid payload still needs a session, and every query is scoped by `userId`.
+
+## API conventions
+
+- Wrap every handler in `authenticatedRoute` or `publicRoute`. They own request IDs, the same-origin check, the session check, and error mapping.
+- Success: `{ data: T }`. Failure: `{ error: { code, message, requestId, fields? } }`.
+- Statuses: 400 invalid input, 401 no session, 403 bad origin, 404 missing owned record, 409 invariant conflict, 429 throttled.
+- Throw domain errors (`RecordNotFoundError`, `DuplicateOpenActivityError`, `InvalidEntryRangeError`) or `ApiError`. Anything else becomes a generic 500 with no internal details.
+- Never accept a raw sort column, SQL fragment, or file path from a client.
+
+## Database
+
+- Every repository method takes `userId` and every query filters by it, including updates, deletes, and restores.
+- Timestamps are stored as UTC ISO strings with a `+00:00` suffix. Calendar days are computed in the configured timezone.
+- Weight is stored as integer grams. Units are a display concern.
+- Schema changes are additive: bump `SCHEMA_VERSION` and keep the pre-migration backup.
+- Put invariants in the database too (`CHECK`, partial unique indexes) so concurrent requests cannot break them.
 
 ## TypeScript
 
-- `strict` mode is mandatory. Do not weaken `tsconfig.json` checks to accommodate application errors.
-- Do not use `any`. Prefer `unknown`, then narrow it at the trust boundary.
-- Do not use non-null assertions. Prove the value exists or return a controlled error.
-- Avoid casts. A cast is acceptable only after runtime validation or when correcting an incomplete third-party declaration; keep it local and explain the constraint when non-obvious.
-- Prefer `type` for domain values, unions, and component props. Use `interface` for intentionally extensible third-party boundaries.
-- Model finite domain states with literal unions or discriminated unions, never free-form strings.
-- Prefer `readonly` domain records and readonly component props.
-- Let Zod infer boundary input types. Do not duplicate a schema as a handwritten request type.
-- Use exhaustive `switch` handling for discriminated unions. An unhandled domain variant must fail type checking.
+- `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` stay on (enforced).
+- No `any`, no non-null assertions (enforced). Narrow `unknown` instead.
+- Type-only imports use `import { type X }` (enforced).
+- Model finite states as literal unions derived from `as const` arrays, e.g. `entryKinds`.
+- Prefer `Readonly<...>` props and domain records.
 
-## Components and hooks
+## React
 
-- Server Components are the default. Add `"use client"` only for interaction, browser APIs, or local transient state.
-- Keep data access in server pages or route handlers; client components receive serializable domain values.
-- Components must expose semantic HTML before ARIA. Add ARIA only when native semantics do not express the interaction.
-- Every input has a programmatic label. Every mutation exposes pending, success, and failure feedback.
-- Do not use effects to derive state that can be computed while rendering.
-- Name reusable hooks `use<Capability>`. A hook must own a coherent behavior, not merely wrap one `useState` call.
-- Avoid prop drilling across more than two product layers. Prefer composition before introducing context.
+- Server Components by default. Add `"use client"` only for interaction or browser APIs.
+- Client mutations use `sendJson` from `core/http/client.ts`. It never throws, so every outcome reaches the UI.
+- Every mutation shows pending, success, and failure states. Destructive actions confirm first.
+- Every input has a label. Use semantic HTML before ARIA. Touch targets are at least 44px.
+- Do not hardcode user-facing text. Add both languages in the same change.
 
-## Services, repositories, and API conventions
+## Styling
 
-- Exported domain services describe a user-visible capability and remain independent of Next.js.
-- Repository methods always take `userId`; no record query may rely on a previously selected global owner.
-- Route handlers use the response envelope `{ data: T }` or `{ error: { code, message, requestId, fields? } }`.
-- Use conventional HTTP methods and statuses. Return `400` for invalid input, `401` for no session, `403` for rejected origin/authorization, `404` for unavailable owned records, `409` for invariant conflicts, and `429` for throttling.
-- Parse pagination with a maximum server-enforced limit. Never accept a raw SQL sort column or clause from the client.
-- Do not expose stack traces, SQLite errors, secrets, filesystem paths, or internal exception messages.
+- Design tokens live in `src/app/globals.css`: colours, category colours (`--kind-*`), radii, spacing. Use tokens, not literal colours.
+- Page styles sit next to the page (`today.css`). Component styles sit next to the component when the component is used on several pages.
+- The navy brand surfaces (`.navy-panel`) stay navy in both themes. Content surfaces follow the theme.
+- Respect `prefers-reduced-motion`.
 
-## Validation and errors
+## Naming and comments
 
-- Treat request bodies, query parameters, environment variables, cookies, database rows, and imported files as untrusted.
-- Validate external input with Zod before it reaches domain or persistence code.
-- Encode invariants twice when appropriate: readable application validation plus database constraints/indexes for race safety.
-- Use stable error codes for client decisions. Translate user-facing error text at the UI boundary.
-- Catch only errors that can be converted, recovered, or enriched. Never use an empty catch block.
-- Destructive actions require a clear confirmation and remain recoverable when the domain supports it.
+- Files are `kebab-case`. Components and types are `PascalCase`. Functions and values are `camelCase`. Module-level invariants are `UPPER_SNAKE_CASE`.
+- Booleans read as facts (`isOpen`, `hasActiveActivity`). Handlers are named for their outcome (`finishActivity`).
+- Comments explain why, not what. TSDoc goes on exported functions whose contract is not obvious from the signature.
 
-## Logging and observability
+## Logging and secrets
 
-- Log structured JSON through `core/observability/logger.ts`.
-- Use event names such as `auth.login_rejected` and include request IDs on request-scoped events.
-- Never log passwords, session tokens, cookies, request bodies, meal details, weight values, or report contents.
-- Health checks and external error tracking must be added behind narrow adapters. Do not couple domain code to a vendor SDK.
+- Log through `core/observability/logger.ts` with dotted event names (`auth.login_rejected`) and the request ID.
+- Never log passwords, cookies, request bodies, journal text, weights, or report contents.
+- Read environment variables only through `getEnvironment()`.
 
-## Security
+## Tests
 
-- Mutating HTTP requests require a valid signed session and same-origin verification.
-- Cookies are `HttpOnly`, `SameSite=Strict`, path-scoped, and `Secure` in production.
-- Authentication must fail closed when secrets are absent or invalid.
-- Use parameterized SQLite statements. Never interpolate user values into SQL identifiers or clauses.
-- Never render user content as HTML. Spreadsheet-bound text must pass formula-injection neutralization.
-- Secrets belong in environment variables. Commit placeholders only.
-- Keep CSP, HSTS, frame denial, content-type protection, referrer policy, and permissions policy enabled.
-- Run `npm audit --audit-level=moderate` before releases and address direct or exploitable advisories.
+- Unit tests sit beside the code as `*.test.ts`. Repository tests use an in-memory SQLite database.
+- Name tests as behaviour ("rejects meals with an end time"). Inject times instead of depending on the clock.
+- Every bug fix gets a regression test where practical.
+- For schemas, test the accepted shape, the important rejections, and any default or coercion. Skip trivial constraint-by-constraint tests.
+- Browser flows live in `tests/e2e`. Run `npm run test:e2e` when you change a user workflow.
 
-## Accessibility
+## Dependencies
 
-- Meet a practical WCAG 2.2 AA baseline: keyboard operation, visible focus, semantic landmarks/headings, sufficient contrast, and 44px touch targets.
-- Use `aria-live` for asynchronous status changes. Do not move focus unexpectedly.
-- Dialogs, if introduced, must trap focus, close with Escape, label themselves, and return focus to the trigger.
-- Respect `prefers-reduced-motion`; motion must communicate state, not decorate empty space.
-
-## Internationalization
-
-- No user-facing component string may be hardcoded. Add English and Italian strings to `core/i18n/catalogs.ts` in the same change.
-- Use typed translation keys and named interpolation tokens.
-- Format dates, times, numbers, and weights with `Intl` using the saved locale and configured timezone.
-- Persist UI language separately from report language. New locale support must not require component changes.
-- Error, validation, loading, empty, accessibility-label, notification, and metadata text are part of localization scope.
-
-## Styling and design tokens
-
-- Use the tokens defined in `app/globals.css` for color, spacing, radius, elevation, sizing, focus, and layout.
-- Do not introduce raw colors in feature CSS unless they extend the documented DailyLog navy/blue brand treatment or a contained chart series.
-- Maintain one dominant focal mass per screen, restrained accent use, matte surfaces, and localized detail density.
-- Do not create equal-card grids, decorative gradients, glass effects, filler badges, or ornamental animation.
-- Design mobile layouts intentionally; do not merely scale the desktop layout.
-
-## State, fetching, and caching
-
-- Keep transient form state local. Persist only domain records and explicit user preferences.
-- Fetch initial private data on the server. Use API requests for mutations, then refresh the affected server-rendered slice.
-- Do not add a client state library until shared client state becomes demonstrably difficult with React primitives.
-- Private responses and generated reports use `no-store`; never cache one user’s data in a public cache.
-- Optimistic updates are allowed only when reversal is unambiguous and persistence conflicts are unlikely.
-
-## Database and transactions
-
-- Store timestamps as aware UTC ISO strings and derive calendar boundaries with the configured IANA timezone.
-- Store body weight as integer grams; conversion is presentation/input behavior.
-- Every query includes `user_id`, including updates, deletes, restores, and lookup-by-ID.
-- Schema changes are additive migrations. Back up a legacy database before its first migration and increment `PRAGMA user_version`.
-- Use transactions for multi-statement invariants and bulk changes.
-- Add indexes only for observed query shapes; document uniqueness and partial indexes as domain rules.
-- Never silently reinterpret, truncate, or delete existing records during a migration.
-
-## Async code and performance
-
-- Await every promise or deliberately detach it with explicit error handling.
-- Run independent work concurrently only when ordering is irrelevant.
-- Keep client bundles small: prefer platform APIs and Server Components; justify each client dependency.
-- Paginate unbounded history. Avoid per-record queries and client-side downloads of the full database.
-- Do not memoize cheap calculations. Measure before adding caches.
-
-## Environment variables
-
-- Validate variables in `core/config/env.ts`; application code must not read secret variables directly.
-- Update `.env.example` and README for every new variable.
-- Required production secrets must not have insecure defaults. Missing auth configuration must deny access.
-- Preserve documented legacy aliases only when they allow safe data migration.
-
-## Testing
-
-- Unit tests protect domain transformations and validation.
-- Integration tests use a real in-memory SQLite database for ownership, constraints, migrations, and trash behavior.
-- Report tests verify file signatures and injection defenses.
-- End-to-end tests protect sign-in and one critical logging flow at desktop/mobile breakpoints.
-- Name tests as behavior statements. Keep them deterministic by injecting times or using fixed timestamps.
-- Do not assert implementation details, framework-generated class names, or incidental markup.
-- `npm test` must pass before merge. Run `npm run test:e2e` when UI workflows change.
-
-## Documentation
-
-- Use TSDoc (`/** ... */`) for exported domain services, public APIs, security-sensitive logic, important types, complex transformations, and non-obvious side effects.
-- Start with intent, then document constraints, invariants, errors, or side effects. Do not restate syntax.
-- Use `@param`, `@returns`, and `@throws` only when they add information not clear from types.
-- Inline comments explain why a decision exists; they must not narrate the following statement.
-- Project documents use sentence-case headings, concise paragraphs, and the terms entry, weigh-in, activity, owner, UI language, and report language consistently.
-
-## Dependencies and imports
-
-- Prefer Node, browser, React, and Next.js platform capabilities before adding a package.
-- Every dependency must have one clear job, current maintenance, usable TypeScript declarations, and no overlapping package already present.
-- Pin direct dependency versions and commit `package-lock.json`.
-- Use `@/` for imports within `src`; use relative imports only from scripts outside `src`.
-- Keep imports ordered by formatter/linter rules: platform, external, blank line, internal.
-- Remove packages in the same change that removes their final use.
-
-## Quality gates and Git hygiene
-
-- Run `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` before merging.
-- CI must also run `npm audit --audit-level=moderate` and the browser regression workflow where supported.
-- Use focused conventional commits. Do not combine unrelated formatting or generated artifacts with feature changes.
-- Never commit `.env`, databases, backups, build output, coverage, or editor state.
-- Do not leave dead code, commented-out code, debug logging, unexplained TODOs, or stale compatibility adapters.
-- Do not abstract a single use “for later.” Duplicate small presentation code once; extract it when the shared rule is proven.
-- Domain invariants—ownership, open activity, timestamp rules, weight normalization, retention—must have one authoritative implementation and database enforcement where possible.
+- Prefer the platform: Node, the browser, React, Next.js. A new package needs one clear job and no overlap with existing ones.
+- Pin exact versions and commit `package-lock.json`.
+- Remove a package in the same change that removes its last use.

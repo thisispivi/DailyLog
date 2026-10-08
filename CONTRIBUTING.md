@@ -1,41 +1,43 @@
-# Contributing to DailyLog
+# Contributing
 
-## Prerequisites
+## Setup
 
-- Git
-- Node.js 20.9 or newer
-- npm 10 or newer
-
-## Local setup
-
-```powershell
-npm ci
-Copy-Item .env.example .env
+```bash
+npm ci                  # installs dependencies and the git hooks
+cp .env.example .env    # set APP_PASSWORD and SESSION_SECRET
 npm run db:migrate
 npm run dev
 ```
 
-Use a disposable database path for development when production-like data is not required. Never commit `.env`, database files, backups, journal content, exports, or session cookies.
+Point `DATABASE_PATH` at a throwaway file when you don't need real data. Never commit `.env`, databases, backups, or exports.
 
-## Engineering rules
+Read [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) before your first change. It says where new code goes and what lint enforces.
 
-Read [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) before changing architecture, security, persistence, localization, or UI. Keep changes inside the owning feature and add English and Italian strings together.
+## Workflow
 
-## Validation
+1. Branch from `main` as `<kind>/<short-description>`, e.g. `feat/weekly-summary` or `fix/dst-day-bounds`.
+2. Commit with [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`, `ci:`.
+3. Open a pull request against `main`. Its title becomes the release note, so use the same format.
+4. Merge once CI is green, then delete the branch.
 
-Run the complete local gate before opening a pull request:
+Release Please turns merged commits into the changelog and version bump.
 
-```powershell
+## Checks
+
+The hooks run automatically:
+
+- **pre-commit**: Prettier and ESLint on staged files.
+- **pre-push**: format check, lint, typecheck, unit tests.
+
+Run the full local gate before opening a pull request:
+
+```bash
 npm run quality
-npm audit --audit-level=moderate
+npm run test:e2e    # when a user workflow, layout, or form changes
 ```
 
-Run `npm run test:e2e` when a user workflow, responsive layout, authentication, form, navigation, or theme changes. Run `npm install` after dependency changes and commit `package-lock.json`.
+If a hook fails, fix the cause. Don't skip it with `--no-verify`.
 
 ## Pull requests
 
-Create a focused branch and use a Conventional Commit title such as `feat: add report filter` or `fix: preserve local day at DST`. Describe the user-visible outcome, migration/operational impact, security impact, and commands actually run. Include deterministic tests for behavior changes and screenshots only when they materially help review UI changes.
-
-## Merge policy
-
-Protect `main` with the quality and browser CI jobs, required resolved conversations, up-to-date branches, linear history, and blocked force pushes. Require CODEOWNERS review when the maintainer team can satisfy it without blocking emergency security work.
+Say what changed for the user, any migration or security impact, and which commands you ran. Include a regression test for bug fixes. Screenshots help for UI changes.
