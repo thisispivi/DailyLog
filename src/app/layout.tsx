@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Nunito } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 
+// Bundled from node_modules, so builds work offline and the CSP keeps font-src 'self'.
+import "@fontsource-variable/nunito";
 import "./globals.css";
-
-// Self-hosted at build time, so the CSP can keep font-src 'self'.
-const brandFont = Nunito({
-    display: "swap",
-    subsets: ["latin"],
-    variable: "--font-brand",
-});
 
 export const metadata: Metadata = {
     applicationName: "DailyLog",
@@ -32,7 +26,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     const { locale, theme } = await readPreferenceCookies();
     return (
         <html
-            className={brandFont.variable}
             data-scroll-behavior="smooth"
             data-theme={theme}
             lang={locale}

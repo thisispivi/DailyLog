@@ -9,7 +9,7 @@
 :root {
     color-scheme: light dark;
 
-    --font-sans: var(--font-brand), ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-sans: "Nunito Variable", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
 
     --canvas: light-dark(#f4f1ff, #17142b);
     --surface: light-dark(#ffffff, #221e3d);
