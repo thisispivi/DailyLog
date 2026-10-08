@@ -2,3 +2,19 @@ title = "DailyLog Gitleaks configuration"
 
 [extend]
 useDefault = true
+
+# CI scans the full history. The retired Python toolchain committed a
+# detect-secrets baseline whose metadata digest looks like an API key.
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Detect Secrets metadata digest, not a credential."
+  condition = "AND"
+  paths = [
+    '''^\.secrets\.baseline$''',
+  ]
+  regexTarget = "secret"
+  regexes = [
+    '''^3446ab7256fe1f58dad617786d75ef3abc344158$''',
+  ]
