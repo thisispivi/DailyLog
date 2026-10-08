@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" role="img" aria-labelledby="title">
+  <title id="title">DailyLog: meals, training, sleep, and weight in one private journal</title>
+  <defs>
+    <style>
+      text { font-family: Nunito, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+      .icon { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <clipPath id="frame"><rect width="1280" height="400" rx="32"/></clipPath>
+  </defs>
+
+  <rect width="1280" height="400" rx="32" fill="#f4f1ff"/>
+  <g clip-path="url(#frame)">
+    <circle cx="1180" cy="40" r="180" fill="#e9e5ff"/>
+    <circle cx="90" cy="380" r="120" fill="#ece8fb"/>
+  </g>
+
+  <g transform="translate(96 118)">
+    <rect width="72" height="72" rx="22" fill="#6a5ae0"/>
+    <g transform="translate(14 14) scale(1.83)">
+      <path class="icon" stroke="#ffffff" d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+    </g>
+    <text x="96" y="56" font-size="64" font-weight="800" fill="#2e2a4f">DailyLog</text>
+    <text x="0" y="132" font-size="28" font-weight="600" fill="#6e6a8f">Meals, training, sleep, and weight.</text>
+    <text x="0" y="172" font-size="28" font-weight="600" fill="#6e6a8f">One private journal.</text>
+  </g>
+
+  <g transform="translate(680 86)">
+    <g>
+      <rect width="244" height="104" rx="24" fill="#d7f5e3"/>
+      <rect x="20" y="22" width="60" height="60" rx="18" fill="#ffffff"/>
+      <g transform="translate(32 34) scale(1.5)">
+        <path class="icon" stroke="#1e7a4c" d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+        <path class="icon" stroke="#1e7a4c" d="M7 2v20"/>
+        <path class="icon" stroke="#1e7a4c" d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+      </g>
+      <text x="100" y="48" font-size="18" font-weight="700" fill="#1e7a4c">Meals</text>
+      <text x="100" y="78" font-size="26" font-weight="800" fill="#2e2a4f">3 today</text>
+    </g>
+    <g transform="translate(268 0)">
+      <rect width="244" height="104" rx="24" fill="#ffe3cc"/>
+      <rect x="20" y="22" width="60" height="60" rx="18" fill="#ffffff"/>
+      <g transform="translate(32 34) scale(1.5)">
+        <path class="icon" stroke="#a8530f" d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/>
+        <path class="icon" stroke="#a8530f" d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/>
+        <path class="icon" stroke="#a8530f" d="M16 17h4"/>
+        <path class="icon" stroke="#a8530f" d="M4 13h4"/>
+      </g>
+      <text x="100" y="48" font-size="18" font-weight="700" fill="#a8530f">Active</text>
+      <text x="100" y="78" font-size="26" font-weight="800" fill="#2e2a4f">45 min</text>
+    </g>
+    <g transform="translate(0 128)">
+      <rect width="244" height="104" rx="24" fill="#dce6ff"/>
+      <rect x="20" y="22" width="60" height="60" rx="18" fill="#ffffff"/>
+      <g transform="translate(32 34) scale(1.5)">
+        <path class="icon" stroke="#2f4fb0" d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>
+      </g>
+      <text x="100" y="48" font-size="18" font-weight="700" fill="#2f4fb0">Sleep</text>
+      <text x="100" y="78" font-size="26" font-weight="800" fill="#2e2a4f">7 h 45 min</text>
+    </g>
+    <g transform="translate(268 128)">
+      <rect width="244" height="104" rx="24" fill="#eddcff"/>
+      <rect x="20" y="22" width="60" height="60" rx="18" fill="#ffffff"/>
+      <g transform="translate(32 34) scale(1.5)">
+        <path class="icon" stroke="#6a3db0" d="M12 3v18"/>
+        <path class="icon" stroke="#6a3db0" d="m19 8 3 8a5 5 0 0 1-6 0zV7"/>
+        <path class="icon" stroke="#6a3db0" d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/>
+        <path class="icon" stroke="#6a3db0" d="m5 8 3 8a5 5 0 0 1-6 0zV7"/>
+        <path class="icon" stroke="#6a3db0" d="M7 21h10"/>
+      </g>
+      <text x="100" y="48" font-size="18" font-weight="700" fill="#6a3db0">Weight</text>
+      <text x="100" y="78" font-size="26" font-weight="800" fill="#2e2a4f">73.1 kg</text>
+    </g>
+  </g>
+</svg>
