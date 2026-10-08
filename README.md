@@ -1,5 +1,5 @@
 <div align="center">
-  <img alt="DailyLog — private meals, training, sleep, and weight journal" src="./assets/readme/dailylog-banner.png" width="100%">
+  <img alt="DailyLog: meals, training, sleep, and weight in one private journal" src="./assets/readme/dailylog-banner.svg" width="100%">
 </div>
 
 # DailyLog
