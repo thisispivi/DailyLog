@@ -7,7 +7,7 @@ import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
 import type { Locale, WeightUnit } from "@/features/logbook/domain";
-import { KindIcon, type RecordKind } from "@/ui/kind-badge";
+import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 const modes: readonly RecordKind[] = ["meal", "training", "sleep", "weight"];
 
@@ -98,7 +98,7 @@ export function QuickLog({
                         type="button"
                     >
                         <span className="mode-icon">
-                            <KindIcon kind={value} size={18} />
+                            <KindIcon kind={value} size="small" />
                         </span>
                         {translate(locale, `dashboard.${value}`)}
                     </button>

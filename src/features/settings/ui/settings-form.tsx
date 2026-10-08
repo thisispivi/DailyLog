@@ -149,7 +149,7 @@ function OptionGroup<Value extends string>({
     return (
         <div aria-label={title} className="option-group" role="radiogroup">
             {options.map(([optionValue, optionLabel]) => (
-                <label key={optionValue}>
+                <label className="chip" key={optionValue}>
                     <input
                         checked={value === optionValue}
                         name={name}

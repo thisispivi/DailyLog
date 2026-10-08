@@ -6,7 +6,7 @@ import {
     type WeighIn,
     type WeightUnit,
 } from "@/features/logbook/domain";
-import { KindBadge } from "@/ui/kind-badge";
+import { KindIcon } from "@/ui/kind-icon";
 
 const MAX_WEIGHT_POINTS = 12;
 const MAX_ACTIVITY_BARS = 5;
@@ -46,7 +46,7 @@ function WeightTrend({ locale, timeZone, weighIns, weightUnit }: Props) {
     return (
         <section className="trend-card card" data-kind="weight">
             <header className="trend-heading">
-                <KindBadge kind="weight" />
+                <KindIcon kind="weight" />
                 <div>
                     <p className="eyebrow">{translate(locale, "reports.weightSheet")}</p>
                     <h2>{title}</h2>
@@ -116,7 +116,7 @@ function TrainingBreakdown({ entries, locale }: Readonly<{ entries: Entry[]; loc
     return (
         <section className="trend-card card" data-kind="training">
             <header className="trend-heading">
-                <KindBadge kind="training" />
+                <KindIcon kind="training" />
                 <div>
                     <p className="eyebrow">{translate(locale, "dashboard.training")}</p>
                     <h2>{translate(locale, "reports.activityQuestion")}</h2>

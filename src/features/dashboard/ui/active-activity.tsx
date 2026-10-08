@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { sendJson } from "@/core/http/client";
 import { formatDuration, translate } from "@/core/i18n/translate";
 import type { Entry, Locale } from "@/features/logbook/domain";
-import { KindBadge } from "@/ui/kind-badge";
+import { KindIcon } from "@/ui/kind-icon";
 
 const CLOCK_TICK_MS = 30_000;
 
@@ -47,7 +47,7 @@ export function ActiveActivity({
     return (
         <section className="active-activity" data-kind={activity.kind} aria-live="polite">
             <span className="active-pulse">
-                <KindBadge kind={activity.kind} size="large" />
+                <KindIcon kind={activity.kind} size="large" />
             </span>
             <div className="active-text">
                 <p className="eyebrow">{translate(locale, "dashboard.inProgress")}</p>
@@ -80,7 +80,7 @@ export function ActiveActivity({
                     onClick={cancel}
                     type="button"
                 >
-                    <Trash2 aria-hidden="true" size={18} />
+                    <Trash2 aria-hidden="true" size="small" />
                 </button>
             </div>
         </section>

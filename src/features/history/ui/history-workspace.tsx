@@ -16,8 +16,7 @@ import {
     type WeighIn,
     type WeightUnit,
 } from "@/features/logbook/domain";
-import { KindBadge } from "@/ui/kind-badge";
-import { RobotMark } from "@/ui/robot-mark";
+import { KindIcon } from "@/ui/kind-icon";
 
 type HistoryRecord =
     { item: Entry; recordType: "entry" } | { item: WeighIn; recordType: "weighIn" };
@@ -119,7 +118,7 @@ export function HistoryWorkspace({
                 className="history-filters card"
             >
                 <div className="history-search">
-                    <Search aria-hidden="true" size={18} />
+                    <Search aria-hidden="true" size="small" />
                     <label className="sr-only" htmlFor="history-search">
                         {translate(locale, "common.search")}
                     </label>
@@ -178,7 +177,6 @@ export function HistoryWorkspace({
                 <TrashList items={trash} onRestore={restore} {...shared} />
             ) : records.length === 0 ? (
                 <div className="empty-state card">
-                    <RobotMark size={56} />
                     <p>
                         {translate(
                             locale,
@@ -208,7 +206,7 @@ export function HistoryWorkspace({
                                         onClick={() => setOpenKey(open ? null : key)}
                                         type="button"
                                     >
-                                        <KindBadge
+                                        <KindIcon
                                             kind={
                                                 record.recordType === "entry"
                                                     ? record.item.kind
@@ -447,7 +445,6 @@ function TrashList({
             </div>
             {items.length === 0 ? (
                 <div className="empty-state">
-                    <RobotMark size={56} />
                     <p>{translate(locale, "history.trashEmpty")}</p>
                 </div>
             ) : (

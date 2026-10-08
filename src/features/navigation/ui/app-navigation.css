@@ -5,12 +5,15 @@
     height: 100vh;
     flex-direction: column;
     gap: var(--space-8);
-    padding: 28px 18px 22px;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--line);
+    padding: 28px 16px 20px;
 }
 
-.sidebar-brand {
-    padding: 4px 10px;
-    border-radius: var(--radius-small);
+.sidebar-logo {
+    align-self: start;
+    border-radius: 12px;
+    padding: 2px 8px;
 }
 
 .sidebar-nav ul {
@@ -28,57 +31,52 @@
     gap: 12px;
     border-radius: 14px;
     padding: 0 14px;
-    color: rgb(226 233 250 / 72%);
-    font-weight: 650;
+    color: var(--text-muted);
+    font-weight: 700;
     transition:
         background 120ms ease,
         color 120ms ease;
 }
 
 .nav-link:hover {
-    background: rgb(255 255 255 / 7%);
-    color: white;
+    background: var(--surface-muted);
+    color: var(--text);
 }
 
 .nav-link[aria-current="page"] {
-    background: var(--blue-500);
-    box-shadow: 0 8px 22px rgb(31 123 255 / 35%);
-    color: white;
+    background: var(--primary-soft);
+    color: var(--primary);
 }
 
 .sign-out {
     display: flex;
     min-height: 44px;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     margin-top: auto;
-    border: 1px solid rgb(255 255 255 / 12%);
+    border: 0;
     border-radius: 14px;
     background: transparent;
     padding: 0 14px;
-    color: rgb(226 233 250 / 80%);
-    font-weight: 650;
+    color: var(--text-muted);
+    font-weight: 700;
 }
 
 .sign-out:hover {
-    background: rgb(255 255 255 / 7%);
-    color: white;
+    background: var(--surface-muted);
+    color: var(--text);
 }
 
 @media (max-width: 860px) {
     .sidebar {
-        position: sticky;
         z-index: 30;
         height: auto;
         flex-direction: row;
         align-items: center;
         justify-content: space-between;
         gap: var(--space-4);
-        padding: 10px 12px 10px 16px;
-    }
-
-    .sidebar .wordmark {
-        font-size: 18px;
+        box-shadow: 0 1px 0 var(--line);
+        padding: 10px 10px 10px 16px;
     }
 
     .sidebar-nav {
@@ -86,9 +84,8 @@
         right: 12px;
         bottom: 12px;
         left: 12px;
-        border: 1px solid rgb(255 255 255 / 10%);
-        border-radius: 22px;
-        background: var(--navy-900);
+        border-radius: 24px;
+        background: var(--surface);
         box-shadow: var(--shadow-float);
         padding: 6px;
     }
@@ -98,17 +95,17 @@
     }
 
     .nav-link {
-        min-height: 54px;
+        min-height: 56px;
         flex-direction: column;
         justify-content: center;
         gap: 2px;
+        border-radius: 18px;
         padding: 4px;
         font-size: 11px;
     }
 
     .sign-out {
         margin: 0;
-        border: 0;
         padding: 0 12px;
     }
 
