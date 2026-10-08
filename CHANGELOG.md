@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.3.0](https://github.com/thisispivi/DailyLog/compare/v1.2.0...v1.3.0) (2026-10-08)
+
+
+### Features
+
+* introduce the soft wellness design system ([b0e022c](https://github.com/thisispivi/DailyLog/commit/b0e022ccbd95760e021a7b342c6d5ea0451d55c6))
+* introduce the soft wellness design system ([3c5cc55](https://github.com/thisispivi/DailyLog/commit/3c5cc55cb73c38db70fb120a2ad2d56088532c15))
+* rebuild History and Reports in the wellness style ([d001d41](https://github.com/thisispivi/DailyLog/commit/d001d41417986c9f1b4677ecfba0e75c989c718c))
+* rebuild History and Reports in the wellness style ([7154282](https://github.com/thisispivi/DailyLog/commit/7154282c4312c99e115d9b44322468f5c6fdcf73))
+* rebuild Today as a feed with a bottom-sheet logger ([e80cd59](https://github.com/thisispivi/DailyLog/commit/e80cd59a3d231b3886be517dc65230707c77ab14))
+* rebuild Today as a feed with a bottom-sheet logger ([464ca1e](https://github.com/thisispivi/DailyLog/commit/464ca1e5c4283818688cf97111986c62defbab07))
+
+
+### Bug Fixes
+
+* find the release pull request by label before merging it ([5efbdb8](https://github.com/thisispivi/DailyLog/commit/5efbdb8ab607424bce7be6b7a752a8d7410b2995))
+* find the release pull request by label before merging it ([88674fb](https://github.com/thisispivi/DailyLog/commit/88674fb6b7726724bbfa60d92a45acf0a0533dcc))
+* stop formatting the generated changelog and ignored files in hooks ([90636d7](https://github.com/thisispivi/DailyLog/commit/90636d7ce35d4029cc1c5621091b04d628c56716))
+
 ## [1.2.0](https://github.com/thisispivi/DailyLog/compare/v1.1.0...v1.2.0) (2026-10-08)
 
 
