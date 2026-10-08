@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
@@ -34,11 +34,12 @@ export async function GET(request: NextRequest) {
                 ),
                 ...weighIns.map((item) => item.recordedAt),
             ];
-            if (!timestamps.length)
-                throw new ApiError(404, "NO_DATA", "There is no data to export.");
             timestamps.sort((left, right) => Date.parse(left) - Date.parse(right));
-            startDate = localDateInZone(new Date(timestamps[0]!), environment.timezone);
-            endDate = localDateInZone(new Date(timestamps.at(-1)!), environment.timezone);
+            const first = timestamps[0];
+            const last = timestamps.at(-1);
+            if (!first || !last) throw new ApiError(404, "NO_DATA", "There is no data to export.");
+            startDate = localDateInZone(new Date(first), environment.timezone);
+            endDate = localDateInZone(new Date(last), environment.timezone);
         }
         if (!startDate || !endDate || endDate < startDate) {
             throw new ApiError(400, "INVALID_RANGE", "Choose a valid date range.");

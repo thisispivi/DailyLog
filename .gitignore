@@ -1,37 +1,39 @@
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.coverage
-.coverage.*
-coverage.xml
-results.sarif
-htmlcov/
-.ruff_cache/
-.mypy_cache/
-.import_linter_cache/
-.pre-commit-cache/
-.venv*/
-.env
-.env.*
-!.env.example
-.next/
+# Dependencies and build output
 node_modules/
+.next/
+tsconfig.tsbuildinfo
+
+# Tests
 coverage/
 playwright-report/
 test-results/
-tsconfig.tsbuildinfo
-data/*.bak
-data/*-e2e.sqlite3*
+
+# Local configuration and runtime data
+.env
+.env.*
+!.env.example
 data/
 exports/
 *.sqlite3
+*.sqlite3-*
 *.db
-build/
-dist/
-site/
-Thumbs.db
+*.bak
 
-# Editor swap files
+# Leftovers from the retired Python bot toolchain
+.venv*/
+__pycache__/
+*.py[cod]
+.coverage
+coverage.xml
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.import_linter_cache/
+dist/
+*.egg-info/
+
+# Editor and OS files
 *.swp
 *.swo
+.DS_Store
+Thumbs.db

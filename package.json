@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:migrate": "tsx scripts/migrate.ts",
-    "quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",

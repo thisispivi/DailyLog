@@ -1,0 +1,8 @@
+#!/bin/sh
+# Mirrors the CI quality job minus the production build, which takes too long for every push.
+set -e
+
+npm run format:check
+npm run lint
+npm run typecheck
+npm test

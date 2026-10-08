@@ -2,7 +2,7 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import brandBanner from "../../../assets/readme/dailylog-banner.png";
+import brandBanner from "@assets/readme/dailylog-banner.png";
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
 import { readSession } from "@/core/security/session";

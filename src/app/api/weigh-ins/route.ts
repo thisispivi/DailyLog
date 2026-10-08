@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { apiFailure, ok, requireApiSession } from "@/core/http/api";
 import { createWeighInSchema, weightToGrams } from "@/features/logbook/schemas";
