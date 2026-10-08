@@ -121,6 +121,22 @@ describe("LogbookRepository", () => {
         });
     });
 
+    it("remembers the latest training label and lists record times for streaks", () => {
+        startRun();
+        logbook.finishActivity(OWNER, "2026-08-31T09:00:00+02:00");
+        logbook.createEntry(OWNER, {
+            kind: "training",
+            label: "Gym",
+            startAt: "2026-09-01T18:00:00+02:00",
+            text: "",
+        });
+        logbook.createWeighIn(OWNER, 72400, "2026-08-30T07:00:00+02:00");
+        expect(logbook.lastLabel(OWNER, "training")).toBe("Gym");
+        expect(logbook.lastLabel(OWNER, "sleep")).toBeNull();
+        expect(logbook.recordTimestamps(OWNER, "2026-08-31T00:00:00+00:00")).toHaveLength(2);
+        expect(logbook.recordTimestamps(STRANGER, "2000-01-01T00:00:00+00:00")).toEqual([]);
+    });
+
     it("keeps weigh-ins in canonical grams while preferences remain independent", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         const settings = logbook.updateSettings(OWNER, { exportLocale: "it", weightUnit: "lb" });

@@ -41,13 +41,15 @@ export function formatWeight(grams: number, unit: WeightUnit, locale: Locale): s
 }
 
 export function formatDuration(startAt: string, endAt: string | null, locale: Locale): string {
-    const milliseconds = Math.max(
-        0,
-        Date.parse(endAt ?? new Date().toISOString()) - Date.parse(startAt),
-    );
-    const minutes = Math.round(milliseconds / 60_000);
+    const end = Date.parse(endAt ?? new Date().toISOString());
+    return formatMinutes(Math.max(0, end - Date.parse(startAt)) / 60_000, locale);
+}
+
+/** "45 min", "8 h", or "7 h 30 min". */
+export function formatMinutes(totalMinutes: number, locale: Locale): string {
+    const minutes = Math.round(totalMinutes);
     const hours = Math.floor(minutes / 60);
     const remainder = minutes % 60;
-    if (hours === 0) return new Intl.NumberFormat(locale).format(minutes) + " min";
+    if (hours === 0) return `${new Intl.NumberFormat(locale).format(minutes)} min`;
     return remainder ? `${hours} h ${remainder} min` : `${hours} h`;
 }

@@ -16,6 +16,7 @@ const en = {
         title: "One quiet place for the things that shape your day.",
     },
     common: {
+        close: "Close",
         add: "Add",
         back: "Back",
         cancel: "Cancel",
@@ -49,6 +50,8 @@ const en = {
         signOut: "Sign out",
     },
     dashboard: {
+        addRecord: "Add record",
+        streak: "{count}-day streak",
         activityBlocked: "Finish or cancel the activity in progress before starting another.",
         confirmCancel: "Discard the activity in progress? It goes to the trash.",
         inProgress: "In progress",
@@ -74,6 +77,7 @@ const en = {
         weightHelper: "Stored in metric; shown in your preferred unit.",
     },
     entry: {
+        time: "Time",
         breakfast: "Breakfast",
         dinner: "Dinner",
         endTime: "End time",
@@ -165,6 +169,7 @@ const it: CatalogShape = {
         title: "Un luogo tranquillo per ciò che dà forma alla tua giornata.",
     },
     common: {
+        close: "Chiudi",
         add: "Aggiungi",
         back: "Indietro",
         cancel: "Annulla",
@@ -198,6 +203,8 @@ const it: CatalogShape = {
         signOut: "Esci",
     },
     dashboard: {
+        addRecord: "Aggiungi",
+        streak: "{count} giorni di fila",
         activityBlocked: "Concludi o annulla l’attività in corso prima di iniziarne un’altra.",
         confirmCancel: "Annullare l’attività in corso? Verrà spostata nel cestino.",
         inProgress: "In corso",
@@ -223,6 +230,7 @@ const it: CatalogShape = {
         weightHelper: "Salvato in unità metriche; mostrato nell’unità preferita.",
     },
     entry: {
+        time: "Ora",
         breakfast: "Colazione",
         dinner: "Cena",
         endTime: "Ora di fine",

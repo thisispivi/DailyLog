@@ -1,63 +1,43 @@
-.today-hero {
-    position: relative;
+.today-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.streak {
+    background: var(--training-tile);
+    color: var(--training-ink);
+}
+
+/* Day summary tiles */
+
+.today-tiles {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--space-6) var(--space-8);
-    margin-bottom: var(--space-6);
-    overflow: hidden;
-    border-radius: var(--radius-large);
-    padding: clamp(24px, 4vw, 36px);
-    box-shadow: var(--shadow-float);
-}
-
-.today-hero .eyebrow {
-    color: rgb(226 233 250 / 70%);
-}
-
-.today-hero h1 {
-    color: white;
-}
-
-.today-hero-robot {
-    align-self: start;
-}
-
-.today-stats {
-    display: grid;
-    grid-column: 1 / -1;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-3);
-    margin: 0;
+    margin: 0 0 var(--space-6);
 }
 
-.today-stat {
+.today-tile {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 2px 10px;
-    border: 1px solid rgb(255 255 255 / 10%);
-    border-radius: var(--radius-medium);
-    background: rgb(255 255 255 / 6%);
-    padding: 12px 14px;
+    gap: 6px;
 }
 
-.today-stat .kind-badge {
-    grid-row: span 2;
+.today-tile .kind-icon {
+    background: var(--surface);
 }
 
-.today-stat dt {
-    color: rgb(226 233 250 / 70%);
-    font-size: 12px;
-    font-weight: 650;
+.today-tile dt {
+    font-size: 13px;
+    font-weight: 700;
 }
 
-.today-stat dd {
+.today-tile dd {
     margin: 0;
     overflow: hidden;
-    color: white;
-    font-size: 19px;
+    color: var(--text);
+    font-size: 22px;
     font-weight: 800;
-    letter-spacing: -0.02em;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -70,19 +50,21 @@
     align-items: center;
     gap: var(--space-4);
     margin-bottom: var(--space-6);
-    border: 1px solid color-mix(in srgb, var(--kind), transparent 55%);
-    border-radius: var(--radius-large);
-    background: color-mix(in srgb, var(--kind), var(--surface) 88%);
-    padding: 18px 20px;
+    border-radius: var(--radius-card);
+    padding: 16px 18px;
 }
 
 .active-text h2 {
     margin: 0;
+    color: var(--text);
 }
 
 .active-text p {
-    margin: 2px 0 0;
-    color: var(--text-muted);
+    margin: 0;
+}
+
+.active-text .eyebrow {
+    color: var(--kind-ink);
 }
 
 .active-pulse {
@@ -93,26 +75,27 @@
 .active-pulse::after {
     position: absolute;
     inset: 0;
-    border-radius: 50%;
-    background: var(--kind);
+    border-radius: 18px;
+    background: var(--kind-ink);
     content: "";
-    animation: active-ring 1.8s ease-out infinite;
+    animation: active-ring 2s ease-out infinite;
+}
+
+.active-pulse .kind-icon {
+    position: relative;
+    z-index: 1;
+    background: var(--surface);
 }
 
 @keyframes active-ring {
     from {
-        opacity: 0.45;
+        opacity: 0.35;
         transform: scale(1);
     }
     to {
         opacity: 0;
-        transform: scale(1.7);
+        transform: scale(1.5);
     }
-}
-
-.active-pulse .kind-badge {
-    position: relative;
-    z-index: 1;
 }
 
 .active-actions {
@@ -120,97 +103,13 @@
     gap: var(--space-2);
 }
 
-/* Quick log and timeline */
-
-.today-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-    align-items: start;
-    gap: var(--space-6);
+.active-cancel {
+    background: var(--surface);
 }
 
-.quick-log,
-.day-timeline {
-    padding: 24px;
-}
+/* Timeline */
 
-.mode-switch {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--space-2);
-    margin-bottom: var(--space-5);
-}
-
-.mode-button {
-    display: grid;
-    justify-items: center;
-    gap: 6px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-medium);
-    background: transparent;
-    padding: 12px 6px 10px;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 700;
-    transition:
-        border-color 120ms ease,
-        background 120ms ease;
-}
-
-.mode-icon {
-    display: grid;
-    width: 36px;
-    height: 36px;
-    place-items: center;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--kind), transparent 85%);
-    color: var(--kind);
-}
-
-.mode-button:hover {
-    border-color: color-mix(in srgb, var(--kind), transparent 50%);
-}
-
-.mode-button[aria-pressed="true"] {
-    border-color: var(--kind);
-    background: color-mix(in srgb, var(--kind), transparent 90%);
-    color: var(--text);
-}
-
-.mode-button[aria-pressed="true"] .mode-icon {
-    background: var(--kind);
-    color: white;
-}
-
-.quick-form {
-    display: grid;
-    gap: var(--space-4);
-}
-
-.quick-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
-}
-
-.quick-wide {
-    grid-column: 1 / -1;
-}
-
-.quick-hint {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 13px;
-}
-
-.quick-submit-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-}
-
-.timeline-list {
+.timeline {
     display: grid;
     margin: 0;
     padding: 0;
@@ -220,21 +119,28 @@
 .timeline-row {
     position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 52px auto minmax(0, 1fr);
     align-items: center;
     gap: var(--space-3);
-    padding: 10px 0;
+    padding: 8px 0;
 }
 
-/* The vertical rail that joins the badges. */
-.timeline-row:not(:last-child)::before {
+/* The soft rail that joins the icons. */
+.timeline-row:not(:last-child)::after {
     position: absolute;
-    top: 48px;
-    bottom: -10px;
-    left: 18px;
+    top: 50px;
+    bottom: -8px;
+    left: 83px;
     width: 2px;
+    border-radius: 2px;
     background: var(--line);
     content: "";
+}
+
+.timeline-row time {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .timeline-text {
@@ -251,41 +157,87 @@
 
 .timeline-text span {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
-.timeline-row time {
-    color: var(--text-muted);
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 650;
+/* Logger sheet */
+
+.kind-picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
 }
 
-@media (max-width: 1080px) {
-    .today-layout {
-        grid-template-columns: 1fr;
-    }
+.kind-option {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-3);
+    min-height: 120px;
+    border: 0;
+    padding: 18px;
+    font-size: 16px;
+    text-align: left;
+    transition: transform 120ms ease;
 }
 
-@media (max-width: 720px) {
-    .today-hero {
-        grid-template-columns: 1fr;
-    }
+.kind-option .kind-icon {
+    background: var(--surface);
+}
 
-    .today-hero-robot {
-        position: absolute;
-        top: 18px;
-        right: 18px;
-        width: 56px;
-        height: 56px;
-    }
+.kind-option:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
 
-    .today-hero-text {
-        padding-right: 64px;
-    }
+.kind-option:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
 
-    .today-stats {
+.kind-picker-hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 14px;
+}
+
+.record-form {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    border: 0;
+    padding: 0;
+}
+
+.chip-row legend {
+    margin-bottom: var(--space-2);
+}
+
+.weight-input {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+@media (max-width: 960px) {
+    .today-tiles {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    /* The add button floats above the tab bar, in thumb reach. */
+    .add-record {
+        position: fixed;
+        right: 20px;
+        bottom: 96px;
+        z-index: 25;
+        min-height: 56px;
+        box-shadow: var(--shadow-float);
+        padding: 0 22px;
     }
 
     .active-activity {
@@ -298,18 +250,5 @@
 
     .active-actions .button {
         flex: 1;
-    }
-
-    .quick-log,
-    .day-timeline {
-        padding: 18px;
-    }
-
-    .quick-fields {
-        grid-template-columns: 1fr;
-    }
-
-    .mode-button {
-        font-size: 12px;
     }
 }
