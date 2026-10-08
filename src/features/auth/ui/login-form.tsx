@@ -4,6 +4,7 @@ import { LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import type { Locale } from "@/features/logbook/domain";
 
@@ -17,32 +18,23 @@ export function LoginForm({
     );
     const [pending, setPending] = useState(false);
 
-    async function submit(event: FormEvent<HTMLFormElement>) {
+    async function signIn(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!configured) return;
         setPending(true);
         setMessage("");
-        const form = new FormData(event.currentTarget);
-        const response = await fetch("/api/auth/login", {
-            body: JSON.stringify({ password: form.get("password") }),
-            headers: { "content-type": "application/json" },
-            method: "POST",
-        });
-        if (response.ok) {
+        const password = new FormData(event.currentTarget).get("password");
+        const { ok, status } = await sendJson("/api/auth/login", "POST", { password });
+        if (ok) {
             router.replace("/today");
             router.refresh();
             return;
         }
-        setMessage(
-            response.status === 429
-                ? translate(locale, "auth.locked")
-                : translate(locale, "auth.invalid"),
-        );
+        setMessage(translate(locale, status === 429 ? "auth.locked" : "auth.invalid"));
         setPending(false);
     }
 
     return (
-        <form className="login-form" onSubmit={submit}>
+        <form className="login-form" onSubmit={signIn}>
             <div className="field">
                 <label htmlFor="password">{translate(locale, "auth.password")}</label>
                 <div className="password-field">
@@ -67,7 +59,7 @@ export function LoginForm({
             >
                 {translate(locale, "auth.submit")}
             </button>
-            <p aria-live="polite" className="status-message">
+            <p aria-live="polite" className="status-message" data-tone="error">
                 {message}
             </p>
         </form>

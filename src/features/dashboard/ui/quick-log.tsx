@@ -1,21 +1,28 @@
 "use client";
 
-import { Dumbbell, Moon, Scale, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
-import { localDateTimeToUtc, localInputValue } from "@/core/time/zoned-time";
-import type { EntryKind, Locale, WeightUnit } from "@/features/logbook/domain";
+import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
+import type { Locale, WeightUnit } from "@/features/logbook/domain";
+import { KindIcon, type RecordKind } from "@/ui/kind-badge";
 
-type LogMode = "meal" | "training" | "sleep" | "weight";
+const modes: readonly RecordKind[] = ["meal", "training", "sleep", "weight"];
 
-const modes = [
-    { icon: Utensils, key: "dashboard.meal", value: "meal" },
-    { icon: Dumbbell, key: "dashboard.training", value: "training" },
-    { icon: Moon, key: "dashboard.sleep", value: "sleep" },
-    { icon: Scale, key: "dashboard.weight", value: "weight" },
+// Meal labels are stored in English, as the Telegram bot did, and translated on display.
+const mealLabels = [
+    ["Breakfast", "entry.breakfast"],
+    ["Snack 1", "entry.snack1"],
+    ["Lunch", "entry.lunch"],
+    ["Snack 2", "entry.snack2"],
+    ["Dinner", "entry.dinner"],
 ] as const;
+
+const trainingSuggestions = ["walk", "run", "gym", "tennis", "tableTennis"] as const;
+
+type Status = { message: string; tone: "error" | "success" } | null;
 
 export function QuickLog({
     hasActiveActivity,
@@ -29,85 +36,80 @@ export function QuickLog({
     weightUnit: WeightUnit;
 }>) {
     const router = useRouter();
-    const [mode, setMode] = useState<LogMode>("meal");
+    const [mode, setMode] = useState<RecordKind>("meal");
     const [pending, setPending] = useState(false);
-    const [message, setMessage] = useState("");
+    const [status, setStatus] = useState<Status>(null);
     const defaultTime = useMemo(() => localInputValue(new Date(), timeZone), [timeZone]);
+    const isActivity = mode === "training" || mode === "sleep";
+    const blocked = isActivity && hasActiveActivity;
 
-    async function submit(event: FormEvent<HTMLFormElement>) {
+    async function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const formElement = event.currentTarget;
-        setPending(true);
-        setMessage("");
         const form = new FormData(formElement);
-        try {
-            const start = String(form.get("startAt") ?? defaultTime);
-            const end = String(form.get("endAt") ?? "");
-            const startAt = fromLocalInput(start, timeZone);
-            const endAt = end ? fromLocalInput(end, timeZone) : null;
-            const response =
-                mode === "weight"
-                    ? await fetch("/api/weigh-ins", {
-                          body: JSON.stringify({
-                              recordedAt: startAt,
-                              unit: weightUnit,
-                              weight: Number(form.get("weight")),
-                          }),
-                          headers: { "content-type": "application/json" },
-                          method: "POST",
-                      })
-                    : await fetch("/api/entries", {
-                          body: JSON.stringify({
-                              endAt: mode === "meal" ? null : endAt,
-                              kind: mode satisfies EntryKind,
-                              label: String(form.get("label") ?? defaultLabel(mode)),
-                              startAt,
-                              text: String(form.get("text") ?? ""),
-                          }),
-                          headers: { "content-type": "application/json" },
-                          method: "POST",
-                      });
-            if (!response.ok) throw new Error("request failed");
-            formElement.reset();
-            setMessage(translate(locale, "common.saved"));
-            router.refresh();
-        } catch {
-            setMessage(translate(locale, "common.error"));
-        } finally {
-            setPending(false);
+        const field = (name: string) => String(form.get(name) ?? "");
+        const startAt = localInputToUtc(field("startAt"), timeZone);
+        setPending(true);
+        setStatus(null);
+        const { ok } =
+            mode === "weight"
+                ? await sendJson("/api/weigh-ins", "POST", {
+                      recordedAt: startAt,
+                      unit: weightUnit,
+                      weight: Number(field("weight")),
+                  })
+                : await sendJson("/api/entries", "POST", {
+                      endAt: field("endAt") ? localInputToUtc(field("endAt"), timeZone) : null,
+                      kind: mode,
+                      label: field("label"),
+                      startAt,
+                      text: field("text"),
+                  });
+        setPending(false);
+        if (!ok) {
+            setStatus({ message: translate(locale, "common.error"), tone: "error" });
+            return;
         }
+        formElement.reset();
+        setStatus({ message: translate(locale, "common.saved"), tone: "success" });
+        router.refresh();
     }
 
     return (
-        <section className="quick-log raised" aria-labelledby="quick-log-title">
-            <div className="quick-log-heading">
-                <div>
-                    <p className="eyebrow">{translate(locale, "dashboard.quickAdd")}</p>
-                    <h2 id="quick-log-title">{translate(locale, `dashboard.${mode}`)}</h2>
-                </div>
-                <div className="mode-switch" role="tablist">
-                    {modes.map(({ icon: Icon, key, value }) => (
-                        <button
-                            aria-label={translate(locale, key)}
-                            aria-selected={mode === value}
-                            className="mode-button"
-                            data-active={mode === value}
-                            key={value}
-                            onClick={() => setMode(value)}
-                            role="tab"
-                            type="button"
-                        >
-                            <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
-                        </button>
-                    ))}
-                </div>
+        <section aria-labelledby="quick-log-title" className="quick-log card" data-kind={mode}>
+            <div className="card-heading">
+                <h2 id="quick-log-title">{translate(locale, "dashboard.quickAdd")}</h2>
             </div>
-            <form onSubmit={submit}>
+            <div
+                className="mode-switch"
+                role="group"
+                aria-label={translate(locale, "dashboard.recordType")}
+            >
+                {modes.map((value) => (
+                    <button
+                        aria-pressed={mode === value}
+                        className="mode-button"
+                        data-kind={value}
+                        key={value}
+                        onClick={() => {
+                            setMode(value);
+                            setStatus(null);
+                        }}
+                        type="button"
+                    >
+                        <span className="mode-icon">
+                            <KindIcon kind={value} size={18} />
+                        </span>
+                        {translate(locale, `dashboard.${value}`)}
+                    </button>
+                ))}
+            </div>
+            <form className="quick-form" key={mode} onSubmit={save}>
                 {mode === "meal" && <MealFields defaultTime={defaultTime} locale={locale} />}
-                {(mode === "training" || mode === "sleep") && (
+                {isActivity && (
                     <ActivityFields
                         defaultTime={defaultTime}
-                        disabled={hasActiveActivity}
+                        disabled={blocked}
                         locale={locale}
                         mode={mode}
                     />
@@ -115,24 +117,45 @@ export function QuickLog({
                 {mode === "weight" && (
                     <WeightFields defaultTime={defaultTime} locale={locale} unit={weightUnit} />
                 )}
+                {blocked && (
+                    <p className="quick-hint">{translate(locale, "dashboard.activityBlocked")}</p>
+                )}
                 <div className="quick-submit-row">
-                    <p aria-live="polite" className="quick-status">
-                        {message}
+                    <p aria-live="polite" className="status-message" data-tone={status?.tone}>
+                        {status?.message}
                     </p>
                     <button
-                        className="button button-accent"
-                        disabled={
-                            pending || (hasActiveActivity && mode !== "meal" && mode !== "weight")
-                        }
+                        className="button button-primary"
+                        disabled={pending || blocked}
                         type="submit"
                     >
-                        {mode === "training" || mode === "sleep"
-                            ? translate(locale, "common.start")
-                            : translate(locale, "common.add")}
+                        {translate(locale, isActivity ? "common.start" : "common.add")}
                     </button>
                 </div>
             </form>
         </section>
+    );
+}
+
+function TimeField({
+    defaultTime,
+    disabled = false,
+    id,
+    locale,
+}: Readonly<{ defaultTime: string; disabled?: boolean; id: string; locale: Locale }>) {
+    return (
+        <div className="field">
+            <label htmlFor={id}>{translate(locale, "entry.startTime")}</label>
+            <input
+                className="input"
+                defaultValue={defaultTime}
+                disabled={disabled}
+                id={id}
+                name="startAt"
+                required
+                type="datetime-local"
+            />
+        </div>
     );
 }
 
@@ -142,26 +165,23 @@ function MealFields({ defaultTime, locale }: Readonly<{ defaultTime: string; loc
             <div className="field">
                 <label htmlFor="meal-label">{translate(locale, "entry.mealType")}</label>
                 <select className="select" defaultValue="Lunch" id="meal-label" name="label">
-                    <option value="Breakfast">{translate(locale, "entry.breakfast")}</option>
-                    <option value="Snack 1">{translate(locale, "entry.snack1")}</option>
-                    <option value="Lunch">{translate(locale, "entry.lunch")}</option>
-                    <option value="Snack 2">{translate(locale, "entry.snack2")}</option>
-                    <option value="Dinner">{translate(locale, "entry.dinner")}</option>
+                    {mealLabels.map(([value, key]) => (
+                        <option key={value} value={value}>
+                            {translate(locale, key)}
+                        </option>
+                    ))}
                 </select>
             </div>
-            <div className="field quick-detail-field">
+            <TimeField defaultTime={defaultTime} id="meal-start" locale={locale} />
+            <div className="field quick-wide">
                 <label htmlFor="meal-text">{translate(locale, "common.details")}</label>
-                <input className="input" id="meal-text" maxLength={2000} name="text" required />
-            </div>
-            <div className="field">
-                <label htmlFor="meal-start">{translate(locale, "entry.startTime")}</label>
                 <input
                     className="input"
-                    defaultValue={defaultTime}
-                    id="meal-start"
-                    name="startAt"
+                    id="meal-text"
+                    maxLength={2000}
+                    name="text"
+                    placeholder={translate(locale, "dashboard.mealDetails")}
                     required
-                    type="datetime-local"
                 />
             </div>
         </div>
@@ -182,7 +202,7 @@ function ActivityFields({
     return (
         <div className="quick-fields">
             {mode === "training" ? (
-                <div className="field">
+                <div className="field quick-wide">
                     <label htmlFor="activity-label">
                         {translate(locale, "entry.trainingType")}
                     </label>
@@ -196,7 +216,7 @@ function ActivityFields({
                         required
                     />
                     <datalist id="activity-suggestions">
-                        {(["walk", "run", "gym", "tennis", "tableTennis"] as const).map((key) => (
+                        {trainingSuggestions.map((key) => (
                             <option key={key} value={translate(locale, `entry.${key}`)} />
                         ))}
                     </datalist>
@@ -204,18 +224,12 @@ function ActivityFields({
             ) : (
                 <input name="label" type="hidden" value="Sleep" />
             )}
-            <div className="field">
-                <label htmlFor="activity-start">{translate(locale, "entry.startTime")}</label>
-                <input
-                    className="input"
-                    defaultValue={defaultTime}
-                    disabled={disabled}
-                    id="activity-start"
-                    name="startAt"
-                    required
-                    type="datetime-local"
-                />
-            </div>
+            <TimeField
+                defaultTime={defaultTime}
+                disabled={disabled}
+                id="activity-start"
+                locale={locale}
+            />
             <div className="field">
                 <label htmlFor="activity-end">
                     {translate(locale, "entry.endTime")} · {translate(locale, "common.optional")}
@@ -228,7 +242,7 @@ function ActivityFields({
                     type="datetime-local"
                 />
             </div>
-            <div className="field quick-detail-field">
+            <div className="field quick-wide">
                 <label htmlFor="activity-text">{translate(locale, "common.details")}</label>
                 <input
                     className="input"
@@ -256,6 +270,7 @@ function WeightFields({
                 <input
                     className="input"
                     id="weight-value"
+                    inputMode="decimal"
                     max="1000"
                     min="1"
                     name="weight"
@@ -264,29 +279,8 @@ function WeightFields({
                     type="number"
                 />
             </div>
-            <div className="field">
-                <label htmlFor="weight-start">{translate(locale, "entry.startTime")}</label>
-                <input
-                    className="input"
-                    defaultValue={defaultTime}
-                    id="weight-start"
-                    name="startAt"
-                    required
-                    type="datetime-local"
-                />
-            </div>
-            <p className="weight-helper">{translate(locale, "dashboard.weightHelper")}</p>
+            <TimeField defaultTime={defaultTime} id="weight-start" locale={locale} />
+            <p className="quick-hint quick-wide">{translate(locale, "dashboard.weightHelper")}</p>
         </div>
     );
-}
-
-function fromLocalInput(value: string, timeZone: string): string {
-    const [date, time] = value.split("T") as [string, string];
-    return localDateTimeToUtc(date, time, timeZone);
-}
-
-function defaultLabel(mode: LogMode): string {
-    if (mode === "sleep") return "Sleep";
-    if (mode === "training") return "Training";
-    return "";
 }

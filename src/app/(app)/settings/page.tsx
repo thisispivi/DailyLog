@@ -8,8 +8,7 @@ import "./settings.css";
 export const metadata = { title: "Settings" };
 
 export default function SettingsPage() {
-    const environment = getEnvironment();
-    const settings = new LogbookRepository().getSettings(environment.ownerId);
+    const settings = new LogbookRepository().getSettings(getEnvironment().ownerId);
     return (
         <>
             <header className="page-header">

@@ -1,179 +1,196 @@
-.history-filters {
+.history-workspace {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) 170px 170px auto;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 20px;
+    gap: var(--space-3);
 }
 
-.search-field {
+.history-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px;
+    gap: var(--space-3);
+    padding: 16px;
+}
+
+.history-search {
     position: relative;
 }
-.search-field svg {
+
+.history-search svg {
     position: absolute;
-    z-index: 1;
-    top: 14px;
+    top: 50%;
     left: 14px;
     color: var(--text-muted);
+    transform: translateY(-50%);
+    pointer-events: none;
 }
-.search-field .input {
+
+.history-search .input {
     padding-left: 42px;
 }
-.history-status {
-    min-height: 24px;
-    margin: 8px 4px;
-    color: var(--success);
-    font-size: 13px;
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    gap: var(--space-2);
 }
-.record-list {
-    overflow: hidden;
-}
-.record-list-header {
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--line);
+
+.filter-chip {
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    padding: 6px 14px;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 700;
 }
-.record-row + .record-row {
+
+.filter-chip[data-kind]::before {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: var(--kind);
+    content: "";
+}
+
+.filter-chip:not([data-kind]) {
+    --kind: var(--accent);
+}
+
+.filter-chip[aria-pressed="true"] {
+    border-color: var(--kind);
+    background: color-mix(in srgb, var(--kind), transparent 88%);
+    color: var(--text);
+}
+
+.history-bulk {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+.record-list {
+    padding: 20px 24px;
+}
+
+.record-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.record-row,
+.trash-row {
     border-top: 1px solid var(--line);
 }
-.record-main {
+
+.record-summary {
     display: grid;
     width: 100%;
-    grid-template-columns: 90px minmax(120px, 0.7fr) minmax(180px, 1fr) 170px 20px;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: 16px;
+    gap: var(--space-3);
     border: 0;
+    border-radius: var(--radius-small);
     background: transparent;
-    padding: 20px 24px;
+    padding: 12px 4px;
     text-align: left;
 }
-.record-main:hover {
+
+.record-summary:hover {
     background: color-mix(in srgb, var(--surface-muted), transparent 40%);
 }
-.record-main span,
-.record-main time {
+
+.record-text {
+    display: grid;
+    min-width: 0;
+}
+
+.record-text strong,
+.record-text span {
     overflow: hidden;
-    color: var(--text-muted);
-    font-size: 13px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.record-kind {
-    font-size: 11px !important;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
+
+.record-text span,
+.record-summary time {
+    color: var(--text-muted);
+    font-size: 13px;
 }
+
 .record-chevron {
     color: var(--text-muted);
-    transition: transform 120ms ease;
+    transition: transform 150ms ease;
 }
-.record-chevron[data-open="true"] {
+
+.record-row[data-open="true"] .record-chevron {
     transform: rotate(180deg);
 }
+
 .record-editor {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    padding: 24px;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-4);
+    border-radius: var(--radius-medium);
     background: var(--surface-muted);
+    padding: 18px;
 }
+
+.record-editor .input,
+.record-editor .select,
+.record-editor .textarea {
+    background: var(--surface);
+}
+
 .editor-wide {
     grid-column: 1 / -1;
 }
+
 .editor-actions {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    gap: 10px;
-}
-.trash-panel {
-    overflow: hidden;
-}
-.trash-heading {
-    padding: 24px;
-    border-bottom: 1px solid var(--line);
-}
-.trash-heading h2,
-.trash-heading p {
-    margin-bottom: 0;
-}
-.trash-heading p {
-    color: var(--text-muted);
-}
-.trash-list {
-    margin: 0;
-    padding: 8px 20px 20px;
-    list-style: none;
-}
-.trash-list li {
     display: flex;
-    min-height: 70px;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.editor-actions .button-danger {
+    margin-right: auto;
+}
+
+.trash-hint {
+    margin: 4px 0 0;
+    font-size: 13px;
+}
+
+.trash-row {
+    display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: var(--space-4);
+    padding: 12px 0;
 }
-.trash-list li + li {
-    border-top: 1px solid var(--line);
-}
-.trash-list li div {
-    display: grid;
-}
-.trash-list li span {
-    color: var(--text-muted);
-    font-size: 12px;
-}
-@media (max-width: 1000px) {
-    .history-filters {
-        grid-template-columns: 1fr 1fr;
-    }
-    .record-main {
-        grid-template-columns: 80px 1fr 130px 20px;
-    }
-    .record-main > span:nth-of-type(2) {
-        display: none;
-    }
-}
-@media (max-width: 650px) {
+
+@media (max-width: 720px) {
     .history-filters {
         grid-template-columns: 1fr;
     }
-    .record-main {
-        grid-template-columns: 1fr auto;
-        gap: 4px 12px;
-        padding: 17px 18px;
+
+    .record-list {
+        padding: 16px;
     }
-    .record-main .record-kind,
-    .record-main > span:nth-of-type(2) {
-        display: block;
-        grid-column: 1;
+
+    .record-summary {
+        grid-template-columns: auto minmax(0, 1fr) auto;
     }
-    .record-main strong {
-        grid-column: 1;
-    }
-    .record-main time {
-        grid-column: 1;
-    }
-    .record-chevron {
+
+    .record-summary time {
         grid-column: 2;
-        grid-row: 1 / 4;
+        grid-row: 2;
     }
+
     .record-editor {
         grid-template-columns: 1fr;
-        padding: 20px 18px;
-    }
-    .editor-wide {
-        grid-column: auto;
-    }
-    .editor-actions {
-        grid-template-columns: 1fr 1fr;
-    }
-    .editor-actions span {
-        display: none;
-    }
-    .trash-list li {
-        align-items: start;
-        flex-direction: column;
-        padding: 16px 0;
     }
 }

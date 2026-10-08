@@ -2,8 +2,8 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
-// Dependency direction: app → features → core, with infrastructure as an adapter
-// layer that only app routes and pages may reach. See docs/CODING_STANDARDS.md.
+// Dependency direction: app → features → ui → core, with infrastructure as an
+// adapter layer that only app routes and pages may reach. See docs/CODING_STANDARDS.md.
 const restrictImports = (...patterns) => ({
     "no-restricted-imports": ["error", { patterns }],
 });
@@ -44,6 +44,14 @@ export default defineConfig([
         rules: restrictImports(noParentImports, {
             group: ["@/app/*", "@/infrastructure/*"],
             message: "Features receive data from routes and pages; they never reach adapters.",
+        }),
+    },
+    {
+        files: ["src/ui/**/*.{ts,tsx}"],
+        rules: restrictImports(noParentImports, {
+            group: ["@/app/*", "@/infrastructure/*", "@/features/*/ui/*"],
+            message:
+                "Shared UI is presentational; it must not depend on routes, adapters, or feature UI.",
         }),
     },
     {
