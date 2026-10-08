@@ -1,4 +1,9 @@
-import type { Entry, WeighIn } from "@/features/logbook/domain";
+import {
+    entryDurationMs,
+    type Entry,
+    type EntryKind,
+    type WeighIn,
+} from "@/features/logbook/domain";
 
 export type DashboardSummary = Readonly<{
     count: number;
@@ -7,29 +12,19 @@ export type DashboardSummary = Readonly<{
     weight: WeighIn | null;
 }>;
 
+/** Totals for one day. `weighIns` is newest first, so the first one is the current weight. */
 export function summarizeDay(
     entries: readonly Entry[],
     weighIns: readonly WeighIn[],
 ): DashboardSummary {
-    const duration = (entry: Entry) =>
-        entry.endAt ? Math.max(0, Date.parse(entry.endAt) - Date.parse(entry.startAt)) : 0;
-    const trainingMinutes = Math.round(
+    const totalMs = (kind: EntryKind) =>
         entries
-            .filter((entry) => entry.kind === "training")
-            .reduce((sum, entry) => sum + duration(entry), 0) / 60_000,
-    );
-    const sleepHours =
-        Math.round(
-            (entries
-                .filter((entry) => entry.kind === "sleep")
-                .reduce((sum, entry) => sum + duration(entry), 0) /
-                3_600_000) *
-                10,
-        ) / 10;
+            .filter((entry) => entry.kind === kind)
+            .reduce((sum, entry) => sum + entryDurationMs(entry), 0);
     return {
         count: entries.length + weighIns.length,
-        sleepHours,
-        trainingMinutes,
+        sleepHours: Math.round(totalMs("sleep") / 360_000) / 10,
+        trainingMinutes: Math.round(totalMs("training") / 60_000),
         weight: weighIns[0] ?? null,
     };
 }

@@ -5,14 +5,14 @@ import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
 import { readSession } from "@/core/security/session";
 import { AppNavigation } from "@/features/navigation/ui/app-navigation";
-import { repository } from "@/infrastructure/database/logbook-repository";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 export const dynamic = "force-dynamic";
 
 export default async function AuthenticatedLayout({ children }: Readonly<{ children: ReactNode }>) {
     const session = await readSession();
     if (!session) redirect("/login");
-    const settings = repository().getSettings(getEnvironment().ownerId);
+    const settings = new LogbookRepository().getSettings(getEnvironment().ownerId);
     return (
         <div className="app-shell">
             <a className="skip-link" href="#main-content">

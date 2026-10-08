@@ -5,7 +5,7 @@ import { summarizeDay } from "@/features/dashboard/dashboard-summary";
 import { ActiveActivity } from "@/features/dashboard/ui/active-activity";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
 import { QuickLog } from "@/features/dashboard/ui/quick-log";
-import { repository } from "@/infrastructure/database/logbook-repository";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 import "./today.css";
 
@@ -13,13 +13,13 @@ export const metadata = { title: "Today" };
 
 export default function TodayPage() {
     const environment = getEnvironment();
-    const logbook = repository();
+    const logbook = new LogbookRepository();
     const settings = logbook.getSettings(environment.ownerId);
     const now = new Date();
     const today = localDateInZone(now, environment.timezone);
     const [from, to] = localDateRangeBounds(today, today, environment.timezone);
-    const entries = logbook.listAllEntries(environment.ownerId, from, to);
-    const weighIns = logbook.listWeighIns(environment.ownerId, from, to);
+    const entries = logbook.listEntriesInRange(environment.ownerId, from, to);
+    const weighIns = logbook.listWeighIns(environment.ownerId, { from, to });
     const active = logbook.activeActivity(environment.ownerId);
     const summary = summarizeDay(entries, weighIns);
     const hour = Number(

@@ -3,7 +3,7 @@ import { translate } from "@/core/i18n/translate";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { ExportPanel } from "@/features/reports/ui/export-panel";
 import { TrendCharts } from "@/features/reports/ui/trend-charts";
-import { repository } from "@/infrastructure/database/logbook-repository";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 import "./reports.css";
 
@@ -11,13 +11,13 @@ export const metadata = { title: "Reports" };
 
 export default function ReportsPage() {
     const environment = getEnvironment();
-    const logbook = repository();
+    const logbook = new LogbookRepository();
     const settings = logbook.getSettings(environment.ownerId);
     const today = localDateInZone(new Date(), environment.timezone);
     const monthStart = `${today.slice(0, 8)}01`;
     const [from, to] = localDateRangeBounds(monthStart, today, environment.timezone);
-    const entries = logbook.listAllEntries(environment.ownerId, from, to);
-    const weights = logbook.listWeighIns(environment.ownerId, from, to, 500);
+    const entries = logbook.listEntriesInRange(environment.ownerId, from, to);
+    const weights = logbook.listWeighIns(environment.ownerId, { from, to });
     return (
         <>
             <header className="page-header">

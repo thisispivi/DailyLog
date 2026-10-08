@@ -1,5 +1,5 @@
 import { catalogs, type TranslationKey } from "@/core/i18n/catalogs";
-import type { Locale, WeightUnit } from "@/features/logbook/domain";
+import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
 
 export function translate(
     locale: Locale,
@@ -34,9 +34,10 @@ export function formatTime(value: string | Date, locale: Locale, timeZone: strin
 }
 
 export function formatWeight(grams: number, unit: WeightUnit, locale: Locale): string {
-    const kilograms = grams / 1000;
-    const value = unit === "kg" ? kilograms : kilograms / 0.45359237;
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value)} ${unit}`;
+    const value = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
+        gramsToUnit(grams, unit),
+    );
+    return `${value} ${unit}`;
 }
 
 export function formatDuration(startAt: string, endAt: string | null, locale: Locale): string {

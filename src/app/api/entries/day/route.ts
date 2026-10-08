@@ -1,22 +1,11 @@
-import type { NextRequest } from "next/server";
-import { z } from "zod";
-
 import { getEnvironment } from "@/core/config/env";
-import { apiFailure, ok, requireApiSession } from "@/core/http/api";
+import { authenticatedRoute, ok, readJson } from "@/core/http/api";
 import { localDateRangeBounds } from "@/core/time/zoned-time";
-import { repository } from "@/infrastructure/database/logbook-repository";
+import { dayDeletionSchema } from "@/features/logbook/schemas";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
-const inputSchema = z.object({ date: z.iso.date() });
-
-export async function DELETE(request: NextRequest) {
-    let requestId: string | undefined;
-    try {
-        const context = await requireApiSession(request);
-        requestId = context.requestId;
-        const { date } = inputSchema.parse(await request.json());
-        const [from, to] = localDateRangeBounds(date, date, getEnvironment().timezone);
-        return ok({ deleted: repository().softDeleteEntriesBetween(context.userId, from, to) });
-    } catch (error) {
-        return apiFailure(error, requestId);
-    }
-}
+export const DELETE = authenticatedRoute(async (request, { userId }) => {
+    const { date } = await readJson(request, dayDeletionSchema);
+    const [from, to] = localDateRangeBounds(date, date, getEnvironment().timezone);
+    return ok({ deleted: new LogbookRepository().softDeleteEntriesBetween(userId, from, to) });
+});

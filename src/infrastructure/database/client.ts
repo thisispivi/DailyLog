@@ -23,11 +23,6 @@ export function getDatabase(): Database.Database {
     return database;
 }
 
-export function closeDatabaseForTests(): void {
-    database?.close();
-    database = undefined;
-}
-
 function backupBeforeMigration(path: string): void {
     if (!existsSync(path)) return;
     const probe = new Database(path, { readonly: true });

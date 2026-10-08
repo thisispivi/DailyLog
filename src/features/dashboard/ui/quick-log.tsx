@@ -257,7 +257,7 @@ function WeightFields({
                     className="input"
                     id="weight-value"
                     max="1000"
-                    min="0.01"
+                    min="1"
                     name="weight"
                     required
                     step="0.01"

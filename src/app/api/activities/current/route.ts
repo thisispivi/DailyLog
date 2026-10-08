@@ -1,44 +1,17 @@
-import type { NextRequest } from "next/server";
-import { z } from "zod";
+import { authenticatedRoute, ok, readJson } from "@/core/http/api";
+import { finishActivitySchema } from "@/features/logbook/schemas";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
-import { apiFailure, ApiError, ok, requireApiSession } from "@/core/http/api";
-import { RecordNotFoundError, repository } from "@/infrastructure/database/logbook-repository";
+export const GET = authenticatedRoute(async (_request, { userId }) =>
+    ok(new LogbookRepository().activeActivity(userId)),
+);
 
-const finishSchema = z.object({ endAt: z.iso.datetime({ offset: true }) });
+export const PATCH = authenticatedRoute(async (request, { userId }) => {
+    const { endAt } = await readJson(request, finishActivitySchema);
+    return ok(new LogbookRepository().finishActivity(userId, endAt));
+});
 
-export async function GET(request: NextRequest) {
-    try {
-        const context = await requireApiSession(request);
-        return ok(repository().activeActivity(context.userId));
-    } catch (error) {
-        return apiFailure(error);
-    }
-}
-
-export async function PATCH(request: NextRequest) {
-    let requestId: string | undefined;
-    try {
-        const context = await requireApiSession(request);
-        requestId = context.requestId;
-        const { endAt } = finishSchema.parse(await request.json());
-        return ok(repository().finishActivity(context.userId, endAt));
-    } catch (error) {
-        if (error instanceof RecordNotFoundError)
-            error = new ApiError(404, "NOT_FOUND", error.message);
-        return apiFailure(error, requestId);
-    }
-}
-
-export async function DELETE(request: NextRequest) {
-    let requestId: string | undefined;
-    try {
-        const context = await requireApiSession(request);
-        requestId = context.requestId;
-        const active = repository().activeActivity(context.userId);
-        if (!active) throw new ApiError(404, "NOT_FOUND", "No activity is active.");
-        repository().softDeleteEntry(context.userId, active.id);
-        return ok({ deleted: true });
-    } catch (error) {
-        return apiFailure(error, requestId);
-    }
-}
+export const DELETE = authenticatedRoute(async (_request, { userId }) => {
+    new LogbookRepository().cancelActivity(userId);
+    return ok({ deleted: true });
+});
