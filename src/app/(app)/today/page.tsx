@@ -10,10 +10,14 @@ import {
 } from "@/core/time/zoned-time";
 import { ActiveActivity } from "@/features/dashboard/ui/active-activity";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
-import { RecordLogger } from "@/features/dashboard/ui/record-logger";
+import {
+    AddRecordButton,
+    LogTile,
+    RecordLoggerProvider,
+} from "@/features/dashboard/ui/record-logger";
 import { dailyTotals, loggingStreak } from "@/features/insights/insights";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
-import { KindIcon, type RecordKind } from "@/ui/kind-icon";
+import type { RecordKind } from "@/ui/kind-icon";
 
 import "./today.css";
 
@@ -70,8 +74,17 @@ export default function TodayPage() {
         },
     ];
 
+    const addLabel = translate(locale, "dashboard.addRecord");
+
     return (
-        <>
+        <RecordLoggerProvider
+            hasActiveActivity={Boolean(active)}
+            lastWeightGrams={lastWeighIn?.weightGrams ?? null}
+            locale={locale}
+            recentTrainingLabels={logbook.recentLabels(ownerId, "training")}
+            timeZone={timezone}
+            weightUnit={weightUnit}
+        >
             <header className="page-header">
                 <div>
                     <p className="eyebrow">{formatDate(now, locale, timezone)}</p>
@@ -88,26 +101,17 @@ export default function TodayPage() {
                             {translate(locale, "dashboard.streak", { count: streak })}
                         </span>
                     )}
-                    <RecordLogger
-                        hasActiveActivity={Boolean(active)}
-                        lastTrainingLabel={logbook.lastLabel(ownerId, "training")}
-                        lastWeightGrams={lastWeighIn?.weightGrams ?? null}
-                        locale={locale}
-                        timeZone={timezone}
-                        weightUnit={weightUnit}
-                    />
+                    <AddRecordButton label={addLabel} />
                 </div>
             </header>
             {active && <ActiveActivity activity={active} locale={locale} />}
-            <dl className="today-tiles">
+            <ul className="today-tiles">
                 {tiles.map((tile) => (
-                    <div className="tile today-tile" data-kind={tile.kind} key={tile.kind}>
-                        <KindIcon kind={tile.kind} size="small" />
-                        <dt>{tile.label}</dt>
-                        <dd className="numeric">{tile.value}</dd>
-                    </div>
+                    <li key={tile.kind}>
+                        <LogTile actionLabel={addLabel} {...tile} />
+                    </li>
                 ))}
-            </dl>
+            </ul>
             <DayTimeline
                 entries={entries}
                 locale={locale}
@@ -115,7 +119,7 @@ export default function TodayPage() {
                 weighIns={weighIns}
                 weightUnit={weightUnit}
             />
-        </>
+        </RecordLoggerProvider>
     );
 }
 

@@ -159,57 +159,13 @@
 
 .export-panel form {
     display: grid;
-    gap: var(--space-5);
+    gap: var(--space-4);
 }
 
-.choice-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    font-weight: 700;
-}
-
-.choice-row input {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--primary);
-}
-
-.format-options {
+.export-actions {
     display: grid;
     gap: var(--space-2);
-    margin: 0;
-    border: 0;
-    padding: 0;
-}
-
-.format-options legend {
-    margin-bottom: var(--space-2);
-}
-
-.format-options label {
-    display: flex;
-    min-height: 54px;
-    align-items: center;
-    gap: var(--space-3);
-    border-radius: var(--radius-tile);
-    background: var(--surface-muted);
-    padding: 0 16px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.format-options label:has(input:checked) {
-    background: var(--primary-soft);
-    color: var(--primary);
-}
-
-.format-options input {
-    accent-color: var(--primary);
-}
-
-.export-panel .button-primary {
-    width: 100%;
+    margin-top: var(--space-2);
 }
 
 @media (max-width: 1100px) {

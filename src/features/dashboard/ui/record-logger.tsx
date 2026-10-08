@@ -2,14 +2,16 @@
 
 import { ArrowLeft, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { createContext, type FormEvent, type ReactNode, useContext, useState } from "react";
 
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import { localHour, localInputToUtc, localInputValue } from "@/core/time/zoned-time";
 import { mealLabelForHour, mealLabels } from "@/features/insights/insights";
 import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon, recordKinds, type RecordKind } from "@/ui/kind-icon";
+import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
 
 const mealLabelKeys = {
@@ -21,25 +23,37 @@ const mealLabelKeys = {
 } as const;
 
 const trainingSuggestions = ["walk", "run", "gym", "tennis", "tableTennis"] as const;
+const OTHER_ACTIVITY = "__other__";
 
 type Context = Readonly<{
     hasActiveActivity: boolean;
-    lastTrainingLabel: string | null;
     lastWeightGrams: number | null;
     locale: Locale;
+    recentTrainingLabels: readonly string[];
     timeZone: string;
     weightUnit: WeightUnit;
 }>;
 
-/** The "Add record" button and the sheet it opens: pick a type, then fill a short form. */
-export function RecordLogger(context: Context) {
+/** Opens the logger sheet, either on the type picker (null) or straight on a form. */
+const OpenLogger = createContext<(kind: RecordKind | null) => void>(() => undefined);
+
+const isActivityKind = (kind: RecordKind) => kind === "training" || kind === "sleep";
+
+/** Owns the logger sheet; anything inside can open it with `useOpenLogger`. */
+export function RecordLoggerProvider({ children, ...context }: Context & { children: ReactNode }) {
     const { hasActiveActivity, locale } = context;
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [kind, setKind] = useState<RecordKind | null>(null);
     const [savedMessage, setSavedMessage] = useState("");
-    const isBlocked = (value: RecordKind) =>
-        hasActiveActivity && (value === "training" || value === "sleep");
+    const isBlocked = (value: RecordKind) => hasActiveActivity && isActivityKind(value);
+
+    function openLogger(next: RecordKind | null) {
+        // A running activity blocks starting another; show the picker and its hint instead.
+        setKind(next && isBlocked(next) ? null : next);
+        setSavedMessage("");
+        setOpen(true);
+    }
 
     function saved() {
         setOpen(false);
@@ -48,19 +62,8 @@ export function RecordLogger(context: Context) {
     }
 
     return (
-        <>
-            <button
-                className="button button-primary add-record"
-                onClick={() => {
-                    setKind(null);
-                    setSavedMessage("");
-                    setOpen(true);
-                }}
-                type="button"
-            >
-                <Plus aria-hidden="true" size={20} strokeWidth={2.6} />
-                {translate(locale, "dashboard.addRecord")}
-            </button>
+        <OpenLogger.Provider value={openLogger}>
+            {children}
             <p aria-live="polite" className="sr-only">
                 {savedMessage}
             </p>
@@ -100,17 +103,61 @@ export function RecordLogger(context: Context) {
                     </div>
                 )}
             </Sheet>
-        </>
+        </OpenLogger.Provider>
+    );
+}
+
+export function useOpenLogger() {
+    return useContext(OpenLogger);
+}
+
+export function AddRecordButton({ label }: Readonly<{ label: string }>) {
+    const openLogger = useOpenLogger();
+    return (
+        <button
+            className="button button-primary add-record"
+            onClick={() => openLogger(null)}
+            type="button"
+        >
+            <Plus aria-hidden="true" size={20} strokeWidth={2.6} />
+            {label}
+        </button>
+    );
+}
+
+/** A day tile that doubles as a shortcut to log that record type. */
+export function LogTile({
+    actionLabel,
+    kind,
+    label,
+    value,
+}: Readonly<{ actionLabel: string; kind: RecordKind; label: string; value: string }>) {
+    const openLogger = useOpenLogger();
+    return (
+        <button
+            aria-label={`${label}: ${value}. ${actionLabel}`}
+            className="tile today-tile"
+            data-kind={kind}
+            onClick={() => openLogger(kind)}
+            type="button"
+        >
+            <span className="today-tile-top">
+                <KindIcon kind={kind} size="small" />
+                <Plus aria-hidden="true" className="today-tile-plus" size={18} />
+            </span>
+            <span className="today-tile-label">{label}</span>
+            <span className="today-tile-value numeric">{value}</span>
+        </button>
     );
 }
 
 function RecordForm({
     kind,
-    lastTrainingLabel,
     lastWeightGrams,
     locale,
     onBack,
     onSaved,
+    recentTrainingLabels,
     timeZone,
     weightUnit,
 }: Context & Readonly<{ kind: RecordKind; onBack: () => void; onSaved: () => void }>) {
@@ -118,8 +165,15 @@ function RecordForm({
     const [failed, setFailed] = useState(false);
     const [hasEnd, setHasEnd] = useState(false);
     const [now] = useState(() => new Date());
-    const nowInput = localInputValue(now, timeZone);
-    const isActivity = kind === "training" || kind === "sleep";
+    const isActivity = isActivityKind(kind);
+
+    const activityOptions = [
+        ...new Set([
+            ...recentTrainingLabels,
+            ...trainingSuggestions.map((key) => translate(locale, `entry.${key}`)),
+        ]),
+    ].map((label) => ({ label, value: label }));
+    const [activity, setActivity] = useState(activityOptions[0]?.value ?? OTHER_ACTIVITY);
 
     async function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -145,8 +199,6 @@ function RecordForm({
         setFailed(!ok);
         if (ok) onSaved();
     }
-
-    const submitLabel = isActivity && !hasEnd ? "common.start" : "common.add";
 
     return (
         <form className="record-form" data-kind={kind} onSubmit={save}>
@@ -186,21 +238,34 @@ function RecordForm({
             )}
             {kind === "training" && (
                 <div className="field">
-                    <label htmlFor="record-label">{translate(locale, "entry.trainingType")}</label>
-                    <input
-                        className="input"
-                        defaultValue={lastTrainingLabel ?? ""}
-                        id="record-label"
-                        list="training-suggestions"
-                        maxLength={120}
-                        name="label"
-                        required
+                    <label htmlFor="record-activity">
+                        {translate(locale, "entry.trainingType")}
+                    </label>
+                    <Select
+                        id="record-activity"
+                        onValueChange={setActivity}
+                        options={[
+                            ...activityOptions,
+                            {
+                                label: translate(locale, "entry.otherActivity"),
+                                value: OTHER_ACTIVITY,
+                            },
+                        ]}
+                        value={activity}
                     />
-                    <datalist id="training-suggestions">
-                        {trainingSuggestions.map((key) => (
-                            <option key={key} value={translate(locale, `entry.${key}`)} />
-                        ))}
-                    </datalist>
+                    {activity === OTHER_ACTIVITY ? (
+                        <input
+                            aria-label={translate(locale, "entry.activityName")}
+                            autoFocus
+                            className="input"
+                            maxLength={120}
+                            name="label"
+                            placeholder={translate(locale, "entry.activityName")}
+                            required
+                        />
+                    ) : (
+                        <input name="label" type="hidden" value={activity} />
+                    )}
                 </div>
             )}
             {kind === "weight" && (
@@ -228,33 +293,24 @@ function RecordForm({
                 </div>
             )}
             <div className="form-grid">
-                <div className="field">
-                    <label htmlFor="record-start">
-                        {translate(locale, isActivity ? "entry.startTime" : "entry.time")}
-                    </label>
-                    <input
-                        className="input"
-                        defaultValue={nowInput}
-                        id="record-start"
-                        name="startAt"
-                        required
-                        type="datetime-local"
-                    />
-                </div>
+                <DateTimeField
+                    defaultValue={localInputValue(now, timeZone)}
+                    id="record-start"
+                    label={translate(locale, isActivity ? "entry.startTime" : "entry.time")}
+                    locale={locale}
+                    name="startAt"
+                    timeZone={timeZone}
+                />
                 {isActivity && (
-                    <div className="field">
-                        <label htmlFor="record-end">
-                            {translate(locale, "entry.endTime")} ·{" "}
-                            {translate(locale, "common.optional")}
-                        </label>
-                        <input
-                            className="input"
-                            id="record-end"
-                            name="endAt"
-                            onChange={(event) => setHasEnd(event.currentTarget.value !== "")}
-                            type="datetime-local"
-                        />
-                    </div>
+                    <DateTimeField
+                        clearable
+                        id="record-end"
+                        label={`${translate(locale, "entry.endTime")} · ${translate(locale, "common.optional")}`}
+                        locale={locale}
+                        name="endAt"
+                        onChange={(value) => setHasEnd(value !== "")}
+                        timeZone={timeZone}
+                    />
                 )}
             </div>
             {kind === "training" && (
@@ -275,7 +331,7 @@ function RecordForm({
                     {translate(locale, "common.back")}
                 </button>
                 <button className="button button-primary" disabled={pending} type="submit">
-                    {translate(locale, submitLabel)}
+                    {translate(locale, isActivity && !hasEnd ? "common.start" : "common.add")}
                 </button>
             </div>
         </form>

@@ -181,15 +181,16 @@ export class LogbookRepository {
         return rows.map((row) => row.at);
     }
 
-    /** The label of the most recent entry of a kind, used to prefill the logger. */
-    lastLabel(userId: number, kind: EntryKind): string | null {
-        const row = this.database
+    /** Distinct labels of a kind, most recently used first, to offer in the logger. */
+    recentLabels(userId: number, kind: EntryKind, limit = 8): string[] {
+        const rows = this.database
             .prepare(
-                `SELECT label FROM entries WHERE user_id = ? AND kind = ? AND deleted_at IS NULL
-         ORDER BY start_at DESC, id DESC LIMIT 1`,
+                `SELECT label, MAX(start_at) AS last_used FROM entries
+         WHERE user_id = ? AND kind = ? AND deleted_at IS NULL
+         GROUP BY label ORDER BY last_used DESC LIMIT ?`,
             )
-            .get(userId, kind) as { label: string } | undefined;
-        return row?.label ?? null;
+            .all(userId, kind, limit) as Array<{ label: string }>;
+        return rows.map((row) => row.label);
     }
 
     activeActivity(userId: number): Entry | null {

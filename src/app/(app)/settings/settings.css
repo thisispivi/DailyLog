@@ -47,21 +47,19 @@
     display: block;
 }
 
-.settings-actions {
+/* Changes save instantly, so the confirmation floats where it is easy to notice. */
+.settings-status {
     position: sticky;
-    bottom: var(--space-4);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
+    top: var(--space-4);
+    z-index: 5;
+    min-height: 0;
+    justify-self: start;
     border-radius: 999px;
     background: var(--surface);
-    box-shadow: var(--shadow-float);
-    padding: 8px 8px 8px 22px;
+    box-shadow: var(--shadow-soft);
+    padding: 6px 14px;
 }
 
-@media (max-width: 860px) {
-    .settings-actions {
-        bottom: 100px;
-    }
+.settings-status:empty {
+    display: none;
 }

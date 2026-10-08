@@ -16,7 +16,9 @@ import {
     type WeighIn,
     type WeightUnit,
 } from "@/features/logbook/domain";
+import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon } from "@/ui/kind-icon";
+import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
 
 type HistoryRecord =
@@ -114,14 +116,15 @@ export function HistoryWorkspace({
                         value={query}
                     />
                 </div>
-                <label className="sr-only" htmlFor="history-date">
-                    {translate(locale, "history.date")}
-                </label>
-                <input
-                    className="input history-date"
+                <DateTimeField
+                    clearable
                     id="history-date"
-                    onChange={(event) => setDate(event.currentTarget.value)}
-                    type="date"
+                    label={translate(locale, "history.date")}
+                    labelHidden
+                    locale={locale}
+                    mode="date"
+                    onChange={setDate}
+                    timeZone={timeZone}
                     value={date}
                 />
                 <div
@@ -290,18 +293,16 @@ function RecordEditor({
                 <>
                     <div className="field">
                         <label htmlFor="edit-kind">{translate(locale, "history.type")}</label>
-                        <select
-                            className="select"
+                        <Select
                             defaultValue={record.item.kind}
                             id="edit-kind"
                             name="kind"
-                        >
-                            {entryKinds.map((kind) => (
-                                <option key={kind} value={kind}>
-                                    {translate(locale, `dashboard.${kind}`)}
-                                </option>
-                            ))}
-                        </select>
+                            options={entryKinds.map((kind) => ({
+                                icon: <KindIcon kind={kind} size="small" />,
+                                label: translate(locale, `dashboard.${kind}`),
+                                value: kind,
+                            }))}
+                        />
                     </div>
                     <div className="field">
                         <label htmlFor="edit-label">{translate(locale, "common.label")}</label>
@@ -315,19 +316,25 @@ function RecordEditor({
                         />
                     </div>
                     <DateTimeField
+                        defaultValue={localInputValue(new Date(record.item.startAt), timeZone)}
                         id="edit-start"
                         label={translate(locale, "entry.startTime")}
+                        locale={locale}
                         name="startAt"
-                        required
                         timeZone={timeZone}
-                        value={record.item.startAt}
                     />
                     <DateTimeField
+                        clearable
+                        defaultValue={
+                            record.item.endAt
+                                ? localInputValue(new Date(record.item.endAt), timeZone)
+                                : ""
+                        }
                         id="edit-end"
                         label={translate(locale, "entry.endTime")}
+                        locale={locale}
                         name="endAt"
                         timeZone={timeZone}
-                        value={record.item.endAt}
                     />
                     <div className="field form-wide">
                         <label htmlFor="edit-text">{translate(locale, "common.details")}</label>
@@ -363,12 +370,12 @@ function RecordEditor({
                         />
                     </div>
                     <DateTimeField
+                        defaultValue={localInputValue(new Date(record.item.recordedAt), timeZone)}
                         id="edit-start"
                         label={translate(locale, "entry.time")}
+                        locale={locale}
                         name="startAt"
-                        required
                         timeZone={timeZone}
-                        value={record.item.recordedAt}
                     />
                 </>
             )}
@@ -390,36 +397,6 @@ function RecordEditor({
                 </button>
             </div>
         </form>
-    );
-}
-
-function DateTimeField({
-    id,
-    label,
-    name,
-    required = false,
-    timeZone,
-    value,
-}: Readonly<{
-    id: string;
-    label: string;
-    name: string;
-    required?: boolean;
-    timeZone: string;
-    value: string | null;
-}>) {
-    return (
-        <div className="field">
-            <label htmlFor={id}>{label}</label>
-            <input
-                className="input"
-                defaultValue={value ? localInputValue(new Date(value), timeZone) : ""}
-                id={id}
-                name={name}
-                required={required}
-                type="datetime-local"
-            />
-        </div>
     );
 }
 
