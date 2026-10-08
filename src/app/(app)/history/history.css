@@ -5,9 +5,13 @@
 
 .history-filters {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 190px;
+    grid-template-columns: minmax(0, 1fr) 200px;
     gap: var(--space-3);
-    padding: 16px;
+}
+
+.history-filters .input {
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
 }
 
 .history-search {
@@ -17,89 +21,50 @@
 .history-search svg {
     position: absolute;
     top: 50%;
-    left: 14px;
+    left: 16px;
     color: var(--text-muted);
     transform: translateY(-50%);
     pointer-events: none;
 }
 
 .history-search .input {
-    padding-left: 42px;
+    padding-left: 44px;
 }
 
-.filter-chips {
+.history-chips {
     display: flex;
     flex-wrap: wrap;
     grid-column: 1 / -1;
     gap: var(--space-2);
 }
 
-.filter-chip {
-    min-height: 36px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: transparent;
-    padding: 6px 14px;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.filter-chip[data-kind]::before {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin-right: 8px;
-    border-radius: 50%;
-    background: var(--kind);
-    content: "";
-}
-
-.filter-chip:not([data-kind]) {
-    --kind: var(--accent);
-}
-
-.filter-chip[aria-pressed="true"] {
-    border-color: var(--kind);
-    background: color-mix(in srgb, var(--kind), transparent 88%);
-    color: var(--text);
-}
-
 .history-bulk {
-    grid-column: 1 / -1;
     justify-self: start;
 }
 
 .record-list {
-    padding: 20px 24px;
-}
-
-.record-list ul {
+    display: grid;
+    gap: 2px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.record-row,
-.trash-row {
-    border-top: 1px solid var(--line);
-}
-
-.record-summary {
+.record-row {
     display: grid;
     width: 100%;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-3);
     border: 0;
-    border-radius: var(--radius-small);
+    border-radius: var(--radius-tile);
     background: transparent;
-    padding: 12px 4px;
+    padding: 10px 8px;
     text-align: left;
 }
 
-.record-summary:hover {
-    background: color-mix(in srgb, var(--surface-muted), transparent 40%);
+.record-row:hover {
+    background: var(--surface-muted);
 }
 
 .record-text {
@@ -115,44 +80,13 @@
 }
 
 .record-text span,
-.record-summary time {
+.record-row time {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .record-chevron {
     color: var(--text-muted);
-    transition: transform 150ms ease;
-}
-
-.record-row[data-open="true"] .record-chevron {
-    transform: rotate(180deg);
-}
-
-.record-editor {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-4);
-    margin: 0 0 var(--space-4);
-    border-radius: var(--radius-medium);
-    background: var(--surface-muted);
-    padding: 18px;
-}
-
-.record-editor .input,
-.record-editor .select,
-.record-editor .textarea {
-    background: var(--surface);
-}
-
-.editor-wide {
-    grid-column: 1 / -1;
-}
-
-.editor-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
 }
 
 .editor-actions .button-danger {
@@ -161,7 +95,7 @@
 
 .trash-hint {
     margin: 4px 0 0;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .trash-row {
@@ -169,7 +103,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    padding: 12px 0;
+    padding: 10px 8px;
 }
 
 @media (max-width: 720px) {
@@ -177,20 +111,24 @@
         grid-template-columns: 1fr;
     }
 
-    .record-list {
-        padding: 16px;
+    .history-chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
     }
 
-    .record-summary {
+    .history-chips .chip {
+        flex: none;
+    }
+
+    .record-row {
         grid-template-columns: auto minmax(0, 1fr) auto;
+        row-gap: 0;
     }
 
-    .record-summary time {
+    .record-row time {
         grid-column: 2;
         grid-row: 2;
-    }
-
-    .record-editor {
-        grid-template-columns: 1fr;
+        font-size: 13px;
     }
 }
