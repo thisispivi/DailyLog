@@ -1,13 +1,12 @@
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import brandBanner from "@assets/readme/dailylog-banner.png";
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
+import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 import { readSession } from "@/core/security/session";
 import { LoginForm } from "@/features/auth/ui/login-form";
-import type { Locale } from "@/features/logbook/domain";
 
 import "./login.css";
 
@@ -15,7 +14,7 @@ export const metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
     if (await readSession()) redirect("/today");
-    const locale: Locale = (await cookies()).get("dailylog_locale")?.value === "it" ? "it" : "en";
+    const { locale } = await readPreferenceCookies();
     return (
         <main className="login-page">
             <section className="login-panel" aria-labelledby="login-title">

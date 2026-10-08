@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 
-import type { Locale, Theme } from "@/features/logbook/domain";
+import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 
 import "./globals.css";
 
@@ -22,9 +21,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-    const cookieStore = await cookies();
-    const locale = normalizeLocale(cookieStore.get("dailylog_locale")?.value);
-    const theme = normalizeTheme(cookieStore.get("dailylog_theme")?.value);
+    const { locale, theme } = await readPreferenceCookies();
     return (
         <html
             data-scroll-behavior="smooth"
@@ -35,12 +32,4 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             <body>{children}</body>
         </html>
     );
-}
-
-function normalizeLocale(value: string | undefined): Locale {
-    return value === "it" ? "it" : "en";
-}
-
-function normalizeTheme(value: string | undefined): Theme {
-    return value === "dark" || value === "light" ? value : "system";
 }

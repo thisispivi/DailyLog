@@ -168,7 +168,13 @@ export function HistoryWorkspace({
                 {message}
             </p>
             {type === "trash" ? (
-                <TrashList items={trash} locale={locale} onRestore={restore} timeZone={timeZone} />
+                <TrashList
+                    items={trash}
+                    locale={locale}
+                    onRestore={restore}
+                    timeZone={timeZone}
+                    weightUnit={weightUnit}
+                />
             ) : records.length === 0 ? (
                 <div className="empty-state surface">
                     {entries.length || weighIns.length
@@ -360,7 +366,7 @@ function RecordEditor({
                             className="input"
                             defaultValue={weightNumber(record.item.weightGrams, unit)}
                             id={`weight-${record.item.id}`}
-                            min="0.01"
+                            min="1"
                             name="weight"
                             required
                             step="0.01"
@@ -441,11 +447,13 @@ function TrashList({
     locale,
     onRestore,
     timeZone,
+    weightUnit,
 }: Readonly<{
     items: TrashItem[];
     locale: Locale;
     onRestore: (item: TrashItem) => void;
     timeZone: string;
+    weightUnit: WeightUnit;
 }>) {
     return (
         <section className="trash-panel surface">
@@ -462,7 +470,11 @@ function TrashList({
                     {items.map((item) => (
                         <li key={`${item.recordType}-${item.recordId}`}>
                             <div>
-                                <strong>{item.label}</strong>
+                                <strong>
+                                    {item.recordType === "entry"
+                                        ? item.label
+                                        : formatWeight(item.weightGrams, weightUnit, locale)}
+                                </strong>
                                 <span>{formatDateTime(item.deletedAt, locale, timeZone)}</span>
                             </div>
                             <button

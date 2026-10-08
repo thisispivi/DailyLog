@@ -1,41 +1,13 @@
-import type { NextRequest } from "next/server";
-import { z } from "zod";
+import { authenticatedRoute, ok, readJson } from "@/core/http/api";
+import { restoreSchema } from "@/features/logbook/schemas";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
-import { apiFailure, ApiError, ok, requireApiSession } from "@/core/http/api";
-import {
-    DuplicateOpenActivityError,
-    RecordNotFoundError,
-    repository,
-} from "@/infrastructure/database/logbook-repository";
+export const GET = authenticatedRoute(async (_request, { userId }) =>
+    ok(new LogbookRepository().listTrash(userId)),
+);
 
-const restoreSchema = z.object({
-    recordId: z.number().int().positive(),
-    recordType: z.enum(["entry", "weighIn"]),
+export const POST = authenticatedRoute(async (request, { userId }) => {
+    const { recordId, recordType } = await readJson(request, restoreSchema);
+    new LogbookRepository().restore(userId, recordType, recordId);
+    return ok({ restored: true });
 });
-
-export async function GET(request: NextRequest) {
-    try {
-        const context = await requireApiSession(request);
-        return ok(repository().listTrash(context.userId));
-    } catch (error) {
-        return apiFailure(error);
-    }
-}
-
-export async function POST(request: NextRequest) {
-    let requestId: string | undefined;
-    try {
-        const context = await requireApiSession(request);
-        requestId = context.requestId;
-        const input = restoreSchema.parse(await request.json());
-        repository().restore(context.userId, input.recordType, input.recordId);
-        return ok({ restored: true });
-    } catch (error) {
-        if (error instanceof RecordNotFoundError)
-            error = new ApiError(404, "NOT_FOUND", error.message);
-        if (error instanceof DuplicateOpenActivityError) {
-            error = new ApiError(409, "ACTIVITY_ALREADY_OPEN", error.message);
-        }
-        return apiFailure(error, requestId);
-    }
-}

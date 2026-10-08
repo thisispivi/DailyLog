@@ -1,11 +1,10 @@
-import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { translate } from "@/core/i18n/translate";
-import type { Locale } from "@/features/logbook/domain";
+import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 
 export default async function NotFound() {
-    const locale: Locale = (await cookies()).get("dailylog_locale")?.value === "it" ? "it" : "en";
+    const { locale } = await readPreferenceCookies();
     return (
         <main className="standalone-state">
             <div className="surface raised">

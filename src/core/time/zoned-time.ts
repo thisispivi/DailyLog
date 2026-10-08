@@ -15,6 +15,12 @@ export function localDateTimeToUtc(date: string, time: string, timeZone: string)
     return new Date(utcEpoch).toISOString();
 }
 
+/** Converts a `datetime-local` input value (YYYY-MM-DDTHH:mm) to a UTC ISO timestamp. */
+export function localInputToUtc(value: string, timeZone: string): string {
+    const [date = "", time = ""] = value.split("T");
+    return localDateTimeToUtc(date, time, timeZone);
+}
+
 /** Returns UTC bounds for one inclusive local-date filter. */
 export function localDateRangeBounds(from: string, to: string, timeZone: string): [string, string] {
     if (!datePattern.test(from) || !datePattern.test(to)) throw new Error("Invalid date range.");
@@ -26,6 +32,7 @@ export function localDateRangeBounds(from: string, to: string, timeZone: string)
     return [toStorageTimestamp(start), toStorageTimestamp(end)];
 }
 
+/** Normalizes any ISO timestamp to the `+00:00` form stored since the Telegram bot. */
 export function toStorageTimestamp(isoTimestamp: string): string {
     return new Date(isoTimestamp).toISOString().replace("Z", "+00:00");
 }

@@ -1,10 +1,8 @@
-import { cookies } from "next/headers";
-
 import { translate } from "@/core/i18n/translate";
-import type { Locale } from "@/features/logbook/domain";
+import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 
 export default async function Loading() {
-    const locale: Locale = (await cookies()).get("dailylog_locale")?.value === "it" ? "it" : "en";
+    const { locale } = await readPreferenceCookies();
     return (
         <div className="page-loading" role="status">
             <span className="sr-only">{translate(locale, "common.loading")}</span>

@@ -1,74 +1,52 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { NextResponse } from "next/server";
 
 import { getEnvironment } from "@/core/config/env";
-import { apiFailure, ApiError, requireApiSession } from "@/core/http/api";
+import { ApiError, authenticatedRoute, readQuery } from "@/core/http/api";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
+import { exportQuerySchema } from "@/features/logbook/schemas";
 import { createPdf, createWorkbook } from "@/features/reports/report-service";
-import { repository } from "@/infrastructure/database/logbook-repository";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
-const querySchema = z.object({
-    all: z.enum(["true", "false"]).default("false"),
-    format: z.enum(["xlsx", "pdf"]),
-    from: z.iso.date().optional(),
-    to: z.iso.date().optional(),
-});
+const contentTypes = {
+    pdf: "application/pdf",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+} as const;
 
-export async function GET(request: NextRequest) {
-    let requestId: string | undefined;
-    try {
-        const context = await requireApiSession(request);
-        requestId = context.requestId;
-        const query = querySchema.parse(Object.fromEntries(request.nextUrl.searchParams));
-        const environment = getEnvironment();
-        const logbook = repository();
-        const settings = logbook.getSettings(context.userId);
-        let startDate = query.from;
-        let endDate = query.to;
-        if (query.all === "true") {
-            const entries = logbook.listAllEntries(context.userId);
-            const weighIns = logbook.listWeighIns(context.userId, undefined, undefined, 100_000);
-            const timestamps = [
-                ...entries.flatMap(
-                    (entry) => [entry.startAt, entry.endAt].filter(Boolean) as string[],
-                ),
-                ...weighIns.map((item) => item.recordedAt),
-            ];
-            timestamps.sort((left, right) => Date.parse(left) - Date.parse(right));
-            const first = timestamps[0];
-            const last = timestamps.at(-1);
-            if (!first || !last) throw new ApiError(404, "NO_DATA", "There is no data to export.");
-            startDate = localDateInZone(new Date(first), environment.timezone);
-            endDate = localDateInZone(new Date(last), environment.timezone);
-        }
-        if (!startDate || !endDate || endDate < startDate) {
-            throw new ApiError(400, "INVALID_RANGE", "Choose a valid date range.");
-        }
-        const [from, to] = localDateRangeBounds(startDate, endDate, environment.timezone);
-        const input = {
-            endDate,
-            entries: logbook.listAllEntries(context.userId, from, to),
-            locale: settings.exportLocale,
-            startDate,
-            timeZone: environment.timezone,
-            weighIns: logbook.listWeighIns(context.userId, from, to, 100_000).reverse(),
-            weightUnit: settings.weightUnit,
-        };
-        if (!input.entries.length && !input.weighIns.length)
-            throw new ApiError(404, "NO_DATA", "There is no data to export.");
-        const file = query.format === "pdf" ? await createPdf(input) : await createWorkbook(input);
-        return new NextResponse(new Uint8Array(file), {
-            headers: {
-                "Cache-Control": "no-store",
-                "Content-Disposition": `attachment; filename="dailylog_${startDate}_${endDate}.${query.format}"`,
-                "Content-Type":
-                    query.format === "pdf"
-                        ? "application/pdf"
-                        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "X-Content-Type-Options": "nosniff",
-            },
-        });
-    } catch (error) {
-        return apiFailure(error, requestId);
+export const GET = authenticatedRoute(async (request, { userId }) => {
+    const query = readQuery(request, exportQuerySchema);
+    const { timezone } = getEnvironment();
+    const logbook = new LogbookRepository();
+    let startDate = query.from;
+    let endDate = query.to;
+    if (query.all === "true") {
+        const range = logbook.recordedRange(userId);
+        if (!range) throw new ApiError(404, "NO_DATA", "There is no data to export.");
+        startDate = localDateInZone(new Date(range.first), timezone);
+        endDate = localDateInZone(new Date(range.last), timezone);
     }
-}
+    if (!startDate || !endDate || endDate < startDate) {
+        throw new ApiError(400, "INVALID_RANGE", "Choose a valid date range.");
+    }
+    const [from, to] = localDateRangeBounds(startDate, endDate, timezone);
+    const settings = logbook.getSettings(userId);
+    const input = {
+        endDate,
+        entries: logbook.listEntriesInRange(userId, from, to),
+        locale: settings.exportLocale,
+        startDate,
+        timeZone: timezone,
+        weighIns: logbook.listWeighIns(userId, { from, limit: null, to }).reverse(),
+        weightUnit: settings.weightUnit,
+    };
+    if (!input.entries.length && !input.weighIns.length) {
+        throw new ApiError(404, "NO_DATA", "There is no data to export.");
+    }
+    const file = query.format === "pdf" ? await createPdf(input) : await createWorkbook(input);
+    return new NextResponse(new Uint8Array(file), {
+        headers: {
+            "Cache-Control": "no-store",
+            "Content-Disposition": `attachment; filename="dailylog_${startDate}_${endDate}.${query.format}"`,
+            "Content-Type": contentTypes[query.format],
+        },
+    });
+});

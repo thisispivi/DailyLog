@@ -1,4 +1,4 @@
-type LogLevel = "debug" | "info" | "warn" | "error";
+import { getEnvironment, type LogLevel } from "@/core/config/env";
 
 type LogContext = Readonly<Record<string, boolean | number | string | null | undefined>>;
 
@@ -9,10 +9,9 @@ const rank: Readonly<Record<LogLevel, number>> = {
     error: 40,
 };
 
-/** Emits one structured JSON event while excluding caller-supplied secret objects. */
+/** Emits one structured JSON event. Callers pass primitives only, never request bodies. */
 export function log(level: LogLevel, event: string, context: LogContext = {}): void {
-    const configured = (process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined) ?? "info";
-    if (rank[level] < (rank[configured] ?? rank.info)) return;
+    if (rank[level] < rank[configuredLevel()]) return;
 
     const payload = JSON.stringify({
         timestamp: new Date().toISOString(),
@@ -23,4 +22,13 @@ export function log(level: LogLevel, event: string, context: LogContext = {}): v
     if (level === "error") console.error(payload);
     else if (level === "warn") console.warn(payload);
     else console.info(payload);
+}
+
+function configuredLevel(): LogLevel {
+    try {
+        return getEnvironment().logLevel;
+    } catch {
+        // Invalid configuration fails elsewhere; logging must still work while reporting it.
+        return "info";
+    }
 }
