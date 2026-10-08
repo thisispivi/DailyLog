@@ -7,25 +7,29 @@ import "./history.css";
 
 export const metadata = { title: "History" };
 
+// ponytail: the newest 100 entries and weigh-ins, filtered in the browser. Switch to
+// /api/entries pagination when a year of history no longer fits comfortably.
+const HISTORY_LIMIT = 100;
+
 export default function HistoryPage() {
-    const environment = getEnvironment();
+    const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const settings = logbook.getSettings(environment.ownerId);
+    const { locale, weightUnit } = logbook.getSettings(ownerId);
     return (
         <>
             <header className="page-header">
                 <div>
-                    <p className="eyebrow">{translate(settings.locale, "app.tagline")}</p>
-                    <h1>{translate(settings.locale, "history.title")}</h1>
+                    <p className="eyebrow">{translate(locale, "app.tagline")}</p>
+                    <h1>{translate(locale, "history.title")}</h1>
                 </div>
             </header>
             <HistoryWorkspace
-                entries={logbook.listEntries(environment.ownerId, { limit: 100, offset: 0 }).items}
-                locale={settings.locale}
-                timeZone={environment.timezone}
-                trash={logbook.listTrash(environment.ownerId)}
-                weighIns={logbook.listWeighIns(environment.ownerId, { limit: 100 })}
-                weightUnit={settings.weightUnit}
+                entries={logbook.listEntries(ownerId, { limit: HISTORY_LIMIT, offset: 0 }).items}
+                locale={locale}
+                timeZone={timezone}
+                trash={logbook.listTrash(ownerId)}
+                weighIns={logbook.listWeighIns(ownerId, { limit: HISTORY_LIMIT })}
+                weightUnit={weightUnit}
             />
         </>
     );

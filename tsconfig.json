@@ -24,8 +24,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@assets/*": ["./assets/*"]
+      "@/*": ["./src/*"]
     },
     "noEmit": true
   },

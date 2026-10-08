@@ -10,31 +10,29 @@ import "./reports.css";
 export const metadata = { title: "Reports" };
 
 export default function ReportsPage() {
-    const environment = getEnvironment();
+    const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const settings = logbook.getSettings(environment.ownerId);
-    const today = localDateInZone(new Date(), environment.timezone);
+    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const today = localDateInZone(new Date(), timezone);
     const monthStart = `${today.slice(0, 8)}01`;
-    const [from, to] = localDateRangeBounds(monthStart, today, environment.timezone);
-    const entries = logbook.listEntriesInRange(environment.ownerId, from, to);
-    const weights = logbook.listWeighIns(environment.ownerId, { from, to });
+    const [from, to] = localDateRangeBounds(monthStart, today, timezone);
     return (
         <>
             <header className="page-header">
                 <div>
-                    <p className="eyebrow">{translate(settings.locale, "app.tagline")}</p>
-                    <h1>{translate(settings.locale, "reports.title")}</h1>
+                    <p className="eyebrow">{translate(locale, "reports.thisMonth")}</p>
+                    <h1>{translate(locale, "reports.title")}</h1>
                 </div>
             </header>
             <div className="reports-layout">
                 <TrendCharts
-                    entries={entries}
-                    locale={settings.locale}
-                    timeZone={environment.timezone}
-                    weighIns={weights}
-                    weightUnit={settings.weightUnit}
+                    entries={logbook.listEntriesInRange(ownerId, from, to)}
+                    locale={locale}
+                    timeZone={timezone}
+                    weighIns={logbook.listWeighIns(ownerId, { from, to })}
+                    weightUnit={weightUnit}
                 />
-                <ExportPanel defaultFrom={monthStart} defaultTo={today} locale={settings.locale} />
+                <ExportPanel defaultFrom={monthStart} defaultTo={today} locale={locale} />
             </div>
         </>
     );

@@ -1,10 +1,15 @@
-import { Dumbbell, Moon, Scale, Utensils } from "lucide-react";
-
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
+import { KindBadge } from "@/ui/kind-badge";
+import { RobotMark } from "@/ui/robot-mark";
 
-type TimelineRecord =
-    { at: string; entry: Entry; type: "entry" } | { at: string; type: "weight"; weighIn: WeighIn };
+type TimelineRow = Readonly<{
+    at: string;
+    detail: string;
+    id: string;
+    kind: Entry["kind"] | "weight";
+    title: string;
+}>;
 
 export function DayTimeline({
     entries,
@@ -19,72 +24,52 @@ export function DayTimeline({
     weighIns: WeighIn[];
     weightUnit: WeightUnit;
 }>) {
-    const records: TimelineRecord[] = [
-        ...entries.map((entry): TimelineRecord => ({ at: entry.startAt, entry, type: "entry" })),
-        ...weighIns.map((weighIn): TimelineRecord => ({
+    const rows: TimelineRow[] = [
+        ...entries.map((entry) => ({
+            at: entry.startAt,
+            detail:
+                entry.text ||
+                (entry.endAt
+                    ? formatDuration(entry.startAt, entry.endAt, locale)
+                    : translate(locale, `dashboard.${entry.kind}`)),
+            id: `entry-${entry.id}`,
+            kind: entry.kind,
+            title: entry.label,
+        })),
+        ...weighIns.map((weighIn) => ({
             at: weighIn.recordedAt,
-            type: "weight",
-            weighIn,
+            detail: translate(locale, "dashboard.weight"),
+            id: `weight-${weighIn.id}`,
+            kind: "weight" as const,
+            title: formatWeight(weighIn.weightGrams, weightUnit, locale),
         })),
     ].sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
+
     return (
-        <section className="day-timeline surface" aria-labelledby="timeline-title">
-            <div className="timeline-heading">
+        <section aria-labelledby="timeline-title" className="day-timeline card">
+            <div className="card-heading">
                 <h2 id="timeline-title">{translate(locale, "dashboard.dayTitle")}</h2>
-                <span>
-                    {translate(locale, "dashboard.summaryEntries", { count: records.length })}
+                <span className="count-pill">
+                    {translate(locale, "dashboard.summaryEntries", { count: rows.length })}
                 </span>
             </div>
-            {records.length === 0 ? (
-                <div className="empty-state">{translate(locale, "dashboard.dayEmpty")}</div>
+            {rows.length === 0 ? (
+                <div className="empty-state">
+                    <RobotMark size={56} />
+                    <p>{translate(locale, "dashboard.dayEmpty")}</p>
+                </div>
             ) : (
                 <ol className="timeline-list">
-                    {records.map((record) => {
-                        if (record.type === "weight") {
-                            return (
-                                <li className="timeline-row" key={`weight-${record.weighIn.id}`}>
-                                    <span className="timeline-icon">
-                                        <Scale aria-hidden="true" size={18} />
-                                    </span>
-                                    <div>
-                                        <strong>
-                                            {formatWeight(
-                                                record.weighIn.weightGrams,
-                                                weightUnit,
-                                                locale,
-                                            )}
-                                        </strong>
-                                        <span>{translate(locale, "dashboard.weight")}</span>
-                                    </div>
-                                    <time>{formatTime(record.at, locale, timeZone)}</time>
-                                </li>
-                            );
-                        }
-                        const entry = record.entry;
-                        const Icon =
-                            entry.kind === "meal"
-                                ? Utensils
-                                : entry.kind === "sleep"
-                                  ? Moon
-                                  : Dumbbell;
-                        return (
-                            <li className="timeline-row" key={`entry-${entry.id}`}>
-                                <span className="timeline-icon">
-                                    <Icon aria-hidden="true" size={18} />
-                                </span>
-                                <div>
-                                    <strong>{entry.label}</strong>
-                                    <span>
-                                        {entry.text ||
-                                            (entry.endAt
-                                                ? formatDuration(entry.startAt, entry.endAt, locale)
-                                                : translate(locale, "common.start"))}
-                                    </span>
-                                </div>
-                                <time>{formatTime(entry.startAt, locale, timeZone)}</time>
-                            </li>
-                        );
-                    })}
+                    {rows.map((row) => (
+                        <li className="timeline-row" data-kind={row.kind} key={row.id}>
+                            <KindBadge kind={row.kind} />
+                            <div className="timeline-text">
+                                <strong>{row.title}</strong>
+                                <span>{row.detail}</span>
+                            </div>
+                            <time dateTime={row.at}>{formatTime(row.at, locale, timeZone)}</time>
+                        </li>
+                    ))}
                 </ol>
             )}
         </section>

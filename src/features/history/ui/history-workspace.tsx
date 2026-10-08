@@ -4,19 +4,36 @@ import { ChevronDown, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
+import { sendJson } from "@/core/http/client";
 import { formatDateTime, formatDuration, formatWeight, translate } from "@/core/i18n/translate";
-import { localDateTimeToUtc, localInputValue } from "@/core/time/zoned-time";
-import type {
-    Entry,
-    EntryKind,
-    Locale,
-    TrashItem,
-    WeighIn,
-    WeightUnit,
+import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
+import {
+    entryKinds,
+    gramsToUnit,
+    type Entry,
+    type Locale,
+    type TrashItem,
+    type WeighIn,
+    type WeightUnit,
 } from "@/features/logbook/domain";
+import { KindBadge } from "@/ui/kind-badge";
+import { RobotMark } from "@/ui/robot-mark";
 
-type CurrentRecord =
+type HistoryRecord =
     { item: Entry; recordType: "entry" } | { item: WeighIn; recordType: "weighIn" };
+
+const filters = [
+    ["all", "history.all"],
+    ["meal", "history.meal"],
+    ["training", "history.training"],
+    ["sleep", "history.sleep"],
+    ["weighIn", "history.weighIns"],
+    ["trash", "history.trash"],
+] as const;
+
+type Filter = (typeof filters)[number][0];
+
+type Shared = Readonly<{ locale: Locale; timeZone: string; weightUnit: WeightUnit }>;
 
 export function HistoryWorkspace({
     entries,
@@ -25,99 +42,83 @@ export function HistoryWorkspace({
     trash,
     weighIns,
     weightUnit,
-}: Readonly<{
-    entries: Entry[];
-    locale: Locale;
-    timeZone: string;
-    trash: TrashItem[];
-    weighIns: WeighIn[];
-    weightUnit: WeightUnit;
-}>) {
+}: Shared &
+    Readonly<{
+        entries: Entry[];
+        trash: TrashItem[];
+        weighIns: WeighIn[];
+    }>) {
     const router = useRouter();
-    const [type, setType] = useState<"all" | EntryKind | "weighIn" | "trash">("all");
+    const [filter, setFilter] = useState<Filter>("all");
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
-    const [editing, setEditing] = useState<CurrentRecord | null>(null);
-    const [message, setMessage] = useState("");
+    const [openKey, setOpenKey] = useState<string | null>(null);
+    const [failed, setFailed] = useState(false);
+    const shared = { locale, timeZone, weightUnit };
 
     const records = useMemo(() => {
-        if (type === "trash") return [];
-        const normalizedQuery = query.trim().toLocaleLowerCase(locale);
-        const entryRecords: CurrentRecord[] = entries
-            .filter((entry) => type === "all" || type === entry.kind)
+        if (filter === "trash") return [];
+        const needle = query.trim().toLocaleLowerCase(locale);
+        const onDate = (timestamp: string) =>
+            !date || localInputValue(new Date(timestamp), timeZone).startsWith(date);
+        const entryRecords: HistoryRecord[] = entries
+            .filter((entry) => filter === "all" || filter === entry.kind)
             .filter(
                 (entry) =>
-                    !normalizedQuery ||
-                    `${entry.label} ${entry.text}`
-                        .toLocaleLowerCase(locale)
-                        .includes(normalizedQuery),
+                    !needle ||
+                    `${entry.label} ${entry.text}`.toLocaleLowerCase(locale).includes(needle),
             )
-            .filter(
-                (entry) =>
-                    !date || localInputValue(new Date(entry.startAt), timeZone).startsWith(date),
-            )
+            .filter((entry) => onDate(entry.startAt))
             .map((item) => ({ item, recordType: "entry" }));
-        const weightRecords: CurrentRecord[] = weighIns
-            .filter(() => type === "all" || type === "weighIn")
-            .filter(
-                (item) =>
-                    !date || localInputValue(new Date(item.recordedAt), timeZone).startsWith(date),
-            )
-            .map((item) => ({ item, recordType: "weighIn" }));
+        const weightRecords: HistoryRecord[] =
+            (filter === "all" || filter === "weighIn") && !needle
+                ? weighIns
+                      .filter((item) => onDate(item.recordedAt))
+                      .map((item) => ({ item, recordType: "weighIn" }))
+                : [];
         return [...entryRecords, ...weightRecords].sort(
             (left, right) => Date.parse(recordDate(right)) - Date.parse(recordDate(left)),
         );
-    }, [date, entries, locale, query, timeZone, type, weighIns]);
+    }, [date, entries, filter, locale, query, timeZone, weighIns]);
 
-    async function deleteRecord(record: CurrentRecord) {
+    async function mutate(request: Promise<{ ok: boolean }>) {
+        const { ok } = await request;
+        setFailed(!ok);
+        if (ok) router.refresh();
+        return ok;
+    }
+
+    function deleteRecord(record: HistoryRecord) {
         const label =
             record.recordType === "entry"
                 ? record.item.label
                 : formatWeight(record.item.weightGrams, weightUnit, locale);
         if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
-        const path =
-            record.recordType === "entry"
-                ? `/api/entries/${record.item.id}`
-                : `/api/weigh-ins/${record.item.id}`;
-        const response = await fetch(path, { method: "DELETE" });
-        setMessage(
-            response.ok ? translate(locale, "common.saved") : translate(locale, "common.error"),
-        );
-        if (response.ok) router.refresh();
+        const path = record.recordType === "entry" ? "entries" : "weigh-ins";
+        void mutate(sendJson(`/api/${path}/${record.item.id}`, "DELETE"));
     }
 
-    async function deleteDay() {
-        if (!date || !window.confirm(translate(locale, "history.confirmBulk", { date }))) return;
-        const response = await fetch("/api/entries/day", {
-            body: JSON.stringify({ date }),
-            headers: { "content-type": "application/json" },
-            method: "DELETE",
-        });
-        setMessage(
-            response.ok ? translate(locale, "common.saved") : translate(locale, "common.error"),
-        );
-        if (response.ok) router.refresh();
+    function deleteDay() {
+        if (!window.confirm(translate(locale, "history.confirmBulk", { date }))) return;
+        void mutate(sendJson("/api/entries/day", "DELETE", { date }));
     }
 
-    async function restore(item: TrashItem) {
-        const response = await fetch("/api/trash", {
-            body: JSON.stringify({ recordId: item.recordId, recordType: item.recordType }),
-            headers: { "content-type": "application/json" },
-            method: "POST",
-        });
-        setMessage(
-            response.ok ? translate(locale, "common.saved") : translate(locale, "common.error"),
+    function restore(item: TrashItem) {
+        void mutate(
+            sendJson("/api/trash", "POST", {
+                recordId: item.recordId,
+                recordType: item.recordType,
+            }),
         );
-        if (response.ok) router.refresh();
     }
 
     return (
         <div className="history-workspace">
             <section
-                className="history-filters surface"
                 aria-label={translate(locale, "history.filter")}
+                className="history-filters card"
             >
-                <div className="search-field">
+                <div className="history-search">
                     <Search aria-hidden="true" size={18} />
                     <label className="sr-only" htmlFor="history-search">
                         {translate(locale, "common.search")}
@@ -131,114 +132,116 @@ export function HistoryWorkspace({
                         value={query}
                     />
                 </div>
-                <label className="sr-only" htmlFor="history-type">
-                    {translate(locale, "history.filter")}
-                </label>
-                <select
-                    className="select"
-                    id="history-type"
-                    onChange={(event) => setType(event.currentTarget.value as typeof type)}
-                    value={type}
-                >
-                    <option value="all">{translate(locale, "history.all")}</option>
-                    <option value="meal">{translate(locale, "history.meal")}</option>
-                    <option value="training">{translate(locale, "history.training")}</option>
-                    <option value="sleep">{translate(locale, "history.sleep")}</option>
-                    <option value="weighIn">{translate(locale, "history.weighIns")}</option>
-                    <option value="trash">{translate(locale, "history.trash")}</option>
-                </select>
                 <label className="sr-only" htmlFor="history-date">
                     {translate(locale, "history.date")}
                 </label>
                 <input
-                    className="input"
+                    className="input history-date"
                     id="history-date"
                     onChange={(event) => setDate(event.currentTarget.value)}
                     type="date"
                     value={date}
                 />
-                {date && type !== "trash" && (
-                    <button className="button button-danger" onClick={deleteDay} type="button">
-                        <Trash2 aria-hidden="true" size={17} />
+                <div
+                    aria-label={translate(locale, "history.filter")}
+                    className="filter-chips"
+                    role="group"
+                >
+                    {filters.map(([value, key]) => (
+                        <button
+                            aria-pressed={filter === value}
+                            className="filter-chip"
+                            data-kind={chipKind(value)}
+                            key={value}
+                            onClick={() => setFilter(value)}
+                            type="button"
+                        >
+                            {translate(locale, key)}
+                        </button>
+                    ))}
+                </div>
+                {date && filter !== "trash" && (
+                    <button
+                        className="button button-danger history-bulk"
+                        onClick={deleteDay}
+                        type="button"
+                    >
+                        <Trash2 aria-hidden="true" size={16} />
                         {translate(locale, "history.bulkDelete")}
                     </button>
                 )}
             </section>
-            <p aria-live="polite" className="history-status">
-                {message}
+            <p aria-live="polite" className="status-message" data-tone="error">
+                {failed ? translate(locale, "common.error") : ""}
             </p>
-            {type === "trash" ? (
-                <TrashList
-                    items={trash}
-                    locale={locale}
-                    onRestore={restore}
-                    timeZone={timeZone}
-                    weightUnit={weightUnit}
-                />
+            {filter === "trash" ? (
+                <TrashList items={trash} onRestore={restore} {...shared} />
             ) : records.length === 0 ? (
-                <div className="empty-state surface">
-                    {entries.length || weighIns.length
-                        ? translate(locale, "common.noResults")
-                        : translate(locale, "history.empty")}
+                <div className="empty-state card">
+                    <RobotMark size={56} />
+                    <p>
+                        {translate(
+                            locale,
+                            entries.length || weighIns.length
+                                ? "common.noResults"
+                                : "history.empty",
+                        )}
+                    </p>
                 </div>
             ) : (
-                <section
-                    className="record-list surface"
-                    aria-label={translate(locale, "history.results", { count: records.length })}
-                >
-                    <div className="record-list-header">
-                        <strong>
+                <section className="record-list card">
+                    <div className="card-heading">
+                        <h2>{translate(locale, "history.title")}</h2>
+                        <span className="count-pill">
                             {translate(locale, "history.results", { count: records.length })}
-                        </strong>
+                        </span>
                     </div>
-                    {records.map((record) => (
-                        <article
-                            className="record-row"
-                            key={`${record.recordType}-${record.item.id}`}
-                        >
-                            <button
-                                className="record-main"
-                                onClick={() =>
-                                    setEditing(
-                                        editing?.item.id === record.item.id &&
-                                            editing.recordType === record.recordType
-                                            ? null
-                                            : record,
-                                    )
-                                }
-                                type="button"
-                            >
-                                <span className="record-kind">
-                                    {record.recordType === "entry"
-                                        ? translate(locale, `dashboard.${record.item.kind}`)
-                                        : translate(locale, "dashboard.weight")}
-                                </span>
-                                <strong>{recordTitle(record, locale, weightUnit)}</strong>
-                                <span>{recordDetail(record, locale)}</span>
-                                <time>{formatDateTime(recordDate(record), locale, timeZone)}</time>
-                                <ChevronDown
-                                    aria-hidden="true"
-                                    className="record-chevron"
-                                    data-open={
-                                        editing?.item.id === record.item.id &&
-                                        editing.recordType === record.recordType
-                                    }
-                                    size={18}
-                                />
-                            </button>
-                            {editing?.item.id === record.item.id &&
-                                editing.recordType === record.recordType && (
-                                    <RecordEditor
-                                        locale={locale}
-                                        onClose={() => setEditing(null)}
-                                        onDelete={() => deleteRecord(record)}
-                                        record={record}
-                                        timeZone={timeZone}
-                                        unit={weightUnit}
-                                    />
-                                )}
-                        </article>
-                    ))}
+                    <ul>
+                        {records.map((record) => {
+                            const key = `${record.recordType}-${record.item.id}`;
+                            const open = openKey === key;
+                            return (
+                                <li className="record-row" data-open={open} key={key}>
+                                    <button
+                                        aria-expanded={open}
+                                        className="record-summary"
+                                        onClick={() => setOpenKey(open ? null : key)}
+                                        type="button"
+                                    >
+                                        <KindBadge
+                                            kind={
+                                                record.recordType === "entry"
+                                                    ? record.item.kind
+                                                    : "weight"
+                                            }
+                                        />
+                                        <span className="record-text">
+                                            <strong>
+                                                {recordTitle(record, locale, weightUnit)}
+                                            </strong>
+                                            <span>{recordDetail(record, locale)}</span>
+                                        </span>
+                                        <time dateTime={recordDate(record)}>
+                                            {formatDateTime(recordDate(record), locale, timeZone)}
+                                        </time>
+                                        <ChevronDown
+                                            aria-hidden="true"
+                                            className="record-chevron"
+                                            size={18}
+                                        />
+                                    </button>
+                                    {open && (
+                                        <RecordEditor
+                                            onClose={() => setOpenKey(null)}
+                                            onDelete={() => deleteRecord(record)}
+                                            record={record}
+                                            {...shared}
+                                        />
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </section>
             )}
         </div>
@@ -251,121 +254,116 @@ function RecordEditor({
     onDelete,
     record,
     timeZone,
-    unit,
-}: Readonly<{
-    locale: Locale;
-    onClose: () => void;
-    onDelete: () => void;
-    record: CurrentRecord;
-    timeZone: string;
-    unit: WeightUnit;
-}>) {
+    weightUnit,
+}: Shared &
+    Readonly<{
+        onClose: () => void;
+        onDelete: () => void;
+        record: HistoryRecord;
+    }>) {
     const router = useRouter();
     const [pending, setPending] = useState(false);
-    const [error, setError] = useState("");
+    const [failed, setFailed] = useState(false);
+    const id = record.item.id;
 
-    async function submit(event: FormEvent<HTMLFormElement>) {
+    async function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setPending(true);
-        setError("");
         const form = new FormData(event.currentTarget);
-        const response =
+        const field = (name: string) => String(form.get(name) ?? "");
+        const startAt = localInputToUtc(field("startAt"), timeZone);
+        setPending(true);
+        const { ok } =
             record.recordType === "entry"
-                ? await fetch(`/api/entries/${record.item.id}`, {
-                      body: JSON.stringify({
-                          endAt: form.get("endAt")
-                              ? fromLocal(String(form.get("endAt")), timeZone)
-                              : null,
-                          kind: form.get("kind"),
-                          label: form.get("label"),
-                          startAt: fromLocal(String(form.get("startAt")), timeZone),
-                          text: form.get("text"),
-                      }),
-                      headers: { "content-type": "application/json" },
-                      method: "PATCH",
+                ? await sendJson(`/api/entries/${id}`, "PATCH", {
+                      endAt: field("endAt") ? localInputToUtc(field("endAt"), timeZone) : null,
+                      kind: field("kind"),
+                      label: field("label"),
+                      startAt,
+                      text: field("text"),
                   })
-                : await fetch(`/api/weigh-ins/${record.item.id}`, {
-                      body: JSON.stringify({
-                          recordedAt: fromLocal(String(form.get("startAt")), timeZone),
-                          unit,
-                          weight: Number(form.get("weight")),
-                      }),
-                      headers: { "content-type": "application/json" },
-                      method: "PATCH",
+                : await sendJson(`/api/weigh-ins/${id}`, "PATCH", {
+                      recordedAt: startAt,
+                      unit: weightUnit,
+                      weight: Number(field("weight")),
                   });
         setPending(false);
-        if (!response.ok) {
-            setError(translate(locale, "common.validation"));
-            return;
-        }
+        setFailed(!ok);
+        if (!ok) return;
         onClose();
         router.refresh();
     }
 
     return (
-        <form className="record-editor" onSubmit={submit}>
+        <form className="record-editor" onSubmit={save}>
             {record.recordType === "entry" ? (
                 <>
                     <div className="field">
-                        <label htmlFor={`kind-${record.item.id}`}>
-                            {translate(locale, "history.filter")}
-                        </label>
+                        <label htmlFor={`kind-${id}`}>{translate(locale, "history.type")}</label>
                         <select
                             className="select"
                             defaultValue={record.item.kind}
-                            id={`kind-${record.item.id}`}
+                            id={`kind-${id}`}
                             name="kind"
                         >
-                            <option value="meal">{translate(locale, "dashboard.meal")}</option>
-                            <option value="training">
-                                {translate(locale, "dashboard.training")}
-                            </option>
-                            <option value="sleep">{translate(locale, "dashboard.sleep")}</option>
+                            {entryKinds.map((kind) => (
+                                <option key={kind} value={kind}>
+                                    {translate(locale, `dashboard.${kind}`)}
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div className="field">
-                        <label htmlFor={`label-${record.item.id}`}>
-                            {translate(locale, "common.label")}
-                        </label>
+                        <label htmlFor={`label-${id}`}>{translate(locale, "common.label")}</label>
                         <input
                             className="input"
                             defaultValue={record.item.label}
-                            id={`label-${record.item.id}`}
+                            id={`label-${id}`}
                             maxLength={120}
                             name="label"
                             required
                         />
                     </div>
+                    <DateTimeField
+                        id={`start-${id}`}
+                        label={translate(locale, "entry.startTime")}
+                        name="startAt"
+                        required
+                        timeZone={timeZone}
+                        value={record.item.startAt}
+                    />
+                    <DateTimeField
+                        id={`end-${id}`}
+                        label={translate(locale, "entry.endTime")}
+                        name="endAt"
+                        timeZone={timeZone}
+                        value={record.item.endAt}
+                    />
                     <div className="field editor-wide">
-                        <label htmlFor={`text-${record.item.id}`}>
-                            {translate(locale, "common.details")}
-                        </label>
+                        <label htmlFor={`text-${id}`}>{translate(locale, "common.details")}</label>
                         <textarea
                             className="textarea"
                             defaultValue={record.item.text}
-                            id={`text-${record.item.id}`}
+                            id={`text-${id}`}
                             maxLength={2000}
                             name="text"
                         />
                     </div>
-                    <DateFields
-                        endAt={record.item.endAt}
-                        id={record.item.id}
-                        locale={locale}
-                        startAt={record.item.startAt}
-                        timeZone={timeZone}
-                    />
                 </>
             ) : (
                 <>
                     <div className="field">
-                        <label htmlFor={`weight-${record.item.id}`}>
-                            {translate(locale, "entry.weightValue")} ({unit})
+                        <label htmlFor={`weight-${id}`}>
+                            {translate(locale, "entry.weightValue")} ({weightUnit})
                         </label>
                         <input
                             className="input"
-                            defaultValue={weightNumber(record.item.weightGrams, unit)}
-                            id={`weight-${record.item.id}`}
+                            defaultValue={
+                                Math.round(gramsToUnit(record.item.weightGrams, weightUnit) * 100) /
+                                100
+                            }
+                            id={`weight-${id}`}
+                            inputMode="decimal"
+                            max="1000"
                             min="1"
                             name="weight"
                             required
@@ -373,23 +371,25 @@ function RecordEditor({
                             type="number"
                         />
                     </div>
-                    <DateFields
-                        id={record.item.id}
-                        locale={locale}
-                        startAt={record.item.recordedAt}
+                    <DateTimeField
+                        id={`start-${id}`}
+                        label={translate(locale, "entry.startTime")}
+                        name="startAt"
+                        required
                         timeZone={timeZone}
+                        value={record.item.recordedAt}
                     />
                 </>
             )}
-            <p aria-live="polite" className="status-message editor-wide">
-                {error}
+            <p aria-live="polite" className="status-message editor-wide" data-tone="error">
+                {failed ? translate(locale, "common.validation") : ""}
             </p>
             <div className="editor-actions editor-wide">
                 <button className="button button-danger" onClick={onDelete} type="button">
+                    <Trash2 aria-hidden="true" size={16} />
                     {translate(locale, "common.delete")}
                 </button>
-                <span />
-                <button className="button button-quiet" onClick={onClose} type="button">
+                <button className="button button-ghost" onClick={onClose} type="button">
                     {translate(locale, "common.cancel")}
                 </button>
                 <button className="button button-primary" disabled={pending} type="submit">
@@ -400,45 +400,33 @@ function RecordEditor({
     );
 }
 
-function DateFields({
-    endAt,
+function DateTimeField({
     id,
-    locale,
-    startAt,
+    label,
+    name,
+    required = false,
     timeZone,
+    value,
 }: Readonly<{
-    endAt?: string | null;
-    id: number;
-    locale: Locale;
-    startAt: string;
+    id: string;
+    label: string;
+    name: string;
+    required?: boolean;
     timeZone: string;
+    value: string | null;
 }>) {
     return (
-        <>
-            <div className="field">
-                <label htmlFor={`start-${id}`}>{translate(locale, "entry.startTime")}</label>
-                <input
-                    className="input"
-                    defaultValue={localInputValue(new Date(startAt), timeZone)}
-                    id={`start-${id}`}
-                    name="startAt"
-                    required
-                    type="datetime-local"
-                />
-            </div>
-            {endAt !== undefined && (
-                <div className="field">
-                    <label htmlFor={`end-${id}`}>{translate(locale, "entry.endTime")}</label>
-                    <input
-                        className="input"
-                        defaultValue={endAt ? localInputValue(new Date(endAt), timeZone) : ""}
-                        id={`end-${id}`}
-                        name="endAt"
-                        type="datetime-local"
-                    />
-                </div>
-            )}
-        </>
+        <div className="field">
+            <label htmlFor={id}>{label}</label>
+            <input
+                className="input"
+                defaultValue={value ? localInputValue(new Date(value), timeZone) : ""}
+                id={id}
+                name={name}
+                required={required}
+                type="datetime-local"
+            />
+        </div>
     );
 }
 
@@ -448,37 +436,34 @@ function TrashList({
     onRestore,
     timeZone,
     weightUnit,
-}: Readonly<{
-    items: TrashItem[];
-    locale: Locale;
-    onRestore: (item: TrashItem) => void;
-    timeZone: string;
-    weightUnit: WeightUnit;
-}>) {
+}: Shared & Readonly<{ items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
     return (
-        <section className="trash-panel surface">
-            <div className="trash-heading">
+        <section className="record-list card">
+            <div className="card-heading">
                 <div>
                     <h2>{translate(locale, "history.trash")}</h2>
-                    <p>{translate(locale, "history.trashHint")}</p>
+                    <p className="muted trash-hint">{translate(locale, "history.trashHint")}</p>
                 </div>
             </div>
             {items.length === 0 ? (
-                <div className="empty-state">{translate(locale, "history.trashEmpty")}</div>
+                <div className="empty-state">
+                    <RobotMark size={56} />
+                    <p>{translate(locale, "history.trashEmpty")}</p>
+                </div>
             ) : (
-                <ul className="trash-list">
+                <ul>
                     {items.map((item) => (
-                        <li key={`${item.recordType}-${item.recordId}`}>
-                            <div>
+                        <li className="trash-row" key={`${item.recordType}-${item.recordId}`}>
+                            <span className="record-text">
                                 <strong>
                                     {item.recordType === "entry"
                                         ? item.label
                                         : formatWeight(item.weightGrams, weightUnit, locale)}
                                 </strong>
                                 <span>{formatDateTime(item.deletedAt, locale, timeZone)}</span>
-                            </div>
+                            </span>
                             <button
-                                className="button"
+                                className="button button-ghost"
                                 onClick={() => onRestore(item)}
                                 type="button"
                             >
@@ -493,23 +478,22 @@ function TrashList({
     );
 }
 
-function recordDate(record: CurrentRecord): string {
+function chipKind(filter: Filter): string | undefined {
+    if (filter === "weighIn") return "weight";
+    return (entryKinds as readonly string[]).includes(filter) ? filter : undefined;
+}
+
+function recordDate(record: HistoryRecord): string {
     return record.recordType === "entry" ? record.item.startAt : record.item.recordedAt;
 }
-function recordTitle(record: CurrentRecord, locale: Locale, unit: WeightUnit): string {
+
+function recordTitle(record: HistoryRecord, locale: Locale, unit: WeightUnit): string {
     return record.recordType === "entry"
         ? record.item.label
         : formatWeight(record.item.weightGrams, unit, locale);
 }
-function recordDetail(record: CurrentRecord, locale: Locale): string {
-    return record.recordType === "entry"
-        ? record.item.text || formatDuration(record.item.startAt, record.item.endAt, locale)
-        : "";
-}
-function fromLocal(value: string, timeZone: string): string {
-    const [date, time] = value.split("T") as [string, string];
-    return localDateTimeToUtc(date, time, timeZone);
-}
-function weightNumber(grams: number, unit: WeightUnit): number {
-    return Math.round((unit === "kg" ? grams / 1000 : grams / 1000 / 0.45359237) * 100) / 100;
+
+function recordDetail(record: HistoryRecord, locale: Locale): string {
+    if (record.recordType === "weighIn") return translate(locale, "dashboard.weight");
+    return record.item.text || formatDuration(record.item.startAt, record.item.endAt, locale);
 }

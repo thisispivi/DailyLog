@@ -1,9 +1,17 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 
 import "./globals.css";
+
+// Self-hosted at build time, so the CSP can keep font-src 'self'.
+const brandFont = Plus_Jakarta_Sans({
+    display: "swap",
+    subsets: ["latin"],
+    variable: "--font-brand",
+});
 
 export const metadata: Metadata = {
     applicationName: "DailyLog",
@@ -14,19 +22,17 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
     colorScheme: "light dark",
-    themeColor: [
-        { color: "#f4f5f3", media: "(prefers-color-scheme: light)" },
-        { color: "#0b1423", media: "(prefers-color-scheme: dark)" },
-    ],
+    themeColor: "#071a3d",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
     const { locale, theme } = await readPreferenceCookies();
     return (
         <html
+            className={brandFont.variable}
             data-scroll-behavior="smooth"
-            lang={locale}
             data-theme={theme}
+            lang={locale}
             suppressHydrationWarning
         >
             <body>{children}</body>

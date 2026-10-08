@@ -25,7 +25,6 @@ RUN apk upgrade --no-cache \
     && adduser --system --uid 1001 dailylog
 COPY --from=builder --chown=dailylog:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=dailylog:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=dailylog:nodejs /app/assets ./assets
 RUN mkdir -p /data && chown dailylog:nodejs /data
 USER dailylog
 EXPOSE 3000

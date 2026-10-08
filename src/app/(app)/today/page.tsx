@@ -6,86 +6,94 @@ import { ActiveActivity } from "@/features/dashboard/ui/active-activity";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
 import { QuickLog } from "@/features/dashboard/ui/quick-log";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
+import { KindBadge, type RecordKind } from "@/ui/kind-badge";
+import { RobotMark } from "@/ui/robot-mark";
 
 import "./today.css";
 
 export const metadata = { title: "Today" };
 
 export default function TodayPage() {
-    const environment = getEnvironment();
+    const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const settings = logbook.getSettings(environment.ownerId);
+    const { locale, weightUnit } = logbook.getSettings(ownerId);
     const now = new Date();
-    const today = localDateInZone(now, environment.timezone);
-    const [from, to] = localDateRangeBounds(today, today, environment.timezone);
-    const entries = logbook.listEntriesInRange(environment.ownerId, from, to);
-    const weighIns = logbook.listWeighIns(environment.ownerId, { from, to });
-    const active = logbook.activeActivity(environment.ownerId);
+    const today = localDateInZone(now, timezone);
+    const [from, to] = localDateRangeBounds(today, today, timezone);
+    const entries = logbook.listEntriesInRange(ownerId, from, to);
+    const weighIns = logbook.listWeighIns(ownerId, { from, to });
+    const active = logbook.activeActivity(ownerId);
     const summary = summarizeDay(entries, weighIns);
-    const hour = Number(
-        new Intl.DateTimeFormat("en", {
-            hour: "2-digit",
-            hourCycle: "h23",
-            timeZone: environment.timezone,
-        }).format(now),
-    );
-    const period = hour < 12 ? "periodMorning" : hour < 18 ? "periodAfternoon" : "periodEvening";
+    const stats: Array<{ kind: RecordKind; label: string; value: string }> = [
+        {
+            kind: "meal",
+            label: translate(locale, "dashboard.statMeals"),
+            value: String(entries.filter((entry) => entry.kind === "meal").length),
+        },
+        {
+            kind: "training",
+            label: translate(locale, "dashboard.statTraining"),
+            value: `${summary.trainingMinutes} min`,
+        },
+        {
+            kind: "sleep",
+            label: translate(locale, "dashboard.statSleep"),
+            value: `${summary.sleepHours} h`,
+        },
+        {
+            kind: "weight",
+            label: translate(locale, "dashboard.weight"),
+            value: summary.weight
+                ? formatWeight(summary.weight.weightGrams, weightUnit, locale)
+                : "–",
+        },
+    ];
     return (
         <>
-            <header className="page-header today-header">
-                <div>
-                    <p className="eyebrow">
-                        {formatDate(now, settings.locale, environment.timezone)}
-                    </p>
+            <header className="today-hero navy-panel">
+                <div className="today-hero-text">
+                    <p className="eyebrow">{formatDate(now, locale, timezone)}</p>
                     <h1>
-                        {translate(settings.locale, "dashboard.greeting", {
-                            period: translate(settings.locale, `dashboard.${period}`),
+                        {translate(locale, "dashboard.greeting", {
+                            period: translate(locale, `dashboard.${dayPeriod(now, timezone)}`),
                         })}
                     </h1>
                 </div>
-                <div
-                    className="day-summary"
-                    aria-label={translate(settings.locale, "dashboard.dayTitle")}
-                >
-                    <span>
-                        <strong>{summary.trainingMinutes}</strong>
-                        {translate(settings.locale, "dashboard.summaryTraining", {
-                            minutes: "",
-                        }).trim()}
-                    </span>
-                    <span>
-                        <strong>{summary.sleepHours}</strong>
-                        {translate(settings.locale, "dashboard.summarySleep", { hours: "" }).trim()}
-                    </span>
-                    {summary.weight && (
-                        <span>
-                            <strong>
-                                {formatWeight(
-                                    summary.weight.weightGrams,
-                                    settings.weightUnit,
-                                    settings.locale,
-                                )}
-                            </strong>
-                        </span>
-                    )}
-                </div>
+                <RobotMark className="today-hero-robot" size={88} />
+                <dl className="today-stats">
+                    {stats.map((stat) => (
+                        <div className="today-stat" key={stat.kind}>
+                            <KindBadge kind={stat.kind} size="small" />
+                            <dt>{stat.label}</dt>
+                            <dd>{stat.value}</dd>
+                        </div>
+                    ))}
+                </dl>
             </header>
-            {active && <ActiveActivity activity={active} locale={settings.locale} />}
+            {active && <ActiveActivity activity={active} locale={locale} />}
             <div className="today-layout">
                 <QuickLog
                     hasActiveActivity={Boolean(active)}
-                    locale={settings.locale}
-                    timeZone={environment.timezone}
-                    weightUnit={settings.weightUnit}
+                    locale={locale}
+                    timeZone={timezone}
+                    weightUnit={weightUnit}
                 />
                 <DayTimeline
                     entries={entries}
-                    locale={settings.locale}
-                    timeZone={environment.timezone}
+                    locale={locale}
+                    timeZone={timezone}
                     weighIns={weighIns}
-                    weightUnit={settings.weightUnit}
+                    weightUnit={weightUnit}
                 />
             </div>
         </>
     );
+}
+
+function dayPeriod(now: Date, timeZone: string) {
+    const hour = Number(
+        new Intl.DateTimeFormat("en", { hour: "2-digit", hourCycle: "h23", timeZone }).format(now),
+    );
+    if (hour < 12) return "periodMorning";
+    return hour < 18 ? "periodAfternoon" : "periodEvening";
 }

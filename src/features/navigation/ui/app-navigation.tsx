@@ -1,59 +1,68 @@
 "use client";
 
-import { CalendarDays, ChartNoAxesCombined, History, LogOut, MoonStar } from "lucide-react";
+import { ChartNoAxesCombined, History, LogOut, NotebookPen, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import type { Locale } from "@/features/logbook/domain";
+import { Wordmark } from "@/ui/wordmark";
+
+import "./app-navigation.css";
 
 const destinations = [
-    { href: "/today", icon: CalendarDays, key: "nav.dashboard" },
+    { href: "/today", icon: NotebookPen, key: "nav.dashboard" },
     { href: "/history", icon: History, key: "nav.history" },
     { href: "/reports", icon: ChartNoAxesCombined, key: "nav.reports" },
-    { href: "/settings", icon: MoonStar, key: "nav.settings" },
+    { href: "/settings", icon: Settings2, key: "nav.settings" },
 ] as const;
 
+/** Navy sidebar on wide screens; a top bar plus a floating tab bar on phones. */
 export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
     const pathname = usePathname();
     const router = useRouter();
 
     async function signOut() {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await sendJson("/api/auth/logout", "POST");
         router.replace("/login");
         router.refresh();
     }
 
+    const signOutLabel = translate(locale, "nav.signOut");
+
     return (
-        <aside className="sidebar">
-            <Link className="brand" href="/today">
-                <span className="brand-mark" aria-hidden="true">
-                    <span>●</span>
-                </span>
-                {translate(locale, "app.name")}
+        <aside className="sidebar navy-panel">
+            <Link
+                aria-label={translate(locale, "nav.dashboard")}
+                className="sidebar-brand"
+                href="/today"
+            >
+                <Wordmark />
             </Link>
-            <nav aria-label={translate(locale, "nav.primary")}>
-                <ul className="nav-list">
-                    {destinations.map(({ href, icon: Icon, key }) => (
-                        <li key={href}>
-                            <Link
-                                className="nav-link"
-                                data-active={pathname.startsWith(href)}
-                                href={href}
-                            >
-                                <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
-                                <span>{translate(locale, key)}</span>
-                            </Link>
-                        </li>
-                    ))}
+            <nav aria-label={translate(locale, "nav.primary")} className="sidebar-nav">
+                <ul>
+                    {destinations.map(({ href, icon: Icon, key }) => {
+                        const active = pathname.startsWith(href);
+                        return (
+                            <li key={href}>
+                                <Link
+                                    aria-current={active ? "page" : undefined}
+                                    className="nav-link"
+                                    href={href}
+                                >
+                                    <Icon aria-hidden="true" size={20} strokeWidth={2} />
+                                    <span>{translate(locale, key)}</span>
+                                </Link>
+                            </li>
+                        );
+                    })}
                 </ul>
             </nav>
-            <div className="sidebar-footer">
-                <button className="button button-quiet" onClick={signOut} type="button">
-                    <LogOut aria-hidden="true" size={18} />
-                    {translate(locale, "nav.signOut")}
-                </button>
-            </div>
+            <button className="sign-out" onClick={signOut} type="button">
+                <LogOut aria-hidden="true" size={18} />
+                <span>{signOutLabel}</span>
+            </button>
         </aside>
     );
 }

@@ -1,11 +1,15 @@
 "use client";
 
-import { Moon, Square, Trash2 } from "lucide-react";
+import { Square, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { sendJson } from "@/core/http/client";
 import { formatDuration, translate } from "@/core/i18n/translate";
 import type { Entry, Locale } from "@/features/logbook/domain";
+import { KindBadge } from "@/ui/kind-badge";
+
+const CLOCK_TICK_MS = 30_000;
 
 export function ActiveActivity({
     activity,
@@ -14,58 +18,66 @@ export function ActiveActivity({
     const router = useRouter();
     const [now, setNow] = useState(() => new Date().toISOString());
     const [pending, setPending] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
-        const timer = window.setInterval(() => setNow(new Date().toISOString()), 30_000);
+        const timer = window.setInterval(() => setNow(new Date().toISOString()), CLOCK_TICK_MS);
         return () => window.clearInterval(timer);
     }, []);
 
-    async function mutate(method: "DELETE" | "PATCH") {
-        if (method === "DELETE" && !window.confirm(translate(locale, "dashboard.cancelActivity")))
-            return;
+    async function settle(request: Promise<{ ok: boolean }>) {
         setPending(true);
-        const response = await fetch("/api/activities/current", {
-            ...(method === "PATCH"
-                ? {
-                      body: JSON.stringify({ endAt: new Date().toISOString() }),
-                      headers: { "content-type": "application/json" },
-                  }
-                : {}),
-            method,
-        });
+        const { ok } = await request;
         setPending(false);
-        if (response.ok) router.refresh();
+        setFailed(!ok);
+        if (ok) router.refresh();
+    }
+
+    function finish() {
+        void settle(
+            sendJson("/api/activities/current", "PATCH", { endAt: new Date().toISOString() }),
+        );
+    }
+
+    function cancel() {
+        if (!window.confirm(translate(locale, "dashboard.confirmCancel"))) return;
+        void settle(sendJson("/api/activities/current", "DELETE"));
     }
 
     return (
-        <section className="active-activity" aria-live="polite">
-            <div className="active-icon" aria-hidden="true">
-                {activity.kind === "sleep" ? <Moon size={25} /> : <span className="pulse-dot" />}
-            </div>
-            <div>
-                <p className="eyebrow">{translate(locale, `dashboard.${activity.kind}`)}</p>
+        <section className="active-activity" data-kind={activity.kind} aria-live="polite">
+            <span className="active-pulse">
+                <KindBadge kind={activity.kind} size="large" />
+            </span>
+            <div className="active-text">
+                <p className="eyebrow">{translate(locale, "dashboard.inProgress")}</p>
                 <h2>{activity.label}</h2>
                 <p>
                     {translate(locale, "dashboard.activeFor", {
                         duration: formatDuration(activity.startAt, now, locale),
                     })}
                 </p>
+                {failed && (
+                    <p className="status-message" data-tone="error">
+                        {translate(locale, "common.error")}
+                    </p>
+                )}
             </div>
             <div className="active-actions">
                 <button
-                    className="button active-end"
+                    className="button button-primary"
                     disabled={pending}
-                    onClick={() => mutate("PATCH")}
+                    onClick={finish}
                     type="button"
                 >
-                    <Square aria-hidden="true" size={15} fill="currentColor" />
+                    <Square aria-hidden="true" fill="currentColor" size={14} />
                     {translate(locale, "common.end")}
                 </button>
                 <button
                     aria-label={translate(locale, "dashboard.cancelActivity")}
-                    className="icon-button active-cancel"
+                    className="icon-button"
                     disabled={pending}
-                    onClick={() => mutate("DELETE")}
+                    onClick={cancel}
                     type="button"
                 >
                     <Trash2 aria-hidden="true" size={18} />
