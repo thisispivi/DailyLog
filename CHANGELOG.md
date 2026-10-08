@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/thisispivi/DailyLog/compare/v1.3.0...v1.4.0) (2026-10-08)
+
+
+### Features
+
+* styled pickers, flag icons, and fewer clicks ([9af3b57](https://github.com/thisispivi/DailyLog/commit/9af3b57ad8e01acdf1328b1b2f65f797f80c5600))
+* styled pickers, flag icons, and fewer clicks ([7178801](https://github.com/thisispivi/DailyLog/commit/7178801c86b9e6cc66b25493f06a734273aed281)), closes [#51](https://github.com/thisispivi/DailyLog/issues/51)
+
 ## [1.3.0](https://github.com/thisispivi/DailyLog/compare/v1.2.0...v1.3.0) (2026-10-08)
 
 
