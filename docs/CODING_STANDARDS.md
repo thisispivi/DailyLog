@@ -10,7 +10,7 @@ src/
 ├── features/<feature>/       Domain logic, schemas, and UI for one product area
 │   ├── <name>.ts             Pure logic, next to its <name>.test.ts
 │   └── ui/                   React components owned by the feature
-├── ui/                       Presentational pieces shared by features (brand, badges)
+├── ui/                       Presentational pieces shared by features (logo, icons, sheet)
 ├── core/<concern>/           Cross-cutting policy: config, http, i18n, preferences, security, time, logging
 └── infrastructure/<adapter>/ SQLite and any future external adapter
 ```
@@ -23,6 +23,7 @@ Adding a feature:
 | An API endpoint                      | `src/app/api/<resource>/route.ts`, using the route wrappers |
 | A request schema                     | The owning feature's `schemas.ts`                           |
 | Business logic                       | `src/features/<feature>/<name>.ts`                          |
+| Day totals, summaries, or streaks    | `src/features/insights/insights.ts`                         |
 | A component used by one feature      | `src/features/<feature>/ui/`                                |
 | A component used by several features | `src/ui/` (presentational only)                             |
 | A database query                     | A method on `LogbookRepository`                             |
@@ -91,9 +92,12 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 
 ## Styling
 
-- Design tokens live in `src/app/globals.css`: colours, category colours (`--kind-*`), radii, spacing. Use tokens, not literal colours.
-- Page styles sit next to the page (`today.css`). Component styles sit next to the component when the component is used on several pages.
-- The navy brand surfaces (`.navy-panel`) stay navy in both themes. Content surfaces follow the theme.
+- Design tokens live in `src/app/globals.css`. Use tokens, never literal colours.
+- Each colour is declared once with `light-dark(light, dark)`. The theme setting switches `color-scheme` on `<html>`; never add a separate dark-mode block.
+- Record types are colour-coded. Set `data-kind="meal|training|sleep|weight"` on an element, then use `--kind-tile` for its background and `--kind-ink` for text and icons on it. Pastel tiles are backgrounds only; text on them always uses the ink colour so contrast stays at AA.
+- Reuse the base classes before writing new ones: `.card`, `.tile`, `.chip`, `.pill`, `.button` (`-primary`, `-danger`, `-ghost`), `.field`, `.input`, `.form-grid`.
+- Modal editing goes through `Sheet` (`src/ui/sheet.tsx`), a wrapper around the native `<dialog>`. Don't build custom overlays.
+- Page styles sit next to the page (`today.css`). Component styles sit next to the component when it appears on several pages.
 - Respect `prefers-reduced-motion`.
 
 ## Naming and comments

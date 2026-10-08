@@ -10,11 +10,12 @@ It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 
 ## What it does
 
-- Log meals, training, sleep, and weigh-ins, now or backdated.
+- Log meals, training, sleep, and weigh-ins from one **Add record** sheet, now or backdated. The meal type, last activity, and last weight are prefilled.
+- See the day on **Today**: totals per record type, a timeline, the running activity, and your logging streak.
 - Run one training or sleep session at a time, then end or cancel it from **Today**.
 - Search, filter, edit, and delete records in **History**. Deleted records stay in the trash for 30 days.
-- See weight and training trends in **Reports** and export any range as XLSX or PDF.
-- Choose UI language, report language, theme, and weight unit (kg or lb) separately.
+- See a 7-day summary, 14 nights of sleep, and 30-day weight and training trends in **Reports**, and export any range as XLSX or PDF.
+- Choose UI language, report language, theme (light, dark, or system), and weight unit (kg or lb) separately.
 
 ## Quick start
 
@@ -53,7 +54,7 @@ One Next.js 16 app with a SQLite database. No ORM, no client state library, no C
 src/
 ├── app/              Routes: pages, layouts, API route handlers
 ├── features/<name>/  Product features: domain logic, schemas, feature UI
-├── ui/               Shared presentational pieces: robot, wordmark, category badges
+├── ui/               Shared presentational pieces: logo, record-type icons, sheet
 ├── core/<concern>/   Cross-cutting policy: config, http, i18n, security, time, logging
 └── infrastructure/   Adapters. Today only the SQLite database
 ```
