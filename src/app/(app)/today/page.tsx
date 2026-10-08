@@ -6,8 +6,7 @@ import { ActiveActivity } from "@/features/dashboard/ui/active-activity";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
 import { QuickLog } from "@/features/dashboard/ui/quick-log";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
-import { KindBadge, type RecordKind } from "@/ui/kind-badge";
-import { RobotMark } from "@/ui/robot-mark";
+import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 import "./today.css";
 
@@ -59,11 +58,11 @@ export default function TodayPage() {
                         })}
                     </h1>
                 </div>
-                <RobotMark className="today-hero-robot" size={88} />
+
                 <dl className="today-stats">
                     {stats.map((stat) => (
                         <div className="today-stat" key={stat.kind}>
-                            <KindBadge kind={stat.kind} size="small" />
+                            <KindIcon kind={stat.kind} size="small" />
                             <dt>{stat.label}</dt>
                             <dd>{stat.value}</dd>
                         </div>

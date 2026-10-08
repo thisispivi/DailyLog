@@ -1,7 +1,6 @@
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
-import { KindBadge } from "@/ui/kind-badge";
-import { RobotMark } from "@/ui/robot-mark";
+import { KindIcon } from "@/ui/kind-icon";
 
 type TimelineRow = Readonly<{
     at: string;
@@ -55,14 +54,13 @@ export function DayTimeline({
             </div>
             {rows.length === 0 ? (
                 <div className="empty-state">
-                    <RobotMark size={56} />
                     <p>{translate(locale, "dashboard.dayEmpty")}</p>
                 </div>
             ) : (
                 <ol className="timeline-list">
                     {rows.map((row) => (
                         <li className="timeline-row" data-kind={row.kind} key={row.id}>
-                            <KindBadge kind={row.kind} />
+                            <KindIcon kind={row.kind} />
                             <div className="timeline-text">
                                 <strong>{row.title}</strong>
                                 <span>{row.detail}</span>

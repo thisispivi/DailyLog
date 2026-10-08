@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Nunito } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
@@ -7,7 +7,7 @@ import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
 import "./globals.css";
 
 // Self-hosted at build time, so the CSP can keep font-src 'self'.
-const brandFont = Plus_Jakarta_Sans({
+const brandFont = Nunito({
     display: "swap",
     subsets: ["latin"],
     variable: "--font-brand",
@@ -22,7 +22,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
     colorScheme: "light dark",
-    themeColor: "#071a3d",
+    themeColor: [
+        { color: "#f4f1ff", media: "(prefers-color-scheme: light)" },
+        { color: "#17142b", media: "(prefers-color-scheme: dark)" },
+    ],
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
