@@ -1,43 +1,112 @@
 .reports-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
     gap: var(--space-6);
 }
 
-.trend-stack {
+.reports-main {
     display: grid;
     gap: var(--space-6);
 }
 
-.trend-card,
-.export-panel {
-    padding: 24px;
+.reports-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
 }
 
-.trend-heading {
+.summary-tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+}
+
+.summary-tile {
+    display: grid;
+    gap: 6px;
+}
+
+.summary-tile .kind-icon {
+    background: var(--surface);
+}
+
+.summary-tile dt {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.summary-tile dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.chart-heading {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     margin-bottom: var(--space-5);
 }
 
-.trend-heading h2 {
+.chart-heading h2 {
     margin: 0;
+    font-size: 16px;
 }
 
-.trend-heading .eyebrow {
-    margin-bottom: 2px;
+.sleep-bars {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 6px;
+    height: 170px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sleep-bars li {
+    display: grid;
+    height: 100%;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 6px;
+}
+
+.sleep-bar {
+    display: block;
+    min-height: 4px;
+    border-radius: 8px;
+    background: var(--kind-tile);
+    box-shadow: inset 0 -4px 0 var(--kind-ink);
+}
+
+.sleep-day {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
 }
 
 .weight-chart {
     display: block;
     width: 100%;
-    height: 200px;
-    border-radius: var(--radius-medium);
-    background:
-        linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 25%,
-        color-mix(in srgb, var(--kind), transparent 96%);
+    height: 170px;
+    border-radius: var(--radius-tile);
+    background: color-mix(in srgb, var(--kind-tile), transparent 40%);
+}
+
+.weight-area {
+    fill: var(--kind-tile);
+}
+
+.weight-line {
+    stroke: var(--kind-ink);
+    stroke-width: 3;
 }
 
 .chart-endpoints {
@@ -45,11 +114,10 @@
     justify-content: space-between;
     margin-top: var(--space-3);
     color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
 }
 
 .chart-endpoints strong {
-    color: var(--kind);
+    color: var(--kind-ink);
     font-size: 18px;
 }
 
@@ -70,12 +138,11 @@
 
 .activity-bars span {
     color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
 }
 
 .bar-track {
     display: block;
-    height: 10px;
+    height: 12px;
     overflow: hidden;
     border-radius: 999px;
     background: var(--surface-muted);
@@ -85,8 +152,10 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--kind), white 25%), var(--kind));
+    background: var(--kind-ink);
 }
+
+/* Export */
 
 .export-panel form {
     display: grid;
@@ -97,13 +166,13 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-    font-weight: 650;
+    font-weight: 700;
 }
 
 .choice-row input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent);
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary);
 }
 
 .format-options {
@@ -120,38 +189,38 @@
 
 .format-options label {
     display: flex;
-    min-height: 52px;
+    min-height: 54px;
     align-items: center;
     gap: var(--space-3);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-medium);
-    padding: 0 14px;
-    font-weight: 650;
+    border-radius: var(--radius-tile);
+    background: var(--surface-muted);
+    padding: 0 16px;
+    font-weight: 700;
     cursor: pointer;
 }
 
 .format-options label:has(input:checked) {
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    background: var(--primary-soft);
+    color: var(--primary);
 }
 
 .format-options input {
-    accent-color: var(--accent);
+    accent-color: var(--primary);
 }
 
-.format-options svg {
-    color: var(--accent-text);
+.export-panel .button-primary {
+    width: 100%;
 }
 
-@media (max-width: 960px) {
-    .reports-layout {
+@media (max-width: 1100px) {
+    .reports-layout,
+    .reports-charts {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 720px) {
-    .trend-card,
-    .export-panel {
-        padding: 18px;
+    .summary-tiles {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

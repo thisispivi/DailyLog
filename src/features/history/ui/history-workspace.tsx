@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, RotateCcw, Search, Trash2 } from "lucide-react";
+import { ChevronRight, Inbox, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
@@ -17,20 +17,21 @@ import {
     type WeightUnit,
 } from "@/features/logbook/domain";
 import { KindIcon } from "@/ui/kind-icon";
+import { Sheet } from "@/ui/sheet";
 
 type HistoryRecord =
     { item: Entry; recordType: "entry" } | { item: WeighIn; recordType: "weighIn" };
 
 const filters = [
-    ["all", "history.all"],
-    ["meal", "history.meal"],
-    ["training", "history.training"],
-    ["sleep", "history.sleep"],
-    ["weighIn", "history.weighIns"],
-    ["trash", "history.trash"],
+    { key: "history.all", kind: undefined, value: "all" },
+    { key: "history.meal", kind: "meal", value: "meal" },
+    { key: "history.training", kind: "training", value: "training" },
+    { key: "history.sleep", kind: "sleep", value: "sleep" },
+    { key: "history.weighIns", kind: "weight", value: "weighIn" },
+    { key: "history.trash", kind: undefined, value: "trash" },
 ] as const;
 
-type Filter = (typeof filters)[number][0];
+type Filter = (typeof filters)[number]["value"];
 
 type Shared = Readonly<{ locale: Locale; timeZone: string; weightUnit: WeightUnit }>;
 
@@ -41,17 +42,12 @@ export function HistoryWorkspace({
     trash,
     weighIns,
     weightUnit,
-}: Shared &
-    Readonly<{
-        entries: Entry[];
-        trash: TrashItem[];
-        weighIns: WeighIn[];
-    }>) {
+}: Shared & Readonly<{ entries: Entry[]; trash: TrashItem[]; weighIns: WeighIn[] }>) {
     const router = useRouter();
     const [filter, setFilter] = useState<Filter>("all");
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
-    const [openKey, setOpenKey] = useState<string | null>(null);
+    const [editing, setEditing] = useState<HistoryRecord | null>(null);
     const [failed, setFailed] = useState(false);
     const shared = { locale, timeZone, weightUnit };
 
@@ -69,6 +65,7 @@ export function HistoryWorkspace({
             )
             .filter((entry) => onDate(entry.startAt))
             .map((item) => ({ item, recordType: "entry" }));
+        // Weigh-ins have no text, so a search never matches them.
         const weightRecords: HistoryRecord[] =
             (filter === "all" || filter === "weighIn") && !needle
                 ? weighIns
@@ -84,17 +81,6 @@ export function HistoryWorkspace({
         const { ok } = await request;
         setFailed(!ok);
         if (ok) router.refresh();
-        return ok;
-    }
-
-    function deleteRecord(record: HistoryRecord) {
-        const label =
-            record.recordType === "entry"
-                ? record.item.label
-                : formatWeight(record.item.weightGrams, weightUnit, locale);
-        if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
-        const path = record.recordType === "entry" ? "entries" : "weigh-ins";
-        void mutate(sendJson(`/api/${path}/${record.item.id}`, "DELETE"));
     }
 
     function deleteDay() {
@@ -113,12 +99,9 @@ export function HistoryWorkspace({
 
     return (
         <div className="history-workspace">
-            <section
-                aria-label={translate(locale, "history.filter")}
-                className="history-filters card"
-            >
+            <section aria-label={translate(locale, "history.filter")} className="history-filters">
                 <div className="history-search">
-                    <Search aria-hidden="true" size="small" />
+                    <Search aria-hidden="true" size={18} />
                     <label className="sr-only" htmlFor="history-search">
                         {translate(locale, "common.search")}
                     </label>
@@ -143,14 +126,14 @@ export function HistoryWorkspace({
                 />
                 <div
                     aria-label={translate(locale, "history.filter")}
-                    className="filter-chips"
+                    className="history-chips"
                     role="group"
                 >
-                    {filters.map(([value, key]) => (
+                    {filters.map(({ key, kind, value }) => (
                         <button
                             aria-pressed={filter === value}
-                            className="filter-chip"
-                            data-kind={chipKind(value)}
+                            className="chip"
+                            data-kind={kind}
                             key={value}
                             onClick={() => setFilter(value)}
                             type="button"
@@ -159,51 +142,46 @@ export function HistoryWorkspace({
                         </button>
                     ))}
                 </div>
-                {date && filter !== "trash" && (
-                    <button
-                        className="button button-danger history-bulk"
-                        onClick={deleteDay}
-                        type="button"
-                    >
-                        <Trash2 aria-hidden="true" size={16} />
-                        {translate(locale, "history.bulkDelete")}
-                    </button>
-                )}
             </section>
+            {date && filter !== "trash" && (
+                <button
+                    className="button button-danger history-bulk"
+                    onClick={deleteDay}
+                    type="button"
+                >
+                    <Trash2 aria-hidden="true" size={16} />
+                    {translate(locale, "history.bulkDelete")}
+                </button>
+            )}
             <p aria-live="polite" className="status-message" data-tone="error">
                 {failed ? translate(locale, "common.error") : ""}
             </p>
             {filter === "trash" ? (
                 <TrashList items={trash} onRestore={restore} {...shared} />
-            ) : records.length === 0 ? (
-                <div className="empty-state card">
-                    <p>
-                        {translate(
-                            locale,
-                            entries.length || weighIns.length
-                                ? "common.noResults"
-                                : "history.empty",
-                        )}
-                    </p>
-                </div>
             ) : (
-                <section className="record-list card">
+                <section className="card">
                     <div className="card-heading">
                         <h2>{translate(locale, "history.title")}</h2>
-                        <span className="count-pill">
+                        <span className="pill numeric">
                             {translate(locale, "history.results", { count: records.length })}
                         </span>
                     </div>
-                    <ul>
-                        {records.map((record) => {
-                            const key = `${record.recordType}-${record.item.id}`;
-                            const open = openKey === key;
-                            return (
-                                <li className="record-row" data-open={open} key={key}>
+                    {records.length === 0 ? (
+                        <EmptyState
+                            message={translate(
+                                locale,
+                                entries.length || weighIns.length
+                                    ? "common.noResults"
+                                    : "history.empty",
+                            )}
+                        />
+                    ) : (
+                        <ul className="record-list">
+                            {records.map((record) => (
+                                <li key={`${record.recordType}-${record.item.id}`}>
                                     <button
-                                        aria-expanded={open}
-                                        className="record-summary"
-                                        onClick={() => setOpenKey(open ? null : key)}
+                                        className="record-row"
+                                        onClick={() => setEditing(record)}
                                         type="button"
                                     >
                                         <KindIcon
@@ -219,88 +197,103 @@ export function HistoryWorkspace({
                                             </strong>
                                             <span>{recordDetail(record, locale)}</span>
                                         </span>
-                                        <time dateTime={recordDate(record)}>
+                                        <time className="numeric" dateTime={recordDate(record)}>
                                             {formatDateTime(recordDate(record), locale, timeZone)}
                                         </time>
-                                        <ChevronDown
+                                        <ChevronRight
                                             aria-hidden="true"
                                             className="record-chevron"
                                             size={18}
                                         />
                                     </button>
-                                    {open && (
-                                        <RecordEditor
-                                            onClose={() => setOpenKey(null)}
-                                            onDelete={() => deleteRecord(record)}
-                                            record={record}
-                                            {...shared}
-                                        />
-                                    )}
                                 </li>
-                            );
-                        })}
-                    </ul>
+                            ))}
+                        </ul>
+                    )}
                 </section>
             )}
+            <Sheet
+                closeLabel={translate(locale, "common.close")}
+                onClose={() => setEditing(null)}
+                open={editing !== null}
+                title={translate(locale, "common.edit")}
+            >
+                {editing && (
+                    <RecordEditor
+                        onDone={() => {
+                            setEditing(null);
+                            router.refresh();
+                        }}
+                        record={editing}
+                        {...shared}
+                    />
+                )}
+            </Sheet>
         </div>
     );
 }
 
 function RecordEditor({
     locale,
-    onClose,
-    onDelete,
+    onDone,
     record,
     timeZone,
     weightUnit,
-}: Shared &
-    Readonly<{
-        onClose: () => void;
-        onDelete: () => void;
-        record: HistoryRecord;
-    }>) {
-    const router = useRouter();
+}: Shared & Readonly<{ onDone: () => void; record: HistoryRecord }>) {
     const [pending, setPending] = useState(false);
     const [failed, setFailed] = useState(false);
     const id = record.item.id;
+    const path = record.recordType === "entry" ? `/api/entries/${id}` : `/api/weigh-ins/${id}`;
 
-    async function save(event: FormEvent<HTMLFormElement>) {
+    async function settle(request: Promise<{ ok: boolean }>) {
+        setPending(true);
+        const { ok } = await request;
+        setPending(false);
+        setFailed(!ok);
+        if (ok) onDone();
+    }
+
+    function save(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         const field = (name: string) => String(form.get(name) ?? "");
         const startAt = localInputToUtc(field("startAt"), timeZone);
-        setPending(true);
-        const { ok } =
+        void settle(
             record.recordType === "entry"
-                ? await sendJson(`/api/entries/${id}`, "PATCH", {
+                ? sendJson(path, "PATCH", {
                       endAt: field("endAt") ? localInputToUtc(field("endAt"), timeZone) : null,
                       kind: field("kind"),
                       label: field("label"),
                       startAt,
                       text: field("text"),
                   })
-                : await sendJson(`/api/weigh-ins/${id}`, "PATCH", {
+                : sendJson(path, "PATCH", {
                       recordedAt: startAt,
                       unit: weightUnit,
                       weight: Number(field("weight")),
-                  });
-        setPending(false);
-        setFailed(!ok);
-        if (!ok) return;
-        onClose();
-        router.refresh();
+                  }),
+        );
+    }
+
+    function moveToTrash() {
+        const label =
+            record.recordType === "entry"
+                ? record.item.label
+                : formatWeight(record.item.weightGrams, weightUnit, locale);
+        if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
+        void settle(sendJson(path, "DELETE"));
     }
 
     return (
-        <form className="record-editor" onSubmit={save}>
+        <form className="form-grid" onSubmit={save}>
             {record.recordType === "entry" ? (
                 <>
                     <div className="field">
-                        <label htmlFor={`kind-${id}`}>{translate(locale, "history.type")}</label>
+                        <label htmlFor="edit-kind">{translate(locale, "history.type")}</label>
                         <select
                             className="select"
                             defaultValue={record.item.kind}
-                            id={`kind-${id}`}
+                            id="edit-kind"
                             name="kind"
                         >
                             {entryKinds.map((kind) => (
@@ -311,18 +304,18 @@ function RecordEditor({
                         </select>
                     </div>
                     <div className="field">
-                        <label htmlFor={`label-${id}`}>{translate(locale, "common.label")}</label>
+                        <label htmlFor="edit-label">{translate(locale, "common.label")}</label>
                         <input
                             className="input"
                             defaultValue={record.item.label}
-                            id={`label-${id}`}
+                            id="edit-label"
                             maxLength={120}
                             name="label"
                             required
                         />
                     </div>
                     <DateTimeField
-                        id={`start-${id}`}
+                        id="edit-start"
                         label={translate(locale, "entry.startTime")}
                         name="startAt"
                         required
@@ -330,18 +323,18 @@ function RecordEditor({
                         value={record.item.startAt}
                     />
                     <DateTimeField
-                        id={`end-${id}`}
+                        id="edit-end"
                         label={translate(locale, "entry.endTime")}
                         name="endAt"
                         timeZone={timeZone}
                         value={record.item.endAt}
                     />
-                    <div className="field editor-wide">
-                        <label htmlFor={`text-${id}`}>{translate(locale, "common.details")}</label>
+                    <div className="field form-wide">
+                        <label htmlFor="edit-text">{translate(locale, "common.details")}</label>
                         <textarea
                             className="textarea"
                             defaultValue={record.item.text}
-                            id={`text-${id}`}
+                            id="edit-text"
                             maxLength={2000}
                             name="text"
                         />
@@ -350,7 +343,7 @@ function RecordEditor({
             ) : (
                 <>
                     <div className="field">
-                        <label htmlFor={`weight-${id}`}>
+                        <label htmlFor="edit-weight">
                             {translate(locale, "entry.weightValue")} ({weightUnit})
                         </label>
                         <input
@@ -359,7 +352,7 @@ function RecordEditor({
                                 Math.round(gramsToUnit(record.item.weightGrams, weightUnit) * 100) /
                                 100
                             }
-                            id={`weight-${id}`}
+                            id="edit-weight"
                             inputMode="decimal"
                             max="1000"
                             min="1"
@@ -370,8 +363,8 @@ function RecordEditor({
                         />
                     </div>
                     <DateTimeField
-                        id={`start-${id}`}
-                        label={translate(locale, "entry.startTime")}
+                        id="edit-start"
+                        label={translate(locale, "entry.time")}
                         name="startAt"
                         required
                         timeZone={timeZone}
@@ -379,16 +372,18 @@ function RecordEditor({
                     />
                 </>
             )}
-            <p aria-live="polite" className="status-message editor-wide" data-tone="error">
+            <p aria-live="polite" className="status-message form-wide" data-tone="error">
                 {failed ? translate(locale, "common.validation") : ""}
             </p>
-            <div className="editor-actions editor-wide">
-                <button className="button button-danger" onClick={onDelete} type="button">
+            <div className="form-actions form-wide editor-actions">
+                <button
+                    className="button button-danger"
+                    disabled={pending}
+                    onClick={moveToTrash}
+                    type="button"
+                >
                     <Trash2 aria-hidden="true" size={16} />
                     {translate(locale, "common.delete")}
-                </button>
-                <button className="button button-ghost" onClick={onClose} type="button">
-                    {translate(locale, "common.cancel")}
                 </button>
                 <button className="button button-primary" disabled={pending} type="submit">
                     {translate(locale, "common.save")}
@@ -436,7 +431,7 @@ function TrashList({
     weightUnit,
 }: Shared & Readonly<{ items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
     return (
-        <section className="record-list card">
+        <section className="card">
             <div className="card-heading">
                 <div>
                     <h2>{translate(locale, "history.trash")}</h2>
@@ -444,11 +439,9 @@ function TrashList({
                 </div>
             </div>
             {items.length === 0 ? (
-                <div className="empty-state">
-                    <p>{translate(locale, "history.trashEmpty")}</p>
-                </div>
+                <EmptyState message={translate(locale, "history.trashEmpty")} />
             ) : (
-                <ul>
+                <ul className="record-list">
                     {items.map((item) => (
                         <li className="trash-row" key={`${item.recordType}-${item.recordId}`}>
                             <span className="record-text">
@@ -460,7 +453,7 @@ function TrashList({
                                 <span>{formatDateTime(item.deletedAt, locale, timeZone)}</span>
                             </span>
                             <button
-                                className="button button-ghost"
+                                className="button"
                                 onClick={() => onRestore(item)}
                                 type="button"
                             >
@@ -475,9 +468,15 @@ function TrashList({
     );
 }
 
-function chipKind(filter: Filter): string | undefined {
-    if (filter === "weighIn") return "weight";
-    return (entryKinds as readonly string[]).includes(filter) ? filter : undefined;
+function EmptyState({ message }: Readonly<{ message: string }>) {
+    return (
+        <div className="empty-state">
+            <span className="state-icon">
+                <Inbox aria-hidden="true" size={28} />
+            </span>
+            <p>{message}</p>
+        </div>
+    );
 }
 
 function recordDate(record: HistoryRecord): string {
