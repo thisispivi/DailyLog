@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/thisispivi/DailyLog/compare/v1.1.0...v1.2.0) (2026-10-08)
+
+
+### Features
+
+* redesign the interface around the banner identity ([8b55f76](https://github.com/thisispivi/DailyLog/commit/8b55f7683742a1be04e7f0c69f7cf9881ba1a4ff))
+* redesign the interface around the banner identity ([e9c5840](https://github.com/thisispivi/DailyLog/commit/e9c584045420b1f22d75c094fa967e17bd59210a))
+
+
+### Bug Fixes
+
+* **deps:** bump brace-expansion to patch DoS advisories ([2a0dc6b](https://github.com/thisispivi/DailyLog/commit/2a0dc6b9c8a23e2400fc103c5a3f7af35cc90119))
+* **deps:** bump next to 16.3.8 to patch security advisories ([607885c](https://github.com/thisispivi/DailyLog/commit/607885c9272f8ff46e552e8673aad6a03a7950ca))
+* **deps:** bump sharp to 0.35.5 to patch librsvg vulnerability ([d920f2e](https://github.com/thisispivi/DailyLog/commit/d920f2ea76ae1541a4ccc38a6083ee4617a7bc2a))
+* **deps:** bump source-map-js to 1.2.2 to patch DoS advisory ([4d84d82](https://github.com/thisispivi/DailyLog/commit/4d84d82bb5b6845308c34bfdc9673f7a35e81ce4))
+* **deps:** replace vulnerable fast-glob in eslint plugin with tinyglobby ([2eaf0d5](https://github.com/thisispivi/DailyLog/commit/2eaf0d5b48fbff9d45c3cd5843f417296ff3e61d))
+
 ## [1.1.0](https://github.com/thisispivi/DailyLog/compare/v1.0.0...v1.1.0) (2026-09-01)
 
 ### Features
