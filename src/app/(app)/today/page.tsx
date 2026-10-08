@@ -1,16 +1,26 @@
+import { Flame } from "lucide-react";
+
 import { getEnvironment } from "@/core/config/env";
-import { formatDate, formatWeight, translate } from "@/core/i18n/translate";
-import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
-import { summarizeDay } from "@/features/dashboard/dashboard-summary";
+import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    localDateInZone,
+    localDateRangeBounds,
+    localHour,
+    shiftDate,
+} from "@/core/time/zoned-time";
 import { ActiveActivity } from "@/features/dashboard/ui/active-activity";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
-import { QuickLog } from "@/features/dashboard/ui/quick-log";
+import { RecordLogger } from "@/features/dashboard/ui/record-logger";
+import { dailyTotals, loggingStreak } from "@/features/insights/insights";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 import "./today.css";
 
 export const metadata = { title: "Today" };
+
+// ponytail: streaks look back one year at most; switch to a stored counter if that ever matters.
+const STREAK_LOOKBACK_DAYS = 365;
 
 export default function TodayPage() {
     const { ownerId, timezone } = getEnvironment();
@@ -22,35 +32,48 @@ export default function TodayPage() {
     const entries = logbook.listEntriesInRange(ownerId, from, to);
     const weighIns = logbook.listWeighIns(ownerId, { from, to });
     const active = logbook.activeActivity(ownerId);
-    const summary = summarizeDay(entries, weighIns);
-    const stats: Array<{ kind: RecordKind; label: string; value: string }> = [
+    const lastWeighIn = logbook.listWeighIns(ownerId, { limit: 1 })[0];
+    const [totals] = dailyTotals([today], entries, weighIns, timezone);
+
+    const [streakFrom] = localDateRangeBounds(
+        shiftDate(today, -STREAK_LOOKBACK_DAYS),
+        today,
+        timezone,
+    );
+    const recordDates = new Set(
+        logbook
+            .recordTimestamps(ownerId, streakFrom)
+            .map((timestamp) => localDateInZone(new Date(timestamp), timezone)),
+    );
+    const streak = loggingStreak(recordDates, today);
+
+    const tiles: Array<{ kind: RecordKind; label: string; value: string }> = [
         {
             kind: "meal",
             label: translate(locale, "dashboard.statMeals"),
-            value: String(entries.filter((entry) => entry.kind === "meal").length),
+            value: String(totals?.meals ?? 0),
         },
         {
             kind: "training",
             label: translate(locale, "dashboard.statTraining"),
-            value: `${summary.trainingMinutes} min`,
+            value: formatMinutes(totals?.activeMinutes ?? 0, locale),
         },
         {
             kind: "sleep",
             label: translate(locale, "dashboard.statSleep"),
-            value: `${summary.sleepHours} h`,
+            value: totals?.sleepMinutes ? formatMinutes(totals.sleepMinutes, locale) : "–",
         },
         {
             kind: "weight",
             label: translate(locale, "dashboard.weight"),
-            value: summary.weight
-                ? formatWeight(summary.weight.weightGrams, weightUnit, locale)
-                : "–",
+            value: lastWeighIn ? formatWeight(lastWeighIn.weightGrams, weightUnit, locale) : "–",
         },
     ];
+
     return (
         <>
-            <header className="today-hero navy-panel">
-                <div className="today-hero-text">
+            <header className="page-header">
+                <div>
                     <p className="eyebrow">{formatDate(now, locale, timezone)}</p>
                     <h1>
                         {translate(locale, "dashboard.greeting", {
@@ -58,41 +81,46 @@ export default function TodayPage() {
                         })}
                     </h1>
                 </div>
-
-                <dl className="today-stats">
-                    {stats.map((stat) => (
-                        <div className="today-stat" key={stat.kind}>
-                            <KindIcon kind={stat.kind} size="small" />
-                            <dt>{stat.label}</dt>
-                            <dd>{stat.value}</dd>
-                        </div>
-                    ))}
-                </dl>
+                <div className="today-actions">
+                    {streak > 0 && (
+                        <span className="pill streak numeric">
+                            <Flame aria-hidden="true" size={16} />
+                            {translate(locale, "dashboard.streak", { count: streak })}
+                        </span>
+                    )}
+                    <RecordLogger
+                        hasActiveActivity={Boolean(active)}
+                        lastTrainingLabel={logbook.lastLabel(ownerId, "training")}
+                        lastWeightGrams={lastWeighIn?.weightGrams ?? null}
+                        locale={locale}
+                        timeZone={timezone}
+                        weightUnit={weightUnit}
+                    />
+                </div>
             </header>
             {active && <ActiveActivity activity={active} locale={locale} />}
-            <div className="today-layout">
-                <QuickLog
-                    hasActiveActivity={Boolean(active)}
-                    locale={locale}
-                    timeZone={timezone}
-                    weightUnit={weightUnit}
-                />
-                <DayTimeline
-                    entries={entries}
-                    locale={locale}
-                    timeZone={timezone}
-                    weighIns={weighIns}
-                    weightUnit={weightUnit}
-                />
-            </div>
+            <dl className="today-tiles">
+                {tiles.map((tile) => (
+                    <div className="tile today-tile" data-kind={tile.kind} key={tile.kind}>
+                        <KindIcon kind={tile.kind} size="small" />
+                        <dt>{tile.label}</dt>
+                        <dd className="numeric">{tile.value}</dd>
+                    </div>
+                ))}
+            </dl>
+            <DayTimeline
+                entries={entries}
+                locale={locale}
+                timeZone={timezone}
+                weighIns={weighIns}
+                weightUnit={weightUnit}
+            />
         </>
     );
 }
 
 function dayPeriod(now: Date, timeZone: string) {
-    const hour = Number(
-        new Intl.DateTimeFormat("en", { hour: "2-digit", hourCycle: "h23", timeZone }).format(now),
-    );
+    const hour = localHour(now, timeZone);
     if (hour < 12) return "periodMorning";
     return hour < 18 ? "periodAfternoon" : "periodEvening";
 }

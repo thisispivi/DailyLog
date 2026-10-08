@@ -45,7 +45,7 @@ export function ActiveActivity({
     }
 
     return (
-        <section className="active-activity" data-kind={activity.kind} aria-live="polite">
+        <section aria-live="polite" className="active-activity tile" data-kind={activity.kind}>
             <span className="active-pulse">
                 <KindIcon kind={activity.kind} size="large" />
             </span>
@@ -75,7 +75,7 @@ export function ActiveActivity({
                 </button>
                 <button
                     aria-label={translate(locale, "dashboard.cancelActivity")}
-                    className="icon-button"
+                    className="icon-button active-cancel"
                     disabled={pending}
                     onClick={cancel}
                     type="button"

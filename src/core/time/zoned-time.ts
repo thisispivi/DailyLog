@@ -25,16 +25,34 @@ export function localInputToUtc(value: string, timeZone: string): string {
 export function localDateRangeBounds(from: string, to: string, timeZone: string): [string, string] {
     if (!datePattern.test(from) || !datePattern.test(to)) throw new Error("Invalid date range.");
     const start = localDateTimeToUtc(from, "00:00", timeZone);
-    const endDate = new Date(`${to}T12:00:00Z`);
-    endDate.setUTCDate(endDate.getUTCDate() + 1);
-    const next = endDate.toISOString().slice(0, 10);
-    const end = localDateTimeToUtc(next, "00:00", timeZone);
+    const end = localDateTimeToUtc(shiftDate(to, 1), "00:00", timeZone);
     return [toStorageTimestamp(start), toStorageTimestamp(end)];
 }
 
 /** Normalizes any ISO timestamp to the `+00:00` form stored since the Telegram bot. */
 export function toStorageTimestamp(isoTimestamp: string): string {
     return new Date(isoTimestamp).toISOString().replace("Z", "+00:00");
+}
+
+/** Adds whole days to a YYYY-MM-DD calendar date. */
+export function shiftDate(date: string, days: number): string {
+    const value = new Date(`${date}T12:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+}
+
+/** The `count` calendar dates ending with `lastDate`, oldest first. */
+export function datesEndingOn(lastDate: string, count: number): string[] {
+    return Array.from({ length: count }, (_, index) => shiftDate(lastDate, index - count + 1));
+}
+
+/** The local hour (0-23) of a moment in a timezone. */
+export function localHour(value: Date, timeZone: string): number {
+    return Number(
+        new Intl.DateTimeFormat("en", { hour: "2-digit", hourCycle: "h23", timeZone }).format(
+            value,
+        ),
+    );
 }
 
 export function localDateInZone(value: Date, timeZone: string): string {

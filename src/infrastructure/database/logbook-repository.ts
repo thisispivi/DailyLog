@@ -167,6 +167,31 @@ export class LogbookRepository {
         return row.first && row.last ? { first: row.first, last: row.last } : null;
     }
 
+    /** Start or record timestamps of every live record since `from`, for streaks. */
+    recordTimestamps(userId: number, from: string): string[] {
+        const rows = this.database
+            .prepare(
+                `SELECT start_at AS at FROM entries
+           WHERE user_id = ? AND deleted_at IS NULL AND start_at >= ?
+         UNION ALL
+         SELECT recorded_at FROM weigh_ins
+           WHERE user_id = ? AND deleted_at IS NULL AND recorded_at >= ?`,
+            )
+            .all(userId, from, userId, from) as Array<{ at: string }>;
+        return rows.map((row) => row.at);
+    }
+
+    /** The label of the most recent entry of a kind, used to prefill the logger. */
+    lastLabel(userId: number, kind: EntryKind): string | null {
+        const row = this.database
+            .prepare(
+                `SELECT label FROM entries WHERE user_id = ? AND kind = ? AND deleted_at IS NULL
+         ORDER BY start_at DESC, id DESC LIMIT 1`,
+            )
+            .get(userId, kind) as { label: string } | undefined;
+        return row?.label ?? null;
+    }
+
     activeActivity(userId: number): Entry | null {
         const row = this.database
             .prepare(
