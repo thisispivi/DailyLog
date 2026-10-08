@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesCombined, History, House, LogOut, Settings2 } from "lucide-react";
+import { ChartNoAxesCombined, History, House, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -15,7 +15,7 @@ const destinations = [
     { href: "/today", icon: House, key: "nav.dashboard" },
     { href: "/history", icon: History, key: "nav.history" },
     { href: "/reports", icon: ChartNoAxesCombined, key: "nav.reports" },
-    { href: "/settings", icon: Settings2, key: "nav.settings" },
+    { href: "/settings", icon: Settings, key: "nav.settings" },
 ] as const;
 
 /** Sidebar on wide screens; a top bar plus a bottom tab bar on phones. */

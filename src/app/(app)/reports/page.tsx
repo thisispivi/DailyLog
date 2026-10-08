@@ -51,7 +51,12 @@ export default function ReportsPage() {
                     </div>
                     <TrainingChart entries={entries} locale={locale} />
                 </div>
-                <ExportPanel defaultFrom={dates[0] ?? today} defaultTo={today} locale={locale} />
+                <ExportPanel
+                    defaultFrom={dates[0] ?? today}
+                    defaultTo={today}
+                    locale={locale}
+                    timeZone={timezone}
+                />
             </div>
         </>
     );

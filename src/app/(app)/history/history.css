@@ -5,11 +5,12 @@
 
 .history-filters {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 200px;
+    grid-template-columns: minmax(0, 1fr) 240px;
     gap: var(--space-3);
 }
 
-.history-filters .input {
+.history-filters .input,
+.history-filters .select-trigger {
     background: var(--surface);
     box-shadow: var(--shadow-soft);
 }

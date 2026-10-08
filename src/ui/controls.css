@@ -1,0 +1,240 @@
+/* Dropdown trigger; also used as the date field trigger. */
+.select-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    gap: 10px;
+    border: 0;
+    border-radius: var(--radius-field);
+    background: var(--surface-muted);
+    padding: 10px 14px;
+    color: var(--text);
+    font-weight: 600;
+    text-align: left;
+}
+
+.select-trigger > span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.select-trigger:focus-visible,
+.select-trigger[data-state="open"] {
+    box-shadow: inset 0 0 0 2px var(--primary);
+    outline: none;
+}
+
+.select-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.select-trigger svg {
+    flex: none;
+    color: var(--text-muted);
+}
+
+.select-trigger > .select-chevron {
+    display: inline-flex;
+    flex: none;
+    margin-left: auto;
+}
+
+/* Floating panels */
+
+.select-content,
+.date-popover {
+    z-index: 60;
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow:
+        0 0 0 1px var(--line),
+        var(--shadow-float);
+    color: var(--text);
+    animation: pop-in 120ms ease-out;
+}
+
+.select-content {
+    width: var(--radix-select-trigger-width);
+    max-height: min(320px, var(--radix-select-content-available-height));
+    overflow: hidden;
+}
+
+.select-viewport {
+    padding: 6px;
+}
+
+.select-item {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+}
+
+.select-item[data-highlighted] {
+    background: var(--surface-muted);
+}
+
+.select-item[data-state="checked"] {
+    color: var(--primary);
+}
+
+.select-check {
+    display: inline-flex;
+    margin-left: auto;
+}
+
+@keyframes pop-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+}
+
+/* Date and time picker */
+
+.date-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.date-clear {
+    width: 36px;
+    height: 36px;
+    flex: none;
+}
+
+.date-popover {
+    padding: 12px;
+    --rdp-accent-color: var(--primary);
+    --rdp-accent-background-color: var(--primary-soft);
+    --rdp-day-width: 40px;
+    --rdp-day-height: 40px;
+    --rdp-day_button-width: 38px;
+    --rdp-day_button-height: 38px;
+    --rdp-day_button-border-radius: 12px;
+    --rdp-selected-border: 0;
+    --rdp-today-color: var(--primary);
+    --rdp-nav_button-width: 36px;
+    --rdp-nav_button-height: 36px;
+    --rdp-nav-height: 40px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.date-popover .rdp-month_caption {
+    padding-left: 8px;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.date-popover .rdp-weekday {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.date-popover .rdp-chevron {
+    fill: var(--text-muted);
+}
+
+.date-popover .rdp-day_button {
+    border: 0;
+}
+
+.date-popover .rdp-day_button:hover {
+    background: var(--surface-muted);
+}
+
+.date-popover .rdp-selected .rdp-day_button {
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 800;
+}
+
+.time-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    border-top: 1px solid var(--line);
+    padding-top: var(--space-3);
+}
+
+.time-input {
+    width: auto;
+    flex: 1;
+    min-height: 44px;
+    font-weight: 800;
+}
+
+.time-row .button {
+    min-height: 40px;
+    padding: 8px 14px;
+}
+
+/* Toggle switch for checkboxes */
+
+.switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.switch {
+    position: relative;
+    width: 46px;
+    height: 28px;
+    flex: none;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    box-shadow: inset 0 0 0 1px var(--line);
+    cursor: pointer;
+    appearance: none;
+    transition: background 150ms ease;
+}
+
+.switch::after {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--shadow-soft);
+    content: "";
+    transition: transform 150ms ease;
+}
+
+.switch:checked {
+    background: var(--primary);
+    box-shadow: none;
+}
+
+.switch:checked::after {
+    transform: translateX(18px);
+}
+
+.flag {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    border-radius: 50%;
+}

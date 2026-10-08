@@ -2,49 +2,57 @@
 
 import { Check, FileText, Languages, MonitorCog, Scale, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
-import type { Locale, Theme, UserSettings, WeightUnit } from "@/features/logbook/domain";
+import type { Locale, UserSettings } from "@/features/logbook/domain";
+import { LanguageFlag } from "@/ui/language-flag";
 
 type Status = { message: string; tone: "error" | "success" } | null;
+type Preferences = Pick<UserSettings, "exportLocale" | "locale" | "theme" | "weightUnit">;
 
+/** Every choice saves as soon as it is made; there is no separate save step. */
 export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
     const router = useRouter();
-    const [locale, setLocale] = useState<Locale>(initial.locale);
-    const [exportLocale, setExportLocale] = useState<Locale>(initial.exportLocale);
-    const [theme, setTheme] = useState<Theme>(initial.theme);
-    const [weightUnit, setWeightUnit] = useState<WeightUnit>(initial.weightUnit);
-    const [pending, setPending] = useState(false);
+    const [settings, setSettings] = useState<Preferences>(initial);
     const [status, setStatus] = useState<Status>(null);
+    const { locale } = settings;
 
-    const languages: ReadonlyArray<readonly [Locale, string]> = [
-        ["en", translate(locale, "settings.english")],
-        ["it", translate(locale, "settings.italian")],
-    ];
-
-    async function save(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setPending(true);
-        setStatus(null);
-        const { ok } = await sendJson("/api/settings", "PATCH", {
-            exportLocale,
-            locale,
-            theme,
-            weightUnit,
-        });
-        setPending(false);
+    async function change<Key extends keyof Preferences>(key: Key, value: Preferences[Key]) {
+        const previous = settings;
+        setSettings({ ...settings, [key]: value });
+        // Preview the theme immediately; the server writes the cookie on save.
+        if (key === "theme") document.documentElement.dataset.theme = value;
+        const { ok } = await sendJson("/api/settings", "PATCH", { [key]: value });
         if (!ok) {
-            setStatus({ message: translate(locale, "common.error"), tone: "error" });
-            return;
+            setSettings(previous);
+            document.documentElement.dataset.theme = previous.theme;
         }
-        setStatus({ message: translate(locale, "common.saved"), tone: "success" });
-        router.refresh();
+        // Confirm in the language the page is about to switch to.
+        const messageLocale: Locale = ok && key === "locale" ? (value as Locale) : locale;
+        setStatus({
+            message: translate(messageLocale, ok ? "common.saved" : "common.error"),
+            tone: ok ? "success" : "error",
+        });
+        if (ok) router.refresh();
     }
 
+    const languages = (["en", "it"] as const).map((value) => ({
+        icon: <LanguageFlag locale={value} />,
+        label: translate(locale, value === "en" ? "settings.english" : "settings.italian"),
+        value,
+    }));
+
     return (
-        <form className="settings-form" onSubmit={save}>
+        <div className="settings-form">
+            <p
+                aria-live="polite"
+                className="status-message settings-status"
+                data-tone={status?.tone}
+            >
+                {status?.message}
+            </p>
             <SettingSection
                 hint={translate(locale, "settings.languageHint")}
                 icon={Languages}
@@ -52,19 +60,19 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
             >
                 <OptionGroup
                     name="locale"
-                    onChange={setLocale}
+                    onChange={(value) => void change("locale", value)}
                     options={languages}
                     title={translate(locale, "settings.interfaceLanguage")}
-                    value={locale}
+                    value={settings.locale}
                 />
             </SettingSection>
             <SettingSection icon={FileText} title={translate(locale, "settings.documentLanguage")}>
                 <OptionGroup
                     name="exportLocale"
-                    onChange={setExportLocale}
+                    onChange={(value) => void change("exportLocale", value)}
                     options={languages}
                     title={translate(locale, "settings.documentLanguage")}
-                    value={exportLocale}
+                    value={settings.exportLocale}
                 />
             </SettingSection>
             <SettingSection
@@ -74,42 +82,29 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
             >
                 <OptionGroup
                     name="theme"
-                    onChange={(value) => {
-                        setTheme(value);
-                        // Preview immediately; the cookie is written when the form is saved.
-                        document.documentElement.dataset.theme = value;
-                    }}
+                    onChange={(value) => void change("theme", value)}
                     options={[
-                        ["system", translate(locale, "settings.system")],
-                        ["light", translate(locale, "settings.light")],
-                        ["dark", translate(locale, "settings.dark")],
+                        { label: translate(locale, "settings.system"), value: "system" },
+                        { label: translate(locale, "settings.light"), value: "light" },
+                        { label: translate(locale, "settings.dark"), value: "dark" },
                     ]}
                     title={translate(locale, "settings.appearance")}
-                    value={theme}
+                    value={settings.theme}
                 />
             </SettingSection>
             <SettingSection icon={Scale} title={translate(locale, "settings.weightUnit")}>
                 <OptionGroup
                     name="weightUnit"
-                    onChange={setWeightUnit}
+                    onChange={(value) => void change("weightUnit", value)}
                     options={[
-                        ["kg", translate(locale, "settings.kilograms")],
-                        ["lb", translate(locale, "settings.pounds")],
+                        { label: translate(locale, "settings.kilograms"), value: "kg" },
+                        { label: translate(locale, "settings.pounds"), value: "lb" },
                     ]}
                     title={translate(locale, "settings.weightUnit")}
-                    value={weightUnit}
+                    value={settings.weightUnit}
                 />
             </SettingSection>
-            <div className="settings-actions">
-                <p aria-live="polite" className="status-message" data-tone={status?.tone}>
-                    {status?.message}
-                </p>
-                <button className="button button-primary" disabled={pending} type="submit">
-                    <Check aria-hidden="true" size={17} />
-                    {translate(locale, "common.save")}
-                </button>
-            </div>
-        </form>
+        </div>
     );
 }
 
@@ -142,22 +137,23 @@ function OptionGroup<Value extends string>({
 }: Readonly<{
     name: string;
     onChange: (value: Value) => void;
-    options: ReadonlyArray<readonly [Value, string]>;
+    options: ReadonlyArray<{ icon?: ReactNode; label: string; value: Value }>;
     title: string;
     value: Value;
 }>) {
     return (
         <div aria-label={title} className="option-group" role="radiogroup">
-            {options.map(([optionValue, optionLabel]) => (
-                <label className="chip" key={optionValue}>
+            {options.map((option) => (
+                <label className="chip" key={option.value}>
                     <input
-                        checked={value === optionValue}
+                        checked={value === option.value}
                         name={name}
-                        onChange={() => onChange(optionValue)}
+                        onChange={() => onChange(option.value)}
                         type="radio"
-                        value={optionValue}
+                        value={option.value}
                     />
-                    <span>{optionLabel}</span>
+                    {option.icon}
+                    <span>{option.label}</span>
                     <Check aria-hidden="true" className="option-check" size={16} />
                 </label>
             ))}

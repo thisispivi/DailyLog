@@ -121,7 +121,7 @@ describe("LogbookRepository", () => {
         });
     });
 
-    it("remembers the latest training label and lists record times for streaks", () => {
+    it("lists recent training labels, newest first, and record times for streaks", () => {
         startRun();
         logbook.finishActivity(OWNER, "2026-08-31T09:00:00+02:00");
         logbook.createEntry(OWNER, {
@@ -131,8 +131,8 @@ describe("LogbookRepository", () => {
             text: "",
         });
         logbook.createWeighIn(OWNER, 72400, "2026-08-30T07:00:00+02:00");
-        expect(logbook.lastLabel(OWNER, "training")).toBe("Gym");
-        expect(logbook.lastLabel(OWNER, "sleep")).toBeNull();
+        expect(logbook.recentLabels(OWNER, "training")).toEqual(["Gym", "Run"]);
+        expect(logbook.recentLabels(OWNER, "sleep")).toEqual([]);
         expect(logbook.recordTimestamps(OWNER, "2026-08-31T00:00:00+00:00")).toHaveLength(2);
         expect(logbook.recordTimestamps(STRANGER, "2000-01-01T00:00:00+00:00")).toEqual([]);
     });
