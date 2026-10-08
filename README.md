@@ -4,210 +4,129 @@
 
 # DailyLog
 
-DailyLog is a private, bilingual web journal for meals, training, sleep, and body weight. It turns the original Telegram bot’s guided commands into faster direct forms, searchable history, recoverable editing, useful trends, and localized exports.
+A private, single-owner web journal for meals, training, sleep, and body weight. English and Italian, light and dark, phone to desktop.
 
-## Product capabilities
+It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 
-- Log meals with a meal type, details, and original local timestamp.
-- Start or backfill training and sleep; one database-enforced activity can remain open at a time.
-- End or cancel an active session from the Today screen.
-- Record weight in kilograms or pounds while storing canonical integer grams.
-- Browse, search, filter, edit, and delete entries and weigh-ins.
-- Bulk-delete one day’s entries without touching its weigh-ins.
-- Restore deleted data from a 30-day trash view.
-- See today’s timeline, sleep/activity totals, weight trend, and activity-duration breakdown.
-- Export any date range or all data as an editable XLSX workbook or print-ready PDF.
-- Use Italian or English independently for the interface and exported reports.
-- Choose light, dark, or system theme with a persisted, flash-free startup.
-- Use the full product on phones, tablets, laptops, and desktops.
+## What it does
 
-## Architecture
+- Log meals, training, sleep, and weigh-ins, now or backdated.
+- Run one training or sleep session at a time, then end or cancel it from **Today**.
+- Search, filter, edit, and delete records in **History**. Deleted records stay in the trash for 30 days.
+- See weight and training trends in **Reports** and export any range as XLSX or PDF.
+- Choose UI language, report language, theme, and weight unit (kg or lb) separately.
 
-DailyLog is one production-deployable Next.js application:
+## Quick start
 
-```text
-Browser
-  ├── React Server Components → initial private views
-  └── authenticated route handlers → validated mutations and downloads
-                                      │
-                          feature/domain modules
-                                      │
-                          SQLite repository adapter
-                                      │
-                 existing entries, weigh_ins, user_settings
-```
+Requires Node.js 20.9+ and npm 10+.
 
-Code is organized by product feature under `src/features`, cross-feature policy under `src/core`, transport routes under `src/app`, and vendor adapters under `src/infrastructure`. See [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) and the concise [architecture decisions](docs/architecture/).
-
-## Technology
-
-- Node.js 20.9 or newer
-- Next.js 16 and React 19
-- strict TypeScript
-- SQLite in WAL mode through `better-sqlite3`
-- Zod runtime validation
-- `write-excel-file` for small, safe XLSX output
-- PDFKit for server-generated PDF reports
-- Vitest and Playwright
-- ESLint and Prettier
-
-The dependency set is intentionally small. There is no ORM, client state framework, CSS framework, chart library, authentication platform, or general component library.
-
-## Requirements
-
-- Node.js `>=20.9`
-- npm `>=10`
-- A TLS-terminating reverse proxy for production
-- A writable directory for the SQLite database
-
-## Installation
-
-```powershell
+```bash
 npm ci
-Copy-Item .env.example .env
+cp .env.example .env    # then set APP_PASSWORD and SESSION_SECRET
 npm run db:migrate
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). DailyLog denies sign-in until `APP_PASSWORD` is configured.
+Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 
-## Environment configuration
+`npm ci` also installs the git hooks (see [Quality checks](#quality-checks)).
 
-```env
-APP_PASSWORD=replace-with-a-long-unique-password
-SESSION_SECRET=replace-with-at-least-32-random-characters
-APP_USER_ID=123456789
-TIMEZONE=Europe/Berlin
-DATABASE_PATH=data/dailylogbot.sqlite3
-LOG_LEVEL=info
-```
+## Configuration
 
-| Variable         | Required          | Purpose                                                                                                      |
-| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `APP_PASSWORD`   | Yes               | Single-owner sign-in password; use at least 12 characters and preferably a password manager-generated value. |
-| `SESSION_SECRET` | Recommended       | Signs session cookies. When omitted, `APP_PASSWORD` is used; a distinct 32+ character value is safer.        |
-| `APP_USER_ID`    | For migrated data | Owner ID used to scope every query. `ALLOWED_USER_ID` remains a supported migration alias.                   |
-| `TIMEZONE`       | No                | IANA timezone for calendar days and local forms; defaults to `Europe/Berlin`.                                |
-| `DATABASE_PATH`  | No                | SQLite file; defaults to `data/dailylogbot.sqlite3`.                                                         |
-| `LOG_LEVEL`      | No                | `debug`, `info`, `warn`, or `error`; the former uppercase values remain accepted.                            |
+All variables are validated with Zod in [`src/core/config/env.ts`](src/core/config/env.ts) when the server starts. Invalid values stop startup with the variable name, never its value.
 
-Never commit `.env`, database files, generated reports, or session secrets.
+| Variable          | Default                    | Notes                                                                     |
+| ----------------- | -------------------------- | ------------------------------------------------------------------------- |
+| `APP_PASSWORD`    | none                       | Required to sign in. 12 to 256 characters.                                |
+| `SESSION_SECRET`  | `APP_PASSWORD`             | Signs session cookies. Use a separate value of 32+ characters.            |
+| `APP_USER_ID`     | `1`                        | Owner ID on every row. Set it to the old Telegram user ID when migrating. |
+| `ALLOWED_USER_ID` | none                       | The bot's name for `APP_USER_ID`. Still accepted.                         |
+| `TIMEZONE`        | `Europe/Berlin`            | IANA zone used for calendar days and form times.                          |
+| `DATABASE_PATH`   | `data/dailylogbot.sqlite3` | SQLite file. The directory is created if missing.                         |
+| `LOG_LEVEL`       | `info`                     | `debug`, `info`, `warn`, or `error`. Uppercase bot values also work.      |
 
-## Database and migration
+## Architecture
 
-`npm run db:migrate` creates missing tables and applies additive schema version 4. When a pre-web database is present, DailyLog first creates a sibling backup such as:
+One Next.js 16 app with a SQLite database. No ORM, no client state library, no CSS framework, no chart library.
 
 ```text
-data/dailylogbot.sqlite3.pre-web-v2.bak
+src/
+├── app/              Routes: pages, layouts, API route handlers
+├── features/<name>/  Product features: domain logic, schemas, feature UI
+├── ui/               Shared presentational pieces: robot, wordmark, category badges
+├── core/<concern>/   Cross-cutting policy: config, http, i18n, security, time, logging
+└── infrastructure/   Adapters. Today only the SQLite database
 ```
 
-The migration preserves table names, record IDs, timestamps, soft-deletion state, user ownership, settings, and metric weight values. It adds independent report language, theme preference, and query indexes. Back up the production volume before every deployment as normal operational practice.
+- Pages are Server Components that read from the repository directly. Client components only handle interaction.
+- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](src/core/http/api.ts). The wrapper checks the origin and session, parses JSON, and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`.
+- [`LogbookRepository`](src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
 
-## Development commands
+ESLint enforces the import direction. The full rules are in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md).
 
-```powershell
-npm run dev            # local development server
-npm run db:migrate     # additive database migrations
-npm run format         # format source and documentation
-npm run format:check   # verify formatting
-npm run lint           # ESLint, React, Next.js, and accessibility rules
+## Runtime validation
+
+Zod validates every input that crosses a trust boundary, once, before it reaches domain code:
+
+| Boundary                   | Schema                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| Request bodies and queries | [`src/features/logbook/schemas.ts`](src/features/logbook/schemas.ts), strict               |
+| Environment                | [`src/core/config/env.ts`](src/core/config/env.ts)                                         |
+| Session cookie payload     | [`src/core/security/session.ts`](src/core/security/session.ts)                             |
+| Locale and theme cookies   | [`src/core/preferences/preference-cookies.ts`](src/core/preferences/preference-cookies.ts) |
+
+Request schemas reject unknown keys. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Database rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape.
+
+## Quality checks
+
+```bash
+npm run format:check   # Prettier
+npm run lint           # ESLint, including import boundaries
 npm run typecheck      # strict TypeScript
-npm test               # deterministic unit and integration suite
-npm run test:e2e       # Chromium desktop and mobile workflows
-npm run build          # optimized standalone production build
-npm run start          # run the production build
-npm run quality        # formatting, lint, types, tests, and build
+npm test               # Vitest unit and SQLite integration tests
+npm run test:e2e       # Playwright, desktop and mobile Chromium
+npm run build          # production build
+npm run quality        # everything above except e2e
 ```
 
-## Tests
+Git hooks in `.githooks/` run automatically:
 
-The regression suite prioritizes behavior that mattered in the Telegram bot and trust boundaries introduced by the web app:
+- **pre-commit**: Prettier and ESLint on staged files.
+- **pre-push**: format check, lint, typecheck, and unit tests.
 
-- schema-v2-to-v4 data preservation;
-- per-owner query isolation;
-- one-open-activity uniqueness;
-- soft deletion and restore;
-- canonical weight conversion;
-- DST-aware local calendar boundaries;
-- daily activity/sleep summaries;
-- entry interval validation;
-- spreadsheet formula neutralization;
-- valid PDF and XLSX output;
-- sign-in and meal logging in a real browser.
+CI runs the same checks plus the production build, Playwright, `npm audit`, a Trivy container scan, and a Gitleaks history scan.
 
-## Localization
+## Database
 
-English and Italian resources live together in `src/core/i18n/catalogs.ts`, producing typed translation keys. Components contain no workflow copy. `Intl` formats dates, times, and numbers using the saved UI locale and configured timezone. UI language, report language, and weight unit are persisted independently.
+`npm run db:migrate` creates or upgrades the schema (currently version 4). The app also migrates on first database access. Migrations are additive.
 
-## Theme and design system
-
-Global tokens in `src/app/globals.css` define typography, spacing, radii, surfaces, semantic colors, focus, shadows, motion, and responsive breakpoints. The visual identity reuses the original navy/electric-blue banner and robot artwork at sign-in, then reduces it to a quiet navy mark and a single blue accent inside the utility interface.
-
-Light and dark palettes are designed separately. System mode is implemented with CSS media queries and the persisted cookie is rendered by the server, avoiding incorrect-theme flashes without startup JavaScript.
-
-## Security model
-
-DailyLog is a private, single-owner application—not a multi-tenant service.
-
-- signed seven-day HttpOnly sessions;
-- `SameSite=Strict` and production `Secure` cookies;
-- same-origin checks on every mutation;
-- login throttling;
-- every database operation scoped by owner ID;
-- Zod validation at request and environment boundaries;
-- parameterized SQL and database constraints;
-- XLSX formula-injection defense;
-- CSP, HSTS in production, frame denial, MIME sniffing protection, restricted browser permissions, and safe referrer policy;
-- structured request logging without journal contents or weight values;
-- stable API errors without stack traces or database details;
-- no public indexing or response caching of private data.
-
-See [SECURITY.md](SECURITY.md) for deployment expectations and vulnerability reporting.
+Before upgrading an older database, DailyLog copies it next to the original, for example `data/dailylogbot.sqlite3.pre-web-v2.bak`.
 
 ## Docker
 
 ```bash
-cp .env.example .env
-# Set APP_PASSWORD and SESSION_SECRET in .env, then:
+cp .env.example .env    # set APP_PASSWORD and SESSION_SECRET
 docker compose up --build --detach
-docker compose ps
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Compose persists `/data/dailylog.sqlite3` in the `dailylog_data` volume, exposes the app on port 3000, and reports container health. Database migrations are applied additively when the application first opens the database. Put HTTPS in front of the container for production.
+Compose publishes the app on http://localhost:14141 and keeps the database in the `dailylog_data` volume at `/data/dailylog.sqlite3`.
 
-## Production deployment
+For production:
 
-1. Provide all required environment variables through a secret manager.
-2. Mount durable storage at `/data` or point `DATABASE_PATH` to another persistent path.
-3. Let the application apply additive migrations on first database access, or run `npm run db:migrate` from a Node checkout before accepting traffic.
-4. Run the standalone Next server behind an HTTPS reverse proxy.
-5. Use one application instance while SQLite and the in-memory login limiter remain the supported architecture.
-6. Back up the database and verify restore procedures regularly.
-7. Monitor structured stderr/stdout logs and the process health from the hosting platform.
+- Put an HTTPS reverse proxy in front.
+- Run a single instance. SQLite and the in-memory login limiter assume one process.
+- Back up the volume and test restores.
 
-## Relationship to the Telegram bot
+See [SECURITY.md](SECURITY.md) for the deployment baseline.
 
-DailyLog’s original Python bot served as the functional and data-model specification. Its useful features are now available directly in the web interface; the Telegram transport and sequential wizard state have been retired to avoid duplicated business rules, dependency stacks, and localization. Git history retains the former implementation, and the pre-migration database backup provides a data rollback source.
+## Security model
 
-## Repository map
-
-```text
-.
-├── assets/readme/                  Original DailyLog banner
-├── docs/
-│   ├── architecture/               Architecture decision records
-│   └── CODING_STANDARDS.md         Canonical engineering rules
-├── scripts/migrate.ts              Explicit migration entry point
-├── src/
-│   ├── app/                        Pages, layouts, APIs, loading/error states
-│   ├── core/                       Configuration, HTTP, i18n, security, time, logs
-│   ├── features/                   Vertical product features and tests
-│   └── infrastructure/database/    Schema migration and SQLite repository
-├── tests/e2e/                      Critical browser workflows
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
-```
+- One owner, one password. Sessions are signed, HttpOnly, `SameSite=Strict`, and last seven days.
+- Every mutating request must come from the same origin.
+- Failed sign-ins are throttled per client and globally.
+- SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
+- CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](next.config.ts).
+- Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
 
 ## License
 

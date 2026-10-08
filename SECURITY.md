@@ -14,13 +14,13 @@ DailyLog is a private, single-owner application. A production operator must:
 
 - set a unique 12+ character `APP_PASSWORD` and distinct 32+ character `SESSION_SECRET` through a secret manager;
 - preserve the existing owner ID with `APP_USER_ID` when migrating data;
-- terminate HTTPS before the application and keep production secure cookies enabled;
+- terminate HTTPS before the application and forward `X-Forwarded-Proto`, so cookies are marked `Secure`;
 - expose the service only to intended networks/users;
 - mount the SQLite database on durable storage with restrictive filesystem permissions;
 - back up the database and test restoration;
-- run one application instance for the supported SQLite/in-memory limiter architecture;
+- run one application instance, because SQLite and the in-memory login limiter assume a single process;
 - apply dependency and application updates promptly;
-- run `npm audit --audit-level=moderate` and the full quality suite before deployment;
+- run `npm audit` and `npm run quality` before deployment;
 - retain structured operational logs without collecting private journal data.
 
 DailyLog does not provide public registration, password recovery, multi-user tenancy, cloud synchronization, or encrypted-at-rest database storage. Use disk or volume encryption when the threat model requires it.
