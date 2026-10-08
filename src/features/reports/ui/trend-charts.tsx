@@ -16,11 +16,12 @@ export function TrendCharts({
 }>) {
     const activity = Object.entries(
         entries
-            .filter((entry) => entry.kind === "training" && entry.endAt)
+            .filter((entry) => entry.kind === "training")
             .reduce<Record<string, number>>((totals, entry) => {
+                if (!entry.endAt) return totals;
                 totals[entry.label] =
                     (totals[entry.label] ?? 0) +
-                    (Date.parse(entry.endAt!) - Date.parse(entry.startAt)) / 60_000;
+                    (Date.parse(entry.endAt) - Date.parse(entry.startAt)) / 60_000;
                 return totals;
             }, {}),
     )
@@ -28,6 +29,8 @@ export function TrendCharts({
         .slice(0, 5);
     const maxActivity = Math.max(...activity.map(([, minutes]) => minutes), 1);
     const weights = [...weighIns].reverse().slice(-12);
+    const first = weights[0];
+    const last = weights.at(-1);
     const weightValues = weights.map((item) => item.weightGrams);
     const minWeight = weightValues.length ? Math.min(...weightValues) : 0;
     const maxWeight = weightValues.length ? Math.max(...weightValues) : 1;
@@ -42,7 +45,7 @@ export function TrendCharts({
             <section className="trend-card trend-primary">
                 <p className="eyebrow">{translate(locale, "reports.weightSheet")}</p>
                 <h2>{translate(locale, "reports.weightQuestion")}</h2>
-                {weights.length ? (
+                {first && last ? (
                     <>
                         <svg
                             aria-label={translate(locale, "reports.weightQuestion")}
@@ -62,10 +65,8 @@ export function TrendCharts({
                             />
                         </svg>
                         <div className="chart-endpoints">
-                            <span>{formatWeight(weights[0]!.weightGrams, weightUnit, locale)}</span>
-                            <strong>
-                                {formatWeight(weights.at(-1)!.weightGrams, weightUnit, locale)}
-                            </strong>
+                            <span>{formatWeight(first.weightGrams, weightUnit, locale)}</span>
+                            <strong>{formatWeight(last.weightGrams, weightUnit, locale)}</strong>
                         </div>
                         <table className="sr-only">
                             <tbody>

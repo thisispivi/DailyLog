@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { apiFailure, ApiError, ok, requireApiSession } from "@/core/http/api";

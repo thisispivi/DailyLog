@@ -3,6 +3,8 @@ title = "DailyLog Gitleaks configuration"
 [extend]
 useDefault = true
 
+# CI scans the full history. The retired Python toolchain committed a
+# detect-secrets baseline whose metadata digest looks like an API key.
 [[rules]]
 id = "generic-api-key"
 

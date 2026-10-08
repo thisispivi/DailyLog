@@ -1,0 +1,13 @@
+#!/bin/sh
+# Fast checks on staged files only. The full gate runs on pre-push and in CI.
+set -e
+
+files=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$files" ] && exit 0
+
+echo "$files" | xargs npx --no-install prettier --check --ignore-unknown
+
+lintable=$(echo "$files" | grep -E '\.(ts|tsx|mjs)$' || true)
+[ -n "$lintable" ] && echo "$lintable" | xargs npx --no-install eslint --max-warnings=0
+
+exit 0

@@ -1,8 +1,9 @@
 .next
 coverage
 dist
-legacy
 node_modules
 package-lock.json
-assets/readme/*.png
-data/*.sqlite3
+playwright-report
+test-results
+assets/**/*.png
+data
