@@ -1,4 +1,4 @@
-type JsonMethod = "DELETE" | "PATCH" | "POST";
+type JsonMethod = "DELETE" | "PATCH" | "POST" | "PUT";
 
 /**
  * Sends a same-origin JSON request from the browser. Network failures resolve to

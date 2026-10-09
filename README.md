@@ -99,7 +99,7 @@ CI runs the same checks plus the production build, Playwright, `npm audit`, a Tr
 
 ## Database
 
-`npm run db:migrate` creates or upgrades the schema (currently version 4). The app also migrates on first database access. Migrations are additive.
+`npm run db:migrate` creates or upgrades the schema (currently version 5). The app also migrates on first database access. Migrations are additive.
 
 Before upgrading an older database, DailyLog copies it next to the original, for example `data/dailylogbot.sqlite3.pre-web-v2.bak`.
 

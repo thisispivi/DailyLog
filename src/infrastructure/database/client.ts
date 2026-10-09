@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */
@@ -88,6 +88,13 @@ export function migrateDatabase(db: Database.Database): void {
         WHERE deleted_at IS NULL AND end_at IS NULL AND kind IN ('training', 'sleep');
       CREATE INDEX IF NOT EXISTS idx_weigh_ins_user_recorded ON weigh_ins(user_id, recorded_at);
       CREATE INDEX IF NOT EXISTS idx_weigh_ins_user_deleted ON weigh_ins(user_id, deleted_at);
+      CREATE TABLE IF NOT EXISTS day_notes (
+        user_id INTEGER NOT NULL,
+        day TEXT NOT NULL CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+        text TEXT NOT NULL CHECK (length(text) BETWEEN 1 AND 10000),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, day)
+      );
       PRAGMA user_version = ${SCHEMA_VERSION};
     `);
     })();

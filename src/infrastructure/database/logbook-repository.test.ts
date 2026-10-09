@@ -137,6 +137,21 @@ describe("LogbookRepository", () => {
         expect(logbook.recordTimestamps(STRANGER, "2000-01-01T00:00:00+00:00")).toEqual([]);
     });
 
+    it("saves one note per day and owner, and removes it when emptied", () => {
+        expect(logbook.saveDayNote(OWNER, "2026-10-09", "Good focus at work.")?.text).toBe(
+            "Good focus at work.",
+        );
+        logbook.saveDayNote(OWNER, "2026-10-09", "Good focus at work. Tired evening.");
+        logbook.saveDayNote(OWNER, "2026-10-07", "Rest day.");
+        expect(logbook.getDayNote(STRANGER, "2026-10-09")).toBeNull();
+        expect(logbook.listDayNotes(OWNER, "2026-10-01", "2026-10-31").map((n) => n.day)).toEqual([
+            "2026-10-07",
+            "2026-10-09",
+        ]);
+        expect(logbook.saveDayNote(OWNER, "2026-10-09", "   ")).toBeNull();
+        expect(logbook.getDayNote(OWNER, "2026-10-09")).toBeNull();
+    });
+
     it("keeps weigh-ins in canonical grams while preferences remain independent", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         const settings = logbook.updateSettings(OWNER, { exportLocale: "it", weightUnit: "lb" });
@@ -170,7 +185,7 @@ describe("legacy schema migration", () => {
             theme: "system",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(4);
+        expect(database.pragma("user_version", { simple: true })).toBe(5);
         database.close();
     });
 });

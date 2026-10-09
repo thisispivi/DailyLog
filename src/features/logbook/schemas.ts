@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { entryKinds, locales, themes, weightUnits } from "@/features/logbook/domain";
+import {
+    DAY_NOTE_MAX_LENGTH,
+    entryKinds,
+    locales,
+    themes,
+    weightUnits,
+} from "@/features/logbook/domain";
 
 // Request schemas are strict: an unexpected key is a client bug or a probe, never
 // something to silently drop.
@@ -85,6 +91,16 @@ export const updateSettingsSchema = z
     .refine((value) => Object.keys(value).length > 0, "At least one setting is required.");
 
 export type SettingsChanges = z.infer<typeof updateSettingsSchema>;
+
+export const dayParamSchema = z.iso.date();
+
+// Notes are trimmed only at the end, so leading indentation and line breaks survive.
+export const saveDayNoteSchema = z.strictObject({
+    text: z
+        .string()
+        .max(DAY_NOTE_MAX_LENGTH)
+        .transform((text) => text.trimEnd()),
+});
 
 export const restoreSchema = z.strictObject({
     recordId: z.number().int().positive(),
