@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.1](https://github.com/thisispivi/DailyLog/compare/v1.4.0...v1.4.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* keep the desktop sidebar fixed to the full window height ([21a3262](https://github.com/thisispivi/DailyLog/commit/21a3262ed6c884b3458b501f0fb9099a536ee0d9))
+* keep the desktop sidebar fixed to the full window height ([c3e165a](https://github.com/thisispivi/DailyLog/commit/c3e165add302ad5cf918d0333b0888e80648ffd1)), closes [#70](https://github.com/thisispivi/DailyLog/issues/70)
+* use consistent cursors across the app ([faa1e47](https://github.com/thisispivi/DailyLog/commit/faa1e4796281419c32b588635a27fedfb0433a57))
+* use consistent cursors across the app ([fb61a49](https://github.com/thisispivi/DailyLog/commit/fb61a499586e4519b72d69cffd9147b798e35cfe)), closes [#71](https://github.com/thisispivi/DailyLog/issues/71)
+
 ## [1.4.0](https://github.com/thisispivi/DailyLog/compare/v1.3.0...v1.4.0) (2026-10-08)
 
 
