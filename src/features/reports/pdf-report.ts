@@ -3,18 +3,16 @@ import { fileURLToPath } from "node:url";
 
 import PDFDocument from "pdfkit";
 
-import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/translate";
-import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
-import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
-import { entryDisplayLabel } from "@/features/logbook/entry-label";
-import { datesInRange, type ReportInput } from "@/features/reports/report-input";
+import { translate } from "@/core/i18n/translate";
+import { localDateInZone } from "@/core/time/zoned-time";
+import { reportDays, summaryTiles, type ReportInput } from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
-import type { RecordKind } from "@/ui/kind-icon";
 
 const PAGE_MARGIN = 40;
 const CONTENT_WIDTH = 595.28 - PAGE_MARGIN * 2;
 const FOOTER_SPACE = 56;
-const TIME_COLUMN = 44;
+// Wide enough for a range such as "01:30–09:00".
+const TIME_COLUMN = 66;
 const PILL_WIDTH = 64;
 const TEXT_X = PAGE_MARGIN + TIME_COLUMN + PILL_WIDTH + 12;
 const TEXT_WIDTH = CONTENT_WIDTH - (TEXT_X - PAGE_MARGIN);
@@ -29,19 +27,10 @@ const fontFiles = {
 } as const;
 type FontWeight = keyof typeof fontFiles;
 
-type DayRow = Readonly<{
-    at: string;
-    detail: string;
-    kind: RecordKind;
-    time: string;
-    title: string;
-}>;
-
 /**
  * Builds the A4 report in the app's soft wellness style: a header band, the
  * period's key figures as tiles, then one section per day with its records and
- * note. Activities that cross midnight appear on each day with that day's part.
- * User text is drawn as plain text, never interpreted as markup.
+ * note. User text is drawn as plain text, never interpreted as markup.
  */
 export async function createPdf(input: ReportInput): Promise<Buffer> {
     const document = new PDFDocument({ bufferPages: true, margin: PAGE_MARGIN, size: "A4" });
@@ -94,34 +83,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
         );
 
     // Summary tiles
-    const dates = datesInRange(input.startDate, input.endDate);
-    const days = dailyTotals(dates, input.entries, input.weighIns, input.timeZone);
-    const summary = summarizePeriod(days);
-    const meals = days.reduce((sum, day) => sum + day.meals, 0);
-    const tiles: Array<{ kind: RecordKind; label: string; value: string }> = [
-        { kind: "meal", label: t("export.totalMeals"), value: String(meals) },
-        {
-            kind: "training",
-            label: t("reports.activeTime"),
-            value: formatMinutes(summary.activeMinutes, input.locale),
-        },
-        {
-            kind: "sleep",
-            label: t("reports.averageSleep"),
-            value:
-                summary.averageSleepMinutes === null
-                    ? "–"
-                    : formatMinutes(summary.averageSleepMinutes, input.locale),
-        },
-        {
-            kind: "weight",
-            label: t("reports.weightChange"),
-            value:
-                summary.weightChangeGrams === null
-                    ? "–"
-                    : `${summary.weightChangeGrams > 0 ? "+" : summary.weightChangeGrams < 0 ? "−" : "±"}${formatWeight(Math.abs(summary.weightChangeGrams), input.weightUnit, input.locale)}`,
-        },
-    ];
+    const tiles = summaryTiles(input);
     const tileGap = 10;
     const tileWidth = (CONTENT_WIDTH - tileGap * (tiles.length - 1)) / tiles.length;
     const tilesTop = headerTop + 108;
@@ -146,12 +108,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
     document.y = tilesTop + 64 + 26;
 
     // One section per day with something to show
-    const notes = new Map(input.notes.map((note) => [note.day, note.text]));
-    for (const date of dates) {
-        const rows = rowsForDay(input, date);
-        const note = notes.get(date);
-        if (rows.length === 0 && !note) continue;
-
+    for (const { date, note, rows } of reportDays(input)) {
         ensureSpace(64);
         font("extraBold")
             .fontSize(13)
@@ -179,6 +136,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
                 .fontSize(9)
                 .fillColor(palette.muted)
                 .text(row.time, PAGE_MARGIN, top + 2, {
+                    lineBreak: false,
                     width: TIME_COLUMN,
                 });
             document
@@ -259,71 +217,6 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
     }
     document.end();
     return completed;
-}
-
-/** The records that belong to one local day, in time order. */
-function rowsForDay(input: ReportInput, date: string): DayRow[] {
-    const [dayStart, dayEnd] = localDateRangeBounds(date, date, input.timeZone);
-    const time = (value: string) => formatTime(value, input.locale, input.timeZone);
-    const inDay = (timestamp: string) =>
-        Date.parse(timestamp) >= Date.parse(dayStart) && Date.parse(timestamp) < Date.parse(dayEnd);
-    const rows: DayRow[] = [];
-
-    for (const entry of input.entries) {
-        const title = entryDisplayLabel(entry, input.locale);
-        if (entry.kind === "meal") {
-            if (inDay(entry.startAt)) {
-                rows.push({
-                    at: entry.startAt,
-                    detail: entry.text,
-                    kind: "meal",
-                    time: time(entry.startAt),
-                    title,
-                });
-            }
-            continue;
-        }
-        const end = entry.endAt ?? new Date().toISOString();
-        if (
-            Date.parse(entry.startAt) >= Date.parse(dayEnd) ||
-            Date.parse(end) <= Date.parse(dayStart)
-        ) {
-            continue;
-        }
-        const segment = clipToDay(entry, dayStart, dayEnd);
-        const until = segment.intoNextDay
-            ? time(new Date(Date.parse(dayEnd) - 60_000).toISOString())
-            : segment.endAt
-              ? time(segment.endAt)
-              : translate(input.locale, "dashboard.inProgress");
-        const minutes = (Date.parse(segment.endAt ?? end) - Date.parse(segment.startAt)) / 60_000;
-        const detail = [
-            `${time(segment.startAt)}–${until}`,
-            formatMinutes(minutes, input.locale),
-            entry.text,
-        ]
-            .filter(Boolean)
-            .join(" · ");
-        rows.push({
-            at: segment.startAt,
-            detail,
-            kind: entry.kind,
-            time: time(segment.startAt),
-            title,
-        });
-    }
-
-    for (const weighIn of input.weighIns) {
-        if (!inDay(weighIn.recordedAt)) continue;
-        rows.push({
-            at: weighIn.recordedAt,
-            detail: "",
-            kind: "weight",
-            time: time(weighIn.recordedAt),
-            title: formatWeight(weighIn.weightGrams, input.weightUnit, input.locale),
-        });
-    }
-    return rows.sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
 }
 
 /** Registers Nunito when its files are readable, otherwise falls back to Helvetica. */

@@ -1,15 +1,11 @@
 import writeExcelFile, { type Cell, type SheetData } from "write-excel-file/node";
 
-import { formatMinutes, translate } from "@/core/i18n/translate";
+import { translate } from "@/core/i18n/translate";
 import { localInputValue } from "@/core/time/zoned-time";
-import { dailyTotals, summarizePeriod } from "@/features/insights/insights";
-import { entryDurationMs, gramsToUnit, type Entry } from "@/features/logbook/domain";
-import { entryDisplayLabel } from "@/features/logbook/entry-label";
-import { datesInRange, type ReportInput } from "@/features/reports/report-input";
+import { gramsToUnit } from "@/features/logbook/domain";
+import { reportDays, summaryTiles, type ReportInput } from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
 import type { RecordKind } from "@/ui/kind-icon";
-
-const ROW_HEIGHT = 22;
 
 /** Prevents user-controlled cell text from being interpreted as a spreadsheet formula. */
 export function neutralizeSpreadsheetFormula(value: string): string {
@@ -17,109 +13,43 @@ export function neutralizeSpreadsheetFormula(value: string): string {
 }
 
 /**
- * Builds the export workbook in the app's palette: a summary sheet with one row
- * per day, then the journal, weigh-ins, and notes. Dates are real Excel dates in
- * the owner's local time, and durations are minutes, so the file can be sorted,
- * filtered, and charted.
+ * Builds the export workbook in the app's palette. The journal sheet reads like
+ * the PDF: the period's key figures, then one small table per day with its
+ * records and note, skipping days with nothing recorded. The weight sheet keeps
+ * real Excel dates and numbers, so it can be sorted and charted.
  */
 export async function createWorkbook(input: ReportInput): Promise<Buffer> {
     const t = (key: Parameters<typeof translate>[1]) => translate(input.locale, key);
     const dateFormat = input.locale === "it" ? "dd/mm/yyyy" : "dd mmm yyyy";
     const dateTimeFormat = `${dateFormat} hh:mm`;
     const localDate = (timestamp: string) => wallClock(timestamp, input.timeZone);
-    const decimal = new Intl.NumberFormat(input.locale, { maximumFractionDigits: 1 });
-
-    const dates = datesInRange(input.startDate, input.endDate);
-    const days = dailyTotals(dates, input.entries, input.weighIns, input.timeZone);
-    const summary = summarizePeriod(days);
     const toUnit = (grams: number) => Math.round(gramsToUnit(grams, input.weightUnit) * 10) / 10;
-    const noteDays = new Set(input.notes.map((note) => note.day));
+    const longDate = new Intl.DateTimeFormat(input.locale, { dateStyle: "full", timeZone: "UTC" });
 
-    const summarySheet: SheetData = [
-        [title("DailyLog", 7)],
-        [subtitle(periodLabel(input), 7)],
-        [],
-        // A cell with columnSpan is followed by nulls for the columns it covers.
-        [header(t("export.metric")), header(t("export.value"), 2), null],
-        metricRow(
-            t("export.totalMeals"),
-            String(days.reduce((sum, day) => sum + day.meals, 0)),
-            "meal",
-        ),
-        metricRow(t("reports.mealsPerDay"), decimal.format(summary.mealsPerDay), "meal"),
-        metricRow(
-            t("reports.activeTime"),
-            formatMinutes(summary.activeMinutes, input.locale),
-            "training",
-        ),
-        metricRow(
-            t("reports.averageSleep"),
-            summary.averageSleepMinutes === null
-                ? "–"
-                : formatMinutes(summary.averageSleepMinutes, input.locale),
-            "sleep",
-        ),
-        metricRow(
-            t("reports.weightChange"),
-            summary.weightChangeGrams === null
-                ? "–"
-                : `${decimal.format(toUnit(summary.weightChangeGrams))} ${input.weightUnit}`,
-            "weight",
-        ),
-        metricRow(t("export.daysWithNotes"), String(noteDays.size)),
-        [],
-        [
-            header(t("reports.columnDate")),
-            header(t("export.columnMeals")),
-            header(t("export.columnActive")),
-            header(t("export.columnSleep")),
-            header(`${t("reports.columnWeight")} (${input.weightUnit})`),
-            header(t("export.columnNote")),
-        ],
-        ...days.map((day, index): Cell[] => [
-            { ...body(index), format: dateFormat, type: Date, value: dayDate(day.date) },
-            { ...body(index), type: Number, value: day.meals },
-            { ...body(index), type: Number, value: day.activeMinutes },
-            {
-                ...body(index),
-                format: "0.0",
-                type: Number,
-                value: Math.round((day.sleepMinutes / 60) * 10) / 10,
-            },
-            day.weightGrams === null
-                ? body(index)
-                : { ...body(index), format: "0.0", type: Number, value: toUnit(day.weightGrams) },
-            { ...body(index), align: "center", value: noteDays.has(day.date) ? "✓" : "" },
-        ]),
-    ];
-
+    // A cell with columnSpan is followed by nulls for the columns it covers.
     const journal: SheetData = [
-        [
-            header(t("reports.columnDate")),
-            header(t("reports.columnType")),
-            header(t("reports.columnLabel")),
-            header(t("reports.columnDetails")),
-            header(t("reports.columnEnd")),
-            header(t("export.columnMinutes")),
-        ],
-        ...input.entries.map((entry, index): Cell[] => [
-            { ...body(index), format: dateTimeFormat, type: Date, value: localDate(entry.startAt) },
-            kindCell(entry.kind, t(`dashboard.${entry.kind}`)),
-            {
-                ...body(index),
-                fontWeight: "bold",
-                value: neutralizeSpreadsheetFormula(entryDisplayLabel(entry, input.locale)),
-            },
-            { ...body(index), value: neutralizeSpreadsheetFormula(entry.text) },
-            entry.endAt
-                ? {
-                      ...body(index),
-                      format: dateTimeFormat,
-                      type: Date,
-                      value: localDate(entry.endAt),
-                  }
-                : body(index),
-            minutesCell(entry, index),
+        [title("DailyLog", 4), null, null, null],
+        [subtitle(periodLabel(input), 4), null, null, null],
+        [],
+        ...summaryTiles(input).map((tile) => metricRow(tile.label, tile.value, tile.kind)),
+        ...reportDays(input).flatMap(({ date, note, rows }): Cell[][] => [
+            [],
+            [dayHeading(capitalize(longDate.format(dayDate(date)))), null, null, null],
+            ...rows.map((row, index): Cell[] => [
+                { ...body(index), fontWeight: "bold", textColor: palette.muted, value: row.time },
+                kindCell(row.kind, t(`dashboard.${row.kind}`)),
+                {
+                    ...body(index),
+                    fontWeight: "bold",
+                    value: neutralizeSpreadsheetFormula(row.title),
+                },
+                {
+                    ...body(index),
+                    textColor: palette.muted,
+                    value: neutralizeSpreadsheetFormula(row.detail),
+                },
+            ]),
+            ...(note ? [noteRow(t("export.columnNote"), neutralizeSpreadsheetFormula(note))] : []),
         ]),
     ];
 
@@ -161,59 +91,21 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
         }),
     ];
 
-    const notes: SheetData = [
-        [header(t("reports.columnDate")), header(t("export.columnNote"))],
-        ...input.notes.map((note, index): Cell[] => [
-            { ...body(index), format: dateFormat, type: Date, value: dayDate(note.day) },
-            { ...body(index), value: neutralizeSpreadsheetFormula(note.text) },
-        ]),
-    ];
-
-    const sheet = {
-        orientation: "landscape" as const,
-        showGridLines: false,
-        stickyRowsCount: 1,
-    };
     return writeExcelFile([
         {
-            ...sheet,
-            columns: [
-                { width: 18 },
-                { width: 10 },
-                { width: 14 },
-                { width: 12 },
-                { width: 14 },
-                { width: 8 },
-                { width: 4 },
-            ],
-            data: summarySheet,
-            sheet: t("export.summarySheet"),
-            stickyRowsCount: 0,
-        },
-        {
-            ...sheet,
-            columns: [
-                { width: 18 },
-                { width: 14 },
-                { width: 24 },
-                { width: 52 },
-                { width: 18 },
-                { width: 10 },
-            ],
+            columns: [{ width: 14 }, { width: 16 }, { width: 28 }, { width: 70 }],
             data: journal,
+            orientation: "landscape",
             sheet: t("reports.journalSheet"),
+            showGridLines: false,
         },
         {
-            ...sheet,
             columns: [{ width: 18 }, { width: 14 }, { width: 12 }],
             data: weights,
+            orientation: "landscape",
             sheet: t("reports.weightSheet"),
-        },
-        {
-            ...sheet,
-            columns: [{ width: 16 }, { width: 90 }],
-            data: notes,
-            sheet: t("export.notesSheet"),
+            showGridLines: false,
+            stickyRowsCount: 1,
         },
     ]).toBuffer();
 }
@@ -253,7 +145,6 @@ function body(index: number): Cell {
         backgroundColor: index % 2 === 1 ? palette.stripe : palette.surface,
         bottomBorderColor: palette.line,
         bottomBorderStyle: "hair",
-        height: ROW_HEIGHT,
         textColor: palette.text,
         value: "",
         wrap: true,
@@ -268,38 +159,55 @@ function kindCell(kind: RecordKind, label: string): Cell {
         bottomBorderColor: palette.surface,
         bottomBorderStyle: "thin",
         fontWeight: "bold",
-        height: ROW_HEIGHT,
         textColor: kindColors[kind].ink,
         value: label,
     };
 }
 
-function metricRow(label: string, value: string, kind?: RecordKind): Cell[] {
-    const colors = kind ? kindColors[kind] : { ink: palette.primary, tile: palette.canvas };
+function metricRow(label: string, value: string, kind: RecordKind): Cell[] {
+    const colors = kindColors[kind];
     return [
         {
             backgroundColor: colors.tile,
+            columnSpan: 2,
             fontWeight: "bold",
             height: 24,
             textColor: colors.ink,
             value: label,
         },
+        null,
         {
             backgroundColor: colors.tile,
-            columnSpan: 2,
             fontSize: 13,
             fontWeight: "bold",
             height: 24,
             textColor: palette.text,
             value,
         },
-        null,
     ];
 }
 
-function minutesCell(entry: Entry, index: number): Cell {
-    if (entry.kind === "meal" || !entry.endAt) return body(index);
-    return { ...body(index), type: Number, value: Math.round(entryDurationMs(entry) / 60_000) };
+function dayHeading(value: string): Cell {
+    return {
+        bottomBorderColor: palette.line,
+        bottomBorderStyle: "thin",
+        columnSpan: 4,
+        fontSize: 13,
+        fontWeight: "bold",
+        height: 26,
+        textColor: palette.text,
+        value,
+    };
+}
+
+function noteRow(label: string, text: string): Cell[] {
+    const box = { alignVertical: "top", backgroundColor: palette.primarySoft } as const;
+    return [
+        { ...box, fontWeight: "bold", textColor: palette.primary, value: label.toUpperCase() },
+        { ...box, columnSpan: 3, textColor: palette.text, value: text, wrap: true },
+        null,
+        null,
+    ];
 }
 
 /**
@@ -308,6 +216,10 @@ function minutesCell(entry: Entry, index: number): Cell {
  */
 function wallClock(timestamp: string, timeZone: string): Date {
     return new Date(`${localInputValue(new Date(timestamp), timeZone)}:00Z`);
+}
+
+function capitalize(value: string): string {
+    return value.charAt(0).toLocaleUpperCase() + value.slice(1);
 }
 
 function dayDate(day: string): Date {
