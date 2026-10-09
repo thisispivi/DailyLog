@@ -73,14 +73,15 @@ ESLint enforces the import direction. The full rules are in [docs/CODING_STANDAR
 
 Zod validates every input that crosses a trust boundary, once, before it reaches domain code:
 
-| Boundary                   | Schema                                                                                               |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Request bodies and queries | [`src/features/logbook/schemas.ts`](daily-log/src/features/logbook/schemas.ts), strict               |
-| Environment                | [`src/core/config/env.ts`](daily-log/src/core/config/env.ts)                                         |
-| Session cookie payload     | [`src/core/security/session.ts`](daily-log/src/core/security/session.ts)                             |
-| Locale and theme cookies   | [`src/core/preferences/preference-cookies.ts`](daily-log/src/core/preferences/preference-cookies.ts) |
+| Boundary                              | Schema                                                                                                                                                                                                   |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request bodies, queries, route params | The owning feature's `schemas.ts`, e.g. [`logbook`](daily-log/src/features/logbook/schemas.ts), [`auth`](daily-log/src/features/auth/schemas.ts), [`profile`](daily-log/src/features/profile/schemas.ts) |
+| Backup import                         | [`src/features/backup/schemas.ts`](daily-log/src/features/backup/schemas.ts), built from the request schemas                                                                                             |
+| Environment                           | [`src/core/config/env.ts`](daily-log/src/core/config/env.ts)                                                                                                                                             |
+| Session cookie payload                | [`src/core/security/session.ts`](daily-log/src/core/security/session.ts)                                                                                                                                 |
+| Locale and theme cookies              | [`src/core/preferences/preference-cookies.ts`](daily-log/src/core/preferences/preference-cookies.ts)                                                                                                     |
 
-Request schemas reject unknown keys. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Database rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape.
+Request schemas reject unknown keys. Larger contracts are composed from smaller ones instead of repeating fields: a backup file is validated with the same entry, settings, and profile schemas the API uses. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Database rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape.
 
 ## Quality checks
 
@@ -105,9 +106,9 @@ CI runs the same checks plus the production build, Playwright, `npm audit`, a Tr
 
 ## Database
 
-`npm run db:migrate` creates or upgrades the schema (currently version 5). The app also migrates on first database access. Migrations are additive.
+`npm run db:migrate` creates or upgrades the schema and prints the resulting version. The app also migrates on first database access. Migrations are additive.
 
-Before upgrading an older database, DailyLog copies it next to the original, for example `data/dailylogbot.sqlite3.pre-web-v2.bak`.
+Before upgrading an older database, DailyLog copies it next to the original as `<file>.pre-web-v<old version>.bak`, for example `data/dailylogbot.sqlite3.pre-web-v2.bak`.
 
 ## Docker
 
@@ -131,6 +132,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 ## Security model
 
 - One owner, one password. Sessions are signed, HttpOnly, `SameSite=Strict`, and last seven days.
+- Set `SESSION_SECRET`. Without it, sessions are signed with `APP_PASSWORD`, and changing the password in Settings does not change that key. The server logs `config.session_secret_is_password` at startup when this is the case.
 - Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client and globally.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
