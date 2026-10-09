@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.0](https://github.com/thisispivi/DailyLog/compare/v1.11.0...v1.12.0) (2026-10-09)
+
+
+### Features
+
+* add a profile page with BMI and personal details on exports ([4274028](https://github.com/thisispivi/DailyLog/commit/4274028bd2d0483f6d14e15af3a2056afeba8548))
+* add a profile page with BMI and personal details on exports ([aaece74](https://github.com/thisispivi/DailyLog/commit/aaece743fdb141d85c1546849999a814f005af56)), closes [#116](https://github.com/thisispivi/DailyLog/issues/116)
+
 ## [1.11.0](https://github.com/thisispivi/DailyLog/compare/v1.10.0...v1.11.0) (2026-10-09)
 
 
