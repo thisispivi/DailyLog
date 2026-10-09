@@ -34,6 +34,8 @@
     "react": "19.2.8",
     "react-day-picker": "10.0.1",
     "react-dom": "19.2.8",
+    "react-is": "19.2.8",
+    "recharts": "3.10.1",
     "write-excel-file": "4.1.1",
     "zod": "4.5.4"
   },

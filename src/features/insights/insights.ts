@@ -116,3 +116,19 @@ export function mealLabelForHour(hour: number): MealLabel {
     if (hour < 18) return "Snack 2";
     return "Dinner";
 }
+
+export type ActivityTotal = Readonly<{ label: string; minutes: number }>;
+
+/** Minutes of finished training per activity label, longest first. */
+export function trainingMinutesByLabel(entries: readonly Entry[], limit = 5): ActivityTotal[] {
+    const totals = new Map<string, number>();
+    for (const entry of entries) {
+        if (entry.kind !== "training") continue;
+        totals.set(entry.label, (totals.get(entry.label) ?? 0) + entryDurationMs(entry) / 60_000);
+    }
+    return [...totals]
+        .map(([label, minutes]) => ({ label, minutes: Math.round(minutes) }))
+        .filter((total) => total.minutes > 0)
+        .sort((left, right) => right.minutes - left.minutes)
+        .slice(0, limit);
+}
