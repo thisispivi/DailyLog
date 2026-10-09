@@ -43,6 +43,11 @@ const en = {
         to: "To",
         validation: "Check the highlighted fields and try again.",
     },
+    notes: {
+        placeholder: "How did the day go? Feelings, work, anything worth remembering.",
+        saving: "Saving…",
+        title: "Notes",
+    },
     nav: {
         dashboard: "Today",
         primary: "Primary navigation",
@@ -202,6 +207,11 @@ const it: CatalogShape = {
         start: "Inizia",
         to: "Al",
         validation: "Controlla i campi evidenziati e riprova.",
+    },
+    notes: {
+        placeholder: "Come è andata la giornata? Emozioni, lavoro, qualsiasi cosa da ricordare.",
+        saving: "Salvataggio…",
+        title: "Note",
     },
     nav: {
         dashboard: "Oggi",

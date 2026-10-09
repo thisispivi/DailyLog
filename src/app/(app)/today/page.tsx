@@ -17,6 +17,7 @@ import {
     RecordLoggerProvider,
 } from "@/features/dashboard/ui/record-logger";
 import { dailyTotals, loggingStreak } from "@/features/insights/insights";
+import { DayNote } from "@/features/notes/ui/day-note";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 import type { RecordKind } from "@/ui/kind-icon";
 
@@ -113,15 +114,23 @@ export default function TodayPage() {
                     </li>
                 ))}
             </ul>
-            <DayTimeline
-                dayEnd={to}
-                dayStart={from}
-                entries={entries}
-                locale={locale}
-                timeZone={timezone}
-                weighIns={weighIns}
-                weightUnit={weightUnit}
-            />
+            <div className="today-columns">
+                <DayTimeline
+                    dayEnd={to}
+                    dayStart={from}
+                    entries={entries}
+                    locale={locale}
+                    timeZone={timezone}
+                    weighIns={weighIns}
+                    weightUnit={weightUnit}
+                />
+                <DayNote
+                    day={today}
+                    initialText={logbook.getDayNote(ownerId, today)?.text ?? ""}
+                    key={today}
+                    locale={locale}
+                />
+            </div>
         </RecordLoggerProvider>
     );
 }

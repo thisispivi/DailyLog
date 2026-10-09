@@ -7,6 +7,7 @@ import {
     RecordNotFoundError,
     TRASH_RETENTION_DAYS,
     type Entry,
+    type DayNote,
     type EntryFilters,
     type EntryKind,
     type Locale,
@@ -346,6 +347,45 @@ export class LogbookRepository {
             )
             .run(now, now, userId, weighInId);
         if (result.changes === 0) throw new RecordNotFoundError("Weigh-in not found.");
+    }
+
+    getDayNote(userId: number, day: string): DayNote | null {
+        const row = this.database
+            .prepare("SELECT day, text, updated_at FROM day_notes WHERE user_id = ? AND day = ?")
+            .get(userId, day) as { day: string; text: string; updated_at: string } | undefined;
+        return row ? { day: row.day, text: row.text, updatedAt: row.updated_at } : null;
+    }
+
+    /** Notes between two local dates, inclusive, oldest first. */
+    listDayNotes(userId: number, fromDay: string, toDay: string): DayNote[] {
+        const rows = this.database
+            .prepare(
+                `SELECT day, text, updated_at FROM day_notes
+         WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day`,
+            )
+            .all(userId, fromDay, toDay) as Array<{
+            day: string;
+            text: string;
+            updated_at: string;
+        }>;
+        return rows.map((row) => ({ day: row.day, text: row.text, updatedAt: row.updated_at }));
+    }
+
+    /** Saves a day's note; an empty note removes it. */
+    saveDayNote(userId: number, day: string, text: string): DayNote | null {
+        if (!text.trim()) {
+            this.database
+                .prepare("DELETE FROM day_notes WHERE user_id = ? AND day = ?")
+                .run(userId, day);
+            return null;
+        }
+        this.database
+            .prepare(
+                `INSERT INTO day_notes (user_id, day, text, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id, day) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at`,
+            )
+            .run(userId, day, text, storageNow());
+        return this.getDayNote(userId, day);
     }
 
     listTrash(userId: number, limit = 100): TrashItem[] {

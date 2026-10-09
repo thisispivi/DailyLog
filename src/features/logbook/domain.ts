@@ -51,6 +51,11 @@ export type TrashItem = Readonly<
     )
 >;
 
+/** Free text for one local calendar day (YYYY-MM-DD). */
+export type DayNote = Readonly<{ day: string; text: string; updatedAt: string }>;
+
+export const DAY_NOTE_MAX_LENGTH = 10_000;
+
 export type EntryFilters = Readonly<{
     from?: string;
     kind?: EntryKind;
