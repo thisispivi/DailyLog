@@ -143,6 +143,82 @@
     text-transform: capitalize;
 }
 
+.date-caption-button {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    padding: 0 8px;
+    color: var(--text);
+    font: inherit;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.date-caption-button:hover {
+    background: var(--surface-muted);
+}
+
+.date-caption-button[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+/* Year and month grids take the place of the day grid at its width (7 × 40px). */
+.date-grid-view {
+    display: grid;
+    width: 280px;
+    justify-items: start;
+    gap: var(--space-2);
+}
+
+.date-grid {
+    display: grid;
+    width: 100%;
+    gap: 6px;
+}
+
+.date-years {
+    max-height: 288px;
+    overflow-y: auto;
+    grid-template-columns: repeat(4, 1fr);
+    scrollbar-color: var(--line) transparent;
+    scrollbar-width: thin;
+}
+
+.date-months {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.date-grid-option {
+    min-height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.date-grid-option:hover {
+    background: var(--surface-muted);
+}
+
+.date-grid-option[aria-pressed="true"] {
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 800;
+}
+
+.date-caption-button:focus-visible,
+.date-grid-option:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--focus), transparent 35%);
+    outline-offset: 1px;
+}
+
 .date-popover .rdp-weekday {
     color: var(--text-muted);
     font-size: 12px;

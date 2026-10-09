@@ -93,7 +93,7 @@ export function ProfileForm({
                     mode="date"
                     onChange={(value) => void save({ birthDate: value || null })}
                     timeZone={timeZone}
-                    yearDropdown
+                    yearPicker
                 />
                 <div className="field">
                     <label htmlFor="profile-height">{translate(locale, "profile.heightCm")}</label>
