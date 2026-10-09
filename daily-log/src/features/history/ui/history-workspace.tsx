@@ -13,7 +13,7 @@ import {
     translate,
 } from "@/core/i18n/translate";
 import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
-import { entryDisplayLabel } from "@/features/logbook/entry-label";
+import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
 import {
     entryKinds,
     gramsToUnit,
@@ -60,6 +60,7 @@ export function HistoryWorkspace({
     const [failed, setFailed] = useState(false);
     const shared = { locale, timeZone, weightUnit };
 
+    const loneSnacks = useMemo(() => loneSnackIds(entries, timeZone), [entries, timeZone]);
     const records = useMemo(() => {
         if (filter === "trash") return [];
         const needle = query.trim().toLocaleLowerCase(locale);
@@ -206,7 +207,12 @@ export function HistoryWorkspace({
                                         />
                                         <span className="record-text">
                                             <strong>
-                                                {recordTitle(record, locale, weightUnit)}
+                                                {recordTitle(
+                                                    record,
+                                                    locale,
+                                                    weightUnit,
+                                                    loneSnacks,
+                                                )}
                                             </strong>
                                             <span>{recordDetail(record, locale)}</span>
                                         </span>
@@ -481,9 +487,14 @@ function recordDate(record: HistoryRecord): string {
     return record.recordType === "entry" ? record.item.startAt : record.item.recordedAt;
 }
 
-function recordTitle(record: HistoryRecord, locale: Locale, unit: WeightUnit): string {
+function recordTitle(
+    record: HistoryRecord,
+    locale: Locale,
+    unit: WeightUnit,
+    loneSnacks: ReadonlySet<number>,
+): string {
     return record.recordType === "entry"
-        ? entryDisplayLabel(record.item, locale)
+        ? entryDisplayLabel(record.item, locale, loneSnacks)
         : formatWeight(record.item.weightGrams, unit, locale);
 }
 
