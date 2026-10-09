@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0](https://github.com/thisispivi/DailyLog/compare/v1.6.0...v1.7.0) (2026-10-09)
+
+
+### Features
+
+* add a monthly calendar view ([06c7518](https://github.com/thisispivi/DailyLog/commit/06c751869e49b404ef2d0931d41729b0ec831921))
+* add a monthly calendar view ([00b591d](https://github.com/thisispivi/DailyLog/commit/00b591d8d560da2f8f820e90fe512323bf523f99)), closes [#81](https://github.com/thisispivi/DailyLog/issues/81)
+
 ## [1.6.0](https://github.com/thisispivi/DailyLog/compare/v1.5.1...v1.6.0) (2026-10-09)
 
 
