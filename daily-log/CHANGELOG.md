@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.14.0](https://github.com/thisispivi/DailyLog/compare/v1.13.0...v1.14.0) (2026-10-09)
+
+
+### Features
+
+* change the sign-in password from Settings ([2f0653b](https://github.com/thisispivi/DailyLog/commit/2f0653b306935cfabed754e1089b362a51a263f9))
+* change the sign-in password from Settings ([2b1721b](https://github.com/thisispivi/DailyLog/commit/2b1721b41773bafd76087b3e2affe13af71080f8)), closes [#126](https://github.com/thisispivi/DailyLog/issues/126)
+
+
+### Bug Fixes
+
+* drop the number from a day's only snack ([23fa40d](https://github.com/thisispivi/DailyLog/commit/23fa40dae3d01e44c07fb14b6587cd98b07d9ec5))
+* drop the number from a day's only snack ([19c2199](https://github.com/thisispivi/DailyLog/commit/19c2199d1ffec81c1fa023ff1b503ef264008a00)), closes [#122](https://github.com/thisispivi/DailyLog/issues/122)
+
 ## [1.13.0](https://github.com/thisispivi/DailyLog/compare/v1.12.1...v1.13.0) (2026-10-09)
 
 
