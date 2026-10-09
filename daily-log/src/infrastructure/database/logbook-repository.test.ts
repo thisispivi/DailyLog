@@ -65,6 +65,48 @@ describe("LogbookRepository", () => {
         expect(logbook.getProfile(STRANGER).firstName).toBe("");
     });
 
+    it("round-trips a backup and skips records that already exist", () => {
+        startRun();
+        logbook.createWeighIn(OWNER, 73_200, "2026-08-31T07:00:00+02:00");
+        logbook.saveDayNote(OWNER, "2026-08-31", "Felt good");
+        logbook.updateProfile(OWNER, { firstName: "Ada", heightCm: 180 });
+        const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
+
+        expect(logbook.importBackup(STRANGER, backup)).toEqual({
+            entries: 1,
+            notes: 1,
+            weighIns: 1,
+        });
+        expect(logbook.importBackup(STRANGER, backup)).toEqual({
+            entries: 0,
+            notes: 0,
+            weighIns: 0,
+        });
+        expect(logbook.exportBackup(STRANGER, backup.exportedAt)).toEqual(backup);
+    });
+
+    it("rolls back the whole import when it would open a second activity", () => {
+        const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
+        startRun();
+        const withOpenSleep = {
+            ...backup,
+            entries: [
+                {
+                    endAt: null,
+                    kind: "sleep" as const,
+                    label: "Sleep",
+                    startAt: "2026-08-31T22:00:00+02:00",
+                    text: "",
+                },
+            ],
+            weighIns: [{ recordedAt: "2026-08-31T07:00:00+02:00", weightGrams: 70_000 }],
+        };
+        expect(() => logbook.importBackup(OWNER, withOpenSleep)).toThrow(
+            DuplicateOpenActivityError,
+        );
+        expect(logbook.listWeighIns(OWNER)).toHaveLength(0);
+    });
+
     it("rejects finishing an activity before it started", () => {
         startRun();
         expect(() => logbook.finishActivity(OWNER, "2026-08-31T07:00:00+02:00")).toThrow(
