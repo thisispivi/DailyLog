@@ -191,9 +191,8 @@ h2 {
 }
 
 .app-shell {
-    display: grid;
-    grid-template-columns: var(--sidebar) minmax(0, 1fr);
     min-height: 100vh;
+    padding-left: var(--sidebar);
 }
 
 .main-content {
@@ -588,7 +587,7 @@ h2 {
 
 @media (max-width: 860px) {
     .app-shell {
-        display: block;
+        padding-left: 0;
     }
 
     .main-content {
