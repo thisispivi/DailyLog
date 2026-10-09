@@ -2,6 +2,8 @@
 # Mirrors the CI quality job minus the production build, which takes too long for every push.
 set -e
 
+cd "$(git rev-parse --show-toplevel)/daily-log"
+
 npm run format:check
 npm run lint
 npm run typecheck

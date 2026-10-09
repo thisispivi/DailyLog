@@ -2,9 +2,17 @@
 coverage
 dist
 node_modules
-package-lock.json
+**/package-lock.json
 playwright-report
 test-results
 assets/**/*.png
 data
-CHANGELOG.md
+**/CHANGELOG.md
+
+# Retired Python toolchain and local agent configuration
+.venv*
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.import_linter_cache
+.claude
