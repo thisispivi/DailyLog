@@ -4,7 +4,7 @@ import { getEnvironment } from "@/core/config/env";
 import { ApiError, authenticatedRoute, readQuery } from "@/core/http/api";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { exportQuerySchema } from "@/features/logbook/schemas";
-import { createPdf } from "@/features/reports/report-service";
+import { createPdf } from "@/features/reports/pdf-report";
 import { createWorkbook } from "@/features/reports/workbook";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
