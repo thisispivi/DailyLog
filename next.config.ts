@@ -32,7 +32,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
     agentRules: false,
-    // Shown in the sidebar and Settings; Release Please bumps package.json on release.
+    // Shown in Settings; Release Please bumps package.json on release.
     env: { DAILYLOG_VERSION: packageJson.version },
     output: "standalone",
     poweredByHeader: false,
