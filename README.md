@@ -39,7 +39,7 @@ All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src
 
 | Variable          | Default                    | Notes                                                                     |
 | ----------------- | -------------------------- | ------------------------------------------------------------------------- |
-| `APP_PASSWORD`    | none                       | Required to sign in. 12 to 256 characters.                                |
+| `APP_PASSWORD`    | none                       | Required to sign in. 12 to 256 characters. Settings can change it later.  |
 | `SESSION_SECRET`  | `APP_PASSWORD`             | Signs session cookies. Use a separate value of 32+ characters.            |
 | `APP_USER_ID`     | `1`                        | Owner ID on every row. Set it to the old Telegram user ID when migrating. |
 | `ALLOWED_USER_ID` | none                       | The bot's name for `APP_USER_ID`. Still accepted.                         |
