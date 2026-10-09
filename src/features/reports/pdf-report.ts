@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import PDFDocument from "pdfkit";
 
@@ -19,11 +19,14 @@ const PILL_WIDTH = 64;
 const TEXT_X = PAGE_MARGIN + TIME_COLUMN + PILL_WIDTH + 12;
 const TEXT_WIDTH = CONTENT_WIDTH - (TEXT_X - PAGE_MARGIN);
 
-// The same Nunito the app uses, bundled by @fontsource. WOFF, not WOFF2: PDFKit
-// embeds WOFF2 glyphs that PDF viewers draw as blank. Next traces these files
-// into the standalone build (next.config.ts); Helvetica is the fallback.
-const FONT_DIRECTORY = join(process.cwd(), "node_modules", "@fontsource", "nunito", "files");
-const fontFiles = { bold: "700", extraBold: "800", regular: "400" } as const;
+// Nunito, as in the app (OFL, see fonts/OFL.txt). WOFF rather than WOFF2: PDFKit
+// embeds WOFF2 glyphs that PDF viewers draw as blank. new URL(..., import.meta.url)
+// lets the bundler copy exactly these files into the build.
+const fontFiles = {
+    bold: new URL("./fonts/nunito-latin-700-normal.woff", import.meta.url),
+    extraBold: new URL("./fonts/nunito-latin-800-normal.woff", import.meta.url),
+    regular: new URL("./fonts/nunito-latin-400-normal.woff", import.meta.url),
+} as const;
 type FontWeight = keyof typeof fontFiles;
 
 type DayRow = Readonly<{
@@ -323,18 +326,16 @@ function rowsForDay(input: ReportInput, date: string): DayRow[] {
     return rows.sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
 }
 
-/** Registers Nunito when its files are present and returns a font switcher. */
+/** Registers Nunito when its files are readable, otherwise falls back to Helvetica. */
 function registerFonts(document: PDFKit.PDFDocument): (weight: FontWeight) => PDFKit.PDFDocument {
-    const available = Object.entries(fontFiles).every(([, weight]) =>
-        existsSync(join(FONT_DIRECTORY, `nunito-latin-${weight}-normal.woff`)),
-    );
-    if (available) {
-        for (const [name, weight] of Object.entries(fontFiles)) {
-            document.registerFont(name, join(FONT_DIRECTORY, `nunito-latin-${weight}-normal.woff`));
+    try {
+        for (const [name, url] of Object.entries(fontFiles)) {
+            document.registerFont(name, readFileSync(fileURLToPath(url)));
         }
         return (weight) => document.font(weight);
+    } catch {
+        return (weight) => document.font(weight === "regular" ? "Helvetica" : "Helvetica-Bold");
     }
-    return (weight) => document.font(weight === "regular" ? "Helvetica" : "Helvetica-Bold");
 }
 
 /** The app icon: a pulse line in a violet rounded square. */
