@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.12.1](https://github.com/thisispivi/DailyLog/compare/v1.12.0...v1.12.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* replace the native month and year menus with Android-style grids ([4163426](https://github.com/thisispivi/DailyLog/commit/4163426b047fa1be06ba8951fded4770a4887f7e))
+* replace the native month and year menus with Android-style grids ([16f8a02](https://github.com/thisispivi/DailyLog/commit/16f8a0221f9ea5cfaee603281a69d8e20e7fec66))
+
 ## [1.12.0](https://github.com/thisispivi/DailyLog/compare/v1.11.0...v1.12.0) (2026-10-09)
 
 
