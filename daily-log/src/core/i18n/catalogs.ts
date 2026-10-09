@@ -185,6 +185,16 @@ const en = {
     },
     settings: {
         appearance: "Appearance",
+        backup: "Backup",
+        backupHint:
+            "Download every record, note, setting, and your profile as a JSON file, or import one. Importing adds what is missing and never deletes anything.",
+        downloadJson: "Download JSON",
+        importConfirm:
+            "Import this backup? Its settings and profile replace the current ones. Records are added and nothing is deleted.",
+        importDone: "Backup imported. Records that were already here were skipped.",
+        importInvalid: "That file is not a DailyLog backup.",
+        importing: "Importing…",
+        importJson: "Import JSON",
         dark: "Dark",
         documentLanguage: "Report language",
         english: "English",
@@ -386,6 +396,16 @@ const it: CatalogShape = {
     },
     settings: {
         appearance: "Aspetto",
+        backup: "Backup",
+        backupHint:
+            "Scarica tutti i dati, le note, le impostazioni e il profilo in un file JSON, oppure importane uno. L’importazione aggiunge ciò che manca e non elimina nulla.",
+        downloadJson: "Scarica JSON",
+        importConfirm:
+            "Importare questo backup? Impostazioni e profilo sostituiranno quelli attuali. I dati vengono aggiunti e nulla viene eliminato.",
+        importDone: "Backup importato. I dati già presenti sono stati saltati.",
+        importInvalid: "Questo file non è un backup di DailyLog.",
+        importing: "Importazione…",
+        importJson: "Importa JSON",
         dark: "Scuro",
         documentLanguage: "Lingua dei report",
         english: "Inglese",

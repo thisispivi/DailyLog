@@ -17,6 +17,7 @@ import {
     type WeighIn,
     type WeightUnit,
 } from "@/features/logbook/domain";
+import { BACKUP_VERSION, type Backup, type ImportResult } from "@/features/backup/schemas";
 import type { EntryChanges, NewEntry, SettingsChanges } from "@/features/logbook/schemas";
 import { EMPTY_PROFILE, type UserProfile } from "@/features/profile/profile";
 import type { ProfileChanges } from "@/features/profile/schemas";
@@ -136,6 +137,94 @@ export class LogbookRepository {
             )
             .run(userId, next.firstName, next.lastName, next.birthDate, next.heightCm);
         return this.getProfile(userId);
+    }
+
+    /** Every live record, the notes, settings, and profile, in the backup file shape. */
+    exportBackup(userId: number, exportedAt: string): Backup {
+        const { exportLocale, locale, theme, weightUnit } = this.getSettings(userId);
+        const entries = this.database
+            .prepare(
+                `SELECT kind, label, text, start_at, end_at FROM entries
+         WHERE user_id = ? AND deleted_at IS NULL ORDER BY start_at, id`,
+            )
+            .all(userId) as Array<
+            Pick<EntryRow, "end_at" | "kind" | "label" | "start_at" | "text">
+        >;
+        const weighIns = this.database
+            .prepare(
+                `SELECT weight_grams, recorded_at FROM weigh_ins
+         WHERE user_id = ? AND deleted_at IS NULL ORDER BY recorded_at, id`,
+            )
+            .all(userId) as Array<Pick<WeighInRow, "recorded_at" | "weight_grams">>;
+        const notes = this.database
+            .prepare("SELECT day, text FROM day_notes WHERE user_id = ? ORDER BY day")
+            .all(userId) as Array<{ day: string; text: string }>;
+        return {
+            app: "DailyLog",
+            entries: entries.map((row) => ({
+                endAt: row.end_at,
+                kind: row.kind,
+                label: row.label,
+                startAt: row.start_at,
+                text: row.text,
+            })),
+            exportedAt,
+            notes,
+            profile: this.getProfile(userId),
+            settings: { exportLocale, locale, theme, weightUnit },
+            version: BACKUP_VERSION,
+            weighIns: weighIns.map((row) => ({
+                recordedAt: row.recorded_at,
+                weightGrams: row.weight_grams,
+            })),
+        };
+    }
+
+    /**
+     * Restores a backup in one transaction: settings and profile are replaced,
+     * records are added unless an identical live one exists, and a day that
+     * already has a note keeps it. Importing the same file twice adds nothing.
+     */
+    importBackup(userId: number, backup: Backup): ImportResult {
+        return this.database.transaction(() => {
+            this.updateSettings(userId, backup.settings);
+            this.updateProfile(userId, backup.profile);
+            const hasEntry = this.database.prepare(
+                `SELECT 1 FROM entries WHERE user_id = ? AND deleted_at IS NULL AND kind = ?
+           AND label = ? AND text = ? AND start_at = ? AND end_at IS ?`,
+            );
+            const hasWeighIn = this.database.prepare(
+                `SELECT 1 FROM weigh_ins WHERE user_id = ? AND deleted_at IS NULL
+           AND weight_grams = ? AND recorded_at = ?`,
+            );
+            const addNote = this.database.prepare(
+                `INSERT OR IGNORE INTO day_notes (user_id, day, text, updated_at)
+         VALUES (?, ?, ?, ?)`,
+            );
+            let entries = 0;
+            for (const entry of backup.entries) {
+                const startAt = toStorageTimestamp(entry.startAt);
+                const endAt = entry.endAt ? toStorageTimestamp(entry.endAt) : null;
+                if (hasEntry.get(userId, entry.kind, entry.label, entry.text, startAt, endAt)) {
+                    continue;
+                }
+                this.createEntry(userId, entry);
+                entries += 1;
+            }
+            let weighIns = 0;
+            for (const weighIn of backup.weighIns) {
+                const recordedAt = toStorageTimestamp(weighIn.recordedAt);
+                if (hasWeighIn.get(userId, weighIn.weightGrams, recordedAt)) continue;
+                this.createWeighIn(userId, weighIn.weightGrams, recordedAt);
+                weighIns += 1;
+            }
+            const now = storageNow();
+            const notes = backup.notes.reduce(
+                (count, note) => count + addNote.run(userId, note.day, note.text, now).changes,
+                0,
+            );
+            return { entries, notes, weighIns };
+        })();
     }
 
     createEntry(userId: number, input: NewEntry): Entry {
