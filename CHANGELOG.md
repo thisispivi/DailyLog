@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/thisispivi/DailyLog/compare/v1.5.0...v1.5.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* style today and the month arrows in the date picker ([8671572](https://github.com/thisispivi/DailyLog/commit/8671572c46955f7dbfc1f50a56dc38ad07238bdc))
+* style today and the month arrows in the date picker ([a95913b](https://github.com/thisispivi/DailyLog/commit/a95913b0d255c0c711f137ef82ba149c7e11ed7b)), closes [#77](https://github.com/thisispivi/DailyLog/issues/77)
+
 ## [1.5.0](https://github.com/thisispivi/DailyLog/compare/v1.4.3...v1.5.0) (2026-10-09)
 
 
