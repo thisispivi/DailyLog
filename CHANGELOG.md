@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/thisispivi/DailyLog/compare/v1.4.3...v1.5.0) (2026-10-09)
+
+
+### Features
+
+* rebuild the report charts with Recharts ([5f6c161](https://github.com/thisispivi/DailyLog/commit/5f6c16157f11d858cfcce56645539ccf30e8ea1e))
+
 ## [1.4.3](https://github.com/thisispivi/DailyLog/compare/v1.4.2...v1.4.3) (2026-10-09)
 
 
