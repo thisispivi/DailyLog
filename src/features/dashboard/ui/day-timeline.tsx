@@ -1,6 +1,7 @@
 import { CalendarHeart } from "lucide-react";
 
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
+import { clipToDay } from "@/features/insights/insights";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
@@ -13,31 +14,52 @@ type TimelineRow = Readonly<{
     title: string;
 }>;
 
+/**
+ * One day of records. Activities that cross midnight show only the part that
+ * falls inside this day (`dayStart` to `dayEnd`, UTC), with its own time range.
+ */
 export function DayTimeline({
+    dayEnd,
+    dayStart,
     entries,
     locale,
     timeZone,
+    title,
     weighIns,
     weightUnit,
 }: Readonly<{
+    dayEnd: string;
+    dayStart: string;
     entries: Entry[];
     locale: Locale;
     timeZone: string;
+    title?: string;
     weighIns: WeighIn[];
     weightUnit: WeightUnit;
 }>) {
+    const time = (value: string) => formatTime(value, locale, timeZone);
     const rows: TimelineRow[] = [
-        ...entries.map((entry) => ({
-            at: entry.startAt,
-            detail:
-                entry.text ||
-                (entry.endAt
-                    ? formatDuration(entry.startAt, entry.endAt, locale)
-                    : translate(locale, "dashboard.inProgress")),
-            id: `entry-${entry.id}`,
-            kind: entry.kind,
-            title: entryDisplayLabel(entry, locale),
-        })),
+        ...entries.map((entry) => {
+            const base = {
+                id: `entry-${entry.id}`,
+                kind: entry.kind,
+                title: entryDisplayLabel(entry, locale),
+            };
+            if (entry.kind === "meal") return { ...base, at: entry.startAt, detail: entry.text };
+            const segment = clipToDay(entry, dayStart, dayEnd);
+            // A part that runs into the next day ends at 23:59 on this one.
+            const end = segment.intoNextDay
+                ? time(new Date(Date.parse(dayEnd) - 60_000).toISOString())
+                : segment.endAt
+                  ? time(segment.endAt)
+                  : translate(locale, "dashboard.inProgress");
+            const parts = [
+                `${time(segment.startAt)}–${end}`,
+                formatDuration(segment.startAt, segment.endAt, locale),
+                entry.text,
+            ];
+            return { ...base, at: segment.startAt, detail: parts.filter(Boolean).join(" · ") };
+        }),
         ...weighIns.map((weighIn) => ({
             at: weighIn.recordedAt,
             detail: translate(locale, "dashboard.weight"),
@@ -50,7 +72,7 @@ export function DayTimeline({
     return (
         <section aria-labelledby="timeline-title" className="card">
             <div className="card-heading">
-                <h2 id="timeline-title">{translate(locale, "dashboard.dayTitle")}</h2>
+                <h2 id="timeline-title">{title ?? translate(locale, "dashboard.dayTitle")}</h2>
                 <span className="pill numeric">
                     {translate(locale, "dashboard.summaryEntries", { count: rows.length })}
                 </span>

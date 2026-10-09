@@ -114,6 +114,8 @@ export default function TodayPage() {
                 ))}
             </ul>
             <DayTimeline
+                dayEnd={to}
+                dayStart={from}
                 entries={entries}
                 locale={locale}
                 timeZone={timezone}
