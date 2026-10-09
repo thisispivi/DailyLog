@@ -6,6 +6,7 @@ import {
     dailyTotals,
     loggingStreak,
     mealLabelForHour,
+    clipToDay,
     summarizePeriod,
     trainingMinutesByLabel,
 } from "@/features/insights/insights";
@@ -69,6 +70,24 @@ describe("dailyTotals", () => {
         expect(first?.meals).toBe(1);
     });
 
+    it("splits training that crosses midnight between both days", () => {
+        const [first, second] = dailyTotals(
+            dates,
+            [
+                entry({
+                    endAt: "2026-10-07T22:32:00+00:00",
+                    kind: "training",
+                    label: "Walk",
+                    startAt: "2026-10-07T21:28:00+00:00",
+                }),
+            ],
+            [],
+            TZ,
+        );
+        expect(first?.activeMinutes).toBe(32);
+        expect(second?.activeMinutes).toBe(32);
+    });
+
     it("ignores open activities and keeps the last weigh-in of each day", () => {
         const [first] = dailyTotals(
             dates,
@@ -80,6 +99,43 @@ describe("dailyTotals", () => {
             TZ,
         );
         expect(first).toMatchObject({ activeMinutes: 0, weightGrams: 73_400 });
+    });
+});
+
+describe("clipToDay", () => {
+    // Berlin, 8 October: 22:00 UTC on the 7th to 22:00 UTC on the 8th.
+    const dayStart = "2026-10-07T22:00:00.000+00:00";
+    const dayEnd = "2026-10-08T22:00:00.000+00:00";
+    const walk = { endAt: "2026-10-08T22:32:00+00:00", startAt: "2026-10-08T21:28:00+00:00" };
+
+    it("cuts an activity at midnight on the day it starts", () => {
+        expect(clipToDay(walk, dayStart, dayEnd)).toEqual({
+            endAt: "2026-10-08T22:00:00.000Z",
+            fromPreviousDay: false,
+            intoNextDay: true,
+            startAt: "2026-10-08T21:28:00.000Z",
+        });
+    });
+
+    it("starts the next day's part at midnight", () => {
+        const next = clipToDay(walk, dayEnd, "2026-10-09T22:00:00.000+00:00");
+        expect(next).toMatchObject({
+            endAt: "2026-10-08T22:32:00.000Z",
+            fromPreviousDay: true,
+            intoNextDay: false,
+            startAt: "2026-10-08T22:00:00.000Z",
+        });
+    });
+
+    it("keeps a running activity open today and caps it on earlier days", () => {
+        const running = { endAt: null, startAt: "2026-10-08T21:28:00+00:00" };
+        const now = new Date("2026-10-08T21:50:00Z");
+        expect(clipToDay(running, dayStart, dayEnd, now).endAt).toBeNull();
+        const later = new Date("2026-10-09T08:00:00Z");
+        expect(clipToDay(running, dayStart, dayEnd, later)).toMatchObject({
+            endAt: "2026-10-08T22:00:00.000Z",
+            intoNextDay: true,
+        });
     });
 });
 

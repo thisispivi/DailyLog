@@ -1,4 +1,4 @@
-import { localDateInZone, shiftDate } from "@/core/time/zoned-time";
+import { localDateInZone, localDateRangeBounds, shiftDate } from "@/core/time/zoned-time";
 import { entryDurationMs, type Entry, type WeighIn } from "@/features/logbook/domain";
 
 export type DayTotals = Readonly<{
@@ -10,10 +10,48 @@ export type DayTotals = Readonly<{
     weightGrams: number | null;
 }>;
 
+export type DaySegment = Readonly<{
+    endAt: string | null;
+    /** The entry started on an earlier day; this day shows it from midnight. */
+    fromPreviousDay: boolean;
+    /** The entry runs past this day; this day shows it until midnight. */
+    intoNextDay: boolean;
+    startAt: string;
+}>;
+
 /**
- * Per-day totals for the given local dates. Meals and training count on the day
- * they start; sleep counts on the day you wake up, so a night belongs to the
- * morning after it.
+ * The part of an entry that falls inside one day, given the day's UTC bounds.
+ * A walk from 23:28 to 00:32 shows as 23:28 to midnight on the first day and
+ * midnight to 00:32 on the next. An activity still running stays open (null end)
+ * on the current day and is capped at midnight on earlier days.
+ */
+export function clipToDay(
+    entry: Pick<Entry, "endAt" | "startAt">,
+    dayStart: string,
+    dayEnd: string,
+    now: Date = new Date(),
+): DaySegment {
+    const start = Math.max(Date.parse(entry.startAt), Date.parse(dayStart));
+    const end = entry.endAt ? Date.parse(entry.endAt) : now.getTime();
+    const dayEndMs = Date.parse(dayEnd);
+    const intoNextDay = end > dayEndMs;
+    return {
+        endAt: intoNextDay
+            ? new Date(dayEndMs).toISOString()
+            : entry.endAt
+              ? new Date(end).toISOString()
+              : null,
+        fromPreviousDay: Date.parse(entry.startAt) < Date.parse(dayStart),
+        intoNextDay,
+        startAt: new Date(start).toISOString(),
+    };
+}
+
+/**
+ * Per-day totals for the given local dates. Meals count on the day they are
+ * eaten and training is split at midnight, so each day gets only its own
+ * minutes. Sleep counts on the day you wake up: a night belongs to the morning
+ * after it.
  */
 export function dailyTotals(
     dates: readonly string[],
@@ -40,8 +78,14 @@ export function dailyTotals(
             const day = dayOf(entry.startAt);
             if (day) day.meals += 1;
         } else if (entry.kind === "training") {
-            const day = dayOf(entry.startAt);
-            if (day) day.activeMinutes += entryDurationMs(entry) / 60_000;
+            if (!entry.endAt) continue;
+            for (const [date, day] of totals) {
+                const [dayStart, dayEnd] = localDateRangeBounds(date, date, timeZone);
+                const overlap =
+                    Math.min(Date.parse(entry.endAt), Date.parse(dayEnd)) -
+                    Math.max(Date.parse(entry.startAt), Date.parse(dayStart));
+                if (overlap > 0) day.activeMinutes += overlap / 60_000;
+            }
         } else if (entry.endAt) {
             const day = dayOf(entry.endAt);
             if (day) day.sleepMinutes += entryDurationMs(entry) / 60_000;
