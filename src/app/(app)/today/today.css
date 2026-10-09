@@ -209,7 +209,6 @@
 }
 
 .kind-option:disabled {
-    cursor: not-allowed;
     opacity: 0.45;
 }
 

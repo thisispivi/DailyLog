@@ -330,7 +330,12 @@ function RecordForm({
                     <ArrowLeft aria-hidden="true" size={18} />
                     {translate(locale, "common.back")}
                 </button>
-                <button className="button button-primary" disabled={pending} type="submit">
+                <button
+                    className="button button-primary"
+                    aria-busy={pending}
+                    disabled={pending}
+                    type="submit"
+                >
                     {translate(locale, isActivity && !hasEnd ? "common.start" : "common.add")}
                 </button>
             </div>

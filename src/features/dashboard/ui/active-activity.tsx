@@ -66,6 +66,7 @@ export function ActiveActivity({
             <div className="active-actions">
                 <button
                     className="button button-primary"
+                    aria-busy={pending}
                     disabled={pending}
                     onClick={finish}
                     type="button"
@@ -76,6 +77,7 @@ export function ActiveActivity({
                 <button
                     aria-label={translate(locale, "dashboard.cancelActivity")}
                     className="icon-button active-cancel"
+                    aria-busy={pending}
                     disabled={pending}
                     onClick={cancel}
                     type="button"
