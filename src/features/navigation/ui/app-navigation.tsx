@@ -4,6 +4,7 @@ import { CalendarDays, ChartNoAxesCombined, History, House, LogOut, Settings } f
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { APP_VERSION, AUTHOR_URL, REPOSITORY_URL } from "@/core/config/build-info";
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import type { Locale } from "@/features/logbook/domain";
@@ -51,6 +52,15 @@ export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
                     ))}
                 </ul>
             </nav>
+            <footer className="sidebar-about">
+                <span className="numeric">v{APP_VERSION}</span>
+                <a href={REPOSITORY_URL} rel="noopener noreferrer" target="_blank">
+                    {translate(locale, "about.repository")}
+                </a>
+                <a href={AUTHOR_URL} rel="noopener noreferrer" target="_blank">
+                    {translate(locale, "about.website")}
+                </a>
+            </footer>
             <button className="sign-out" onClick={signOut} type="button">
                 <LogOut aria-hidden="true" size={19} />
                 <span>{translate(locale, "nav.signOut")}</span>

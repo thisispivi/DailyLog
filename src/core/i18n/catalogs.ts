@@ -1,6 +1,12 @@
 import type { Locale } from "@/features/logbook/domain";
 
 const en = {
+    about: {
+        repository: "Source code",
+        title: "About",
+        version: "Version {version}",
+        website: "Author’s website",
+    },
     app: {
         skip: "Skip to content",
         tagline: "Your day, clearly recorded.",
@@ -188,6 +194,12 @@ const en = {
 } as const;
 
 const it: CatalogShape = {
+    about: {
+        repository: "Codice sorgente",
+        title: "Informazioni",
+        version: "Versione {version}",
+        website: "Sito dell’autore",
+    },
     app: {
         skip: "Vai al contenuto",
         tagline: "La tua giornata, registrata con chiarezza.",

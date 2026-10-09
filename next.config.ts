@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import packageJson from "./package.json";
+
 const isProduction = process.env.NODE_ENV === "production";
 
 const securityHeaders = [
@@ -30,6 +32,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
     agentRules: false,
+    // Shown in the sidebar and Settings; Release Please bumps package.json on release.
+    env: { DAILYLOG_VERSION: packageJson.version },
     output: "standalone",
     poweredByHeader: false,
     experimental: {
