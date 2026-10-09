@@ -2,6 +2,7 @@ import { Flame } from "lucide-react";
 
 import { getEnvironment } from "@/core/config/env";
 import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import { localizedTitle } from "@/core/preferences/preference-cookies";
 import {
     localDateInZone,
     localDateRangeBounds,
@@ -21,7 +22,7 @@ import type { RecordKind } from "@/ui/kind-icon";
 
 import "./today.css";
 
-export const metadata = { title: "Today" };
+export const generateMetadata = () => localizedTitle("nav.dashboard");
 
 // ponytail: streaks look back one year at most; switch to a stored counter if that ever matters.
 const STREAK_LOOKBACK_DAYS = 365;

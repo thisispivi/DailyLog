@@ -1,11 +1,12 @@
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
+import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { HistoryWorkspace } from "@/features/history/ui/history-workspace";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 import "./history.css";
 
-export const metadata = { title: "History" };
+export const generateMetadata = () => localizedTitle("nav.history");
 
 // ponytail: the newest 100 entries and weigh-ins, filtered in the browser. Switch to
 // /api/entries pagination when a year of history no longer fits comfortably.

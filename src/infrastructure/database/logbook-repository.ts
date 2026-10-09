@@ -51,6 +51,7 @@ type SettingsRow = {
 };
 
 type TrashRow = {
+    kind: EntryKind | null;
     deleted_at: string;
     label: string;
     record_id: number;
@@ -351,10 +352,10 @@ export class LogbookRepository {
         this.purgeExpiredTrash();
         const rows = this.database
             .prepare(
-                `SELECT 'entry' AS record_type, id AS record_id, label, NULL AS weight_grams, deleted_at
+                `SELECT 'entry' AS record_type, id AS record_id, kind, label, NULL AS weight_grams, deleted_at
          FROM entries WHERE user_id = ? AND deleted_at IS NOT NULL
          UNION ALL
-         SELECT 'weighIn' AS record_type, id AS record_id, '' AS label, weight_grams, deleted_at
+         SELECT 'weighIn' AS record_type, id AS record_id, NULL AS kind, '' AS label, weight_grams, deleted_at
          FROM weigh_ins WHERE user_id = ? AND deleted_at IS NOT NULL
          ORDER BY deleted_at DESC LIMIT ?`,
             )
@@ -468,7 +469,7 @@ function mapSettings(row: SettingsRow): UserSettings {
 function mapTrashItem(row: TrashRow): TrashItem {
     const base = { deletedAt: row.deleted_at, recordId: row.record_id };
     return row.record_type === "entry"
-        ? { ...base, label: row.label, recordType: "entry" }
+        ? { ...base, kind: row.kind ?? "meal", label: row.label, recordType: "entry" }
         : { ...base, recordType: "weighIn", weightGrams: row.weight_grams ?? 0 };
 }
 

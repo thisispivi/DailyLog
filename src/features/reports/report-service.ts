@@ -3,6 +3,7 @@ import writeExcelFile, { type Cell, type SheetData } from "write-excel-file/node
 
 import { formatDateTime, formatDuration, formatWeight, translate } from "@/core/i18n/translate";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
+import { entryDisplayLabel } from "@/features/logbook/entry-label";
 
 type ReportInput = Readonly<{
     endDate: string;
@@ -29,7 +30,7 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
         ...input.entries.map((entry, index): Cell[] => [
             dataCell(formatDateTime(entry.startAt, input.locale, input.timeZone), index),
             dataCell(translate(input.locale, `dashboard.${entry.kind}`), index),
-            dataCell(neutralizeSpreadsheetFormula(entry.label), index),
+            dataCell(neutralizeSpreadsheetFormula(entryDisplayLabel(entry, input.locale)), index),
             dataCell(neutralizeSpreadsheetFormula(entry.text), index),
             dataCell(
                 entry.endAt ? formatDateTime(entry.endAt, input.locale, input.timeZone) : "",
@@ -101,7 +102,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
             .fontSize(8)
             .font("Helvetica-Bold")
             .text(translate(input.locale, `dashboard.${entry.kind}`).toUpperCase());
-        document.fillColor("#111820").fontSize(12).text(entry.label);
+        document.fillColor("#111820").fontSize(12).text(entryDisplayLabel(entry, input.locale));
         document
             .fillColor("#69727d")
             .fontSize(9)

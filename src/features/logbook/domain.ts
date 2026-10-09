@@ -46,7 +46,8 @@ export type UserSettings = Readonly<{
 
 export type TrashItem = Readonly<
     { deletedAt: string; recordId: number } & (
-        { label: string; recordType: "entry" } | { recordType: "weighIn"; weightGrams: number }
+        | { kind: EntryKind; label: string; recordType: "entry" }
+        | { recordType: "weighIn"; weightGrams: number }
     )
 >;
 

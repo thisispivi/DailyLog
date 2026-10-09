@@ -1,4 +1,4 @@
-import { catalogs, type TranslationKey } from "@/core/i18n/catalogs";
+import { catalogs, type PluralForms, type TranslationKey } from "@/core/i18n/catalogs";
 import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
 
 export function translate(
@@ -7,12 +7,19 @@ export function translate(
     values: Record<string, string | number> = {},
 ): string {
     const [namespace, name] = key.split(".") as [keyof (typeof catalogs)["en"], string];
-    const section = catalogs[locale][namespace] as Readonly<Record<string, string>>;
-    const template = section[name];
-    if (!template) throw new Error(`Missing translation: ${locale}.${key}`);
+    const section = catalogs[locale][namespace] as Readonly<Record<string, string | PluralForms>>;
+    const entry = section[name];
+    if (!entry) throw new Error(`Missing translation: ${locale}.${key}`);
+    const template =
+        typeof entry === "string" ? entry : entry[pluralCategory(locale, values.count)];
     return template.replace(/\{(\w+)\}/g, (match, token: string) =>
         Object.hasOwn(values, token) ? String(values[token]) : match,
     );
+}
+
+/** English and Italian only distinguish "one" from everything else. */
+function pluralCategory(locale: Locale, count: string | number | undefined): keyof PluralForms {
+    return new Intl.PluralRules(locale).select(Number(count ?? 0)) === "one" ? "one" : "other";
 }
 
 export function formatDateTime(value: string | Date, locale: Locale, timeZone: string): string {

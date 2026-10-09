@@ -53,7 +53,7 @@ const en = {
     },
     dashboard: {
         addRecord: "Add record",
-        streak: "{count}-day streak",
+        streak: { one: "{count}-day streak", other: "{count}-day streak" },
         activityBlocked: "Finish or cancel the activity in progress before starting another.",
         confirmCancel: "Discard the activity in progress? It goes to the trash.",
         inProgress: "In progress",
@@ -71,7 +71,7 @@ const en = {
         periodEvening: "evening",
         periodMorning: "morning",
         sleep: "Sleep",
-        summaryEntries: "{count} records",
+        summaryEntries: { one: "{count} record", other: "{count} records" },
         training: "Training",
         weight: "Weight",
     },
@@ -105,7 +105,7 @@ const en = {
         empty: "Your history will grow here as you log meals, movement, sleep, and weight.",
         filter: "Filter history",
         meal: "Meals",
-        results: "{count} records",
+        results: { one: "{count} record", other: "{count} records" },
         searchPlaceholder: "Search labels and details",
         sleep: "Sleep",
         title: "History",
@@ -212,7 +212,7 @@ const it: CatalogShape = {
     },
     dashboard: {
         addRecord: "Aggiungi",
-        streak: "{count} giorni di fila",
+        streak: { one: "{count} giorno di fila", other: "{count} giorni di fila" },
         activityBlocked: "Concludi o annulla l’attività in corso prima di iniziarne un’altra.",
         confirmCancel: "Annullare l’attività in corso? Verrà spostata nel cestino.",
         inProgress: "In corso",
@@ -230,7 +230,7 @@ const it: CatalogShape = {
         periodEvening: "sera",
         periodMorning: "giorno",
         sleep: "Sonno",
-        summaryEntries: "{count} registrazioni",
+        summaryEntries: { one: "{count} registrazione", other: "{count} registrazioni" },
         training: "Allenamento",
         weight: "Peso",
     },
@@ -264,7 +264,7 @@ const it: CatalogShape = {
         empty: "Qui crescerà la cronologia di pasti, movimento, sonno e peso.",
         filter: "Filtra cronologia",
         meal: "Pasti",
-        results: "{count} registrazioni",
+        results: { one: "{count} registrazione", other: "{count} registrazioni" },
         searchPlaceholder: "Cerca etichette e dettagli",
         sleep: "Sonno",
         title: "Cronologia",
@@ -318,7 +318,15 @@ const it: CatalogShape = {
     },
 };
 
-type WidenCatalog<T> = { [Namespace in keyof T]: { [Key in keyof T[Namespace]]: string } };
+/** Strings that include a {count} and need a singular and a plural form. */
+export type PluralForms = Readonly<{ one: string; other: string }>;
+
+// Italian must mirror English exactly, including which entries are plural.
+type WidenCatalog<T> = {
+    [Namespace in keyof T]: {
+        [Key in keyof T[Namespace]]: T[Namespace][Key] extends string ? string : PluralForms;
+    };
+};
 type CatalogShape = WidenCatalog<typeof en>;
 export type TranslationKey = {
     [

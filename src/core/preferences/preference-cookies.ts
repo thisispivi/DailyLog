@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import type { TranslationKey } from "@/core/i18n/catalogs";
+import { translate } from "@/core/i18n/translate";
 import { isSecureRequest } from "@/core/security/session";
 import { locales, themes, type Locale, type Theme } from "@/features/logbook/domain";
 
@@ -35,4 +37,10 @@ export function writePreferenceCookies(
     } as const;
     response.cookies.set(LOCALE_COOKIE, preferences.locale, options);
     response.cookies.set(THEME_COOKIE, preferences.theme, options);
+}
+
+/** Page metadata with a title in the visitor's saved language. */
+export async function localizedTitle(key: TranslationKey): Promise<{ title: string }> {
+    const { locale } = await readPreferenceCookies();
+    return { title: translate(locale, key) };
 }
