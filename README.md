@@ -46,6 +46,7 @@ All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src
 | `TIMEZONE`        | `Europe/Berlin`            | IANA zone used for calendar days and form times.                          |
 | `DATABASE_PATH`   | `data/dailylogbot.sqlite3` | SQLite file. The directory is created if missing.                         |
 | `LOG_LEVEL`       | `info`                     | `debug`, `info`, `warn`, or `error`. Uppercase bot values also work.      |
+| `BUGSINK_DSN`     | none                       | Bugsink project DSN. When set, unexpected server errors are reported.     |
 
 ## Architecture
 

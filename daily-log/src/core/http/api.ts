@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
+import { reportError } from "@/core/observability/error-reporting";
 import { log } from "@/core/observability/logger";
 import { readSession } from "@/core/security/session";
 import {
@@ -114,6 +115,7 @@ export function apiFailure(error: unknown, requestId: string): NextResponse {
         errorType: error instanceof Error ? error.name : "unknown",
         requestId,
     });
+    void reportError(error, { requestId });
     return NextResponse.json(
         {
             error: {

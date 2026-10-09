@@ -31,4 +31,12 @@ describe("parseEnvironment", () => {
         expect(attempt).toThrow("APP_PASSWORD, TIMEZONE");
         expect(attempt).not.toThrow(/short/);
     });
+
+    it("accepts a Bugsink DSN and rejects one without a key or project", () => {
+        const dsn = "https://abc123@bugsink.example.com/4";
+        expect(parseEnvironment({ BUGSINK_DSN: dsn }).errorReportingDsn).toBe(dsn);
+        expect(() => parseEnvironment({ BUGSINK_DSN: "https://bugsink.example.com/4" })).toThrow(
+            "BUGSINK_DSN",
+        );
+    });
 });

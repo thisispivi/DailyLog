@@ -4,3 +4,14 @@ export async function register(): Promise<void> {
     const { getEnvironment } = await import("@/core/config/env");
     getEnvironment();
 }
+
+/** Server rendering and route errors that escape the API wrappers. */
+export async function onRequestError(
+    error: unknown,
+    request: Readonly<{ method: string; path: string }>,
+): Promise<void> {
+    if (process.env.NEXT_RUNTIME !== "nodejs") return;
+    const { reportError } = await import("@/core/observability/error-reporting");
+    // The path only: query strings can carry dates and filters from the journal.
+    await reportError(error, { method: request.method, path: request.path.split("?")[0] ?? "" });
+}
