@@ -133,60 +133,6 @@
     background: var(--surface);
 }
 
-/* Timeline */
-
-.timeline {
-    display: grid;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.timeline-row {
-    position: relative;
-    display: grid;
-    grid-template-columns: 72px auto minmax(0, 1fr);
-    align-items: center;
-    gap: var(--space-3);
-    padding: 8px 0;
-}
-
-/* The soft rail that joins the icons. */
-.timeline-row:not(:last-child)::after {
-    position: absolute;
-    top: 50px;
-    bottom: -8px;
-    left: 103px;
-    width: 2px;
-    border-radius: 2px;
-    background: var(--line);
-    content: "";
-}
-
-.timeline-row time {
-    white-space: nowrap;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.timeline-text {
-    display: grid;
-    min-width: 0;
-}
-
-.timeline-text strong,
-.timeline-text span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.timeline-text span {
-    color: var(--text-muted);
-    font-size: 14px;
-}
-
 /* Logger sheet */
 
 .kind-picker {

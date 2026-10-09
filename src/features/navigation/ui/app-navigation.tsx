@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesCombined, History, House, LogOut, Settings } from "lucide-react";
+import { CalendarDays, ChartNoAxesCombined, History, House, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -13,6 +13,7 @@ import "./app-navigation.css";
 
 const destinations = [
     { href: "/today", icon: House, key: "nav.dashboard" },
+    { href: "/calendar", icon: CalendarDays, key: "nav.calendar" },
     { href: "/history", icon: History, key: "nav.history" },
     { href: "/reports", icon: ChartNoAxesCombined, key: "nav.reports" },
     { href: "/settings", icon: Settings, key: "nav.settings" },
