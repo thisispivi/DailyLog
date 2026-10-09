@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/thisispivi/DailyLog/compare/v1.14.0...v1.15.0) (2026-10-09)
+
+
+### Features
+
+* report unexpected server errors to Bugsink ([3a45ac4](https://github.com/thisispivi/DailyLog/commit/3a45ac4f5d36501283b556580c3bba5e5a301b23))
+
 ## [1.14.0](https://github.com/thisispivi/DailyLog/compare/v1.13.0...v1.14.0) (2026-10-09)
 
 
