@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.0](https://github.com/thisispivi/DailyLog/compare/v1.10.0...v1.11.0) (2026-10-09)
+
+
+### Features
+
+* chart every weigh-in and open the weight chart larger ([066f5f9](https://github.com/thisispivi/DailyLog/commit/066f5f99fe978ef7bbd1fd0c73c1e988ed1c8982))
+* chart every weigh-in and open the weight chart larger ([44abe9a](https://github.com/thisispivi/DailyLog/commit/44abe9a754df3c5bffe1f8149149b5fc23c0f031)), closes [#104](https://github.com/thisispivi/DailyLog/issues/104)
+
+
+### Bug Fixes
+
+* show the version and project links only in Settings ([935f0e9](https://github.com/thisispivi/DailyLog/commit/935f0e99a5f301c6fe63b99254e99f92f3fb494a))
+* show the version and project links only in Settings ([c5c59d7](https://github.com/thisispivi/DailyLog/commit/c5c59d70c7cfa0a6c15ec2ae394dbd4955cf9975)), closes [#105](https://github.com/thisispivi/DailyLog/issues/105)
+
 ## [1.10.0](https://github.com/thisispivi/DailyLog/compare/v1.9.0...v1.10.0) (2026-10-09)
 
 
