@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Entry } from "@/features/logbook/domain";
-import type { ReportInput } from "@/features/reports/report-input";
+import { reportDays, type ReportInput } from "@/features/reports/report-input";
 import { createPdf } from "@/features/reports/pdf-report";
 import { createWorkbook, neutralizeSpreadsheetFormula } from "@/features/reports/workbook";
 
@@ -53,6 +53,16 @@ describe("report generation", () => {
         expect(neutralizeSpreadsheetFormula("=2+2")).toBe("'=2+2");
         expect(neutralizeSpreadsheetFormula("+ felt great")).toBe("'+ felt great");
         expect(neutralizeSpreadsheetFormula("Pasta")).toBe("Pasta");
+    });
+
+    it("shows activity ranges in the time column and skips days with nothing recorded", () => {
+        const days = reportDays(input);
+        expect(days.map((day) => day.date)).toEqual(["2026-08-31"]);
+        expect(days[0]?.rows.find((row) => row.kind === "training")).toMatchObject({
+            detail: "30 min",
+            time: "23:00–23:30",
+        });
+        expect(days[0]?.note).toBe("+ felt great");
     });
 
     it("creates a real XLSX workbook with summary, journal, weight, and notes", async () => {
