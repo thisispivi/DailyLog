@@ -10,6 +10,13 @@ updates:
         dependency-type: production
       development:
         dependency-type: development
+    # Next's lint config (typescript-eslint and its ESLint plugins) does not run on
+    # these majors yet. Drop each rule once eslint-config-next supports it.
+    ignore:
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
