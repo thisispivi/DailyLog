@@ -3,7 +3,7 @@ import { CalendarHeart } from "lucide-react";
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import { clipToDay } from "@/features/insights/insights";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
-import { entryDisplayLabel } from "@/features/logbook/entry-label";
+import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 import "./day-timeline.css";
@@ -40,12 +40,13 @@ export function DayTimeline({
     weightUnit: WeightUnit;
 }>) {
     const time = (value: string) => formatTime(value, locale, timeZone);
+    const loneSnacks = loneSnackIds(entries, timeZone);
     const rows: TimelineRow[] = [
         ...entries.map((entry) => {
             const base = {
                 id: `entry-${entry.id}`,
                 kind: entry.kind,
-                title: entryDisplayLabel(entry, locale),
+                title: entryDisplayLabel(entry, locale, loneSnacks),
             };
             if (entry.kind === "meal") return { ...base, at: entry.startAt, detail: entry.text };
             const segment = clipToDay(entry, dayStart, dayEnd);

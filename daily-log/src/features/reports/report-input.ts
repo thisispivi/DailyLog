@@ -2,7 +2,7 @@ import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import type { DayNote, Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
-import { entryDisplayLabel } from "@/features/logbook/entry-label";
+import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
 import { ageOn, bodyMassIndex, fullName, type UserProfile } from "@/features/profile/profile";
 import type { RecordKind } from "@/ui/kind-icon";
 
@@ -122,9 +122,10 @@ function rowsForDay(input: ReportInput, date: string, now: Date): DayRow[] {
     const inDay = (timestamp: string) =>
         Date.parse(timestamp) >= Date.parse(dayStart) && Date.parse(timestamp) < Date.parse(dayEnd);
     const rows: DayRow[] = [];
+    const loneSnacks = loneSnackIds(input.entries, input.timeZone);
 
     for (const entry of input.entries) {
-        const title = entryDisplayLabel(entry, input.locale);
+        const title = entryDisplayLabel(entry, input.locale, loneSnacks);
         if (entry.kind === "meal") {
             if (inDay(entry.startAt)) {
                 rows.push({
