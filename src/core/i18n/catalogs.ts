@@ -173,6 +173,8 @@ const en = {
         title: "Reports",
         weightSheet: "Weight",
         weightQuestion: "How is my weight changing?",
+        weightSince: "{change} since {date}",
+        expandChart: "Show a larger chart",
         journalSheet: "Journal",
     },
     settings: {
@@ -366,6 +368,8 @@ const it: CatalogShape = {
         title: "Report",
         weightSheet: "Peso",
         weightQuestion: "Come sta cambiando il mio peso?",
+        weightSince: "{change} dal {date}",
+        expandChart: "Mostra il grafico più grande",
         journalSheet: "Diario",
     },
     settings: {

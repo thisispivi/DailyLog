@@ -19,12 +19,14 @@ export function usePortalContainer(): HTMLElement | null {
  */
 export function Sheet({
     children,
+    className,
     closeLabel,
     onClose,
     open,
     title,
 }: Readonly<{
     children: ReactNode;
+    className?: string;
     closeLabel: string;
     onClose: () => void;
     open: boolean;
@@ -41,7 +43,7 @@ export function Sheet({
     return (
         <dialog
             aria-labelledby="sheet-title"
-            className="sheet"
+            className={className ? `sheet ${className}` : "sheet"}
             onClose={onClose}
             onClick={(event) => {
                 // A click on the dialog element itself is a click on the backdrop.

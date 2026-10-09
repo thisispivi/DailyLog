@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Maximize2 } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import {
     Area,
     Bar,
@@ -17,11 +18,12 @@ import {
     type TooltipContentProps,
 } from "recharts";
 
-import { formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
 import type { ActivityTotal, DayTotals } from "@/features/insights/insights";
 import { niceTicks } from "@/features/reports/chart-scale";
-import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import { gramsToUnit, type Locale, type WeighIn, type WeightUnit } from "@/features/logbook/domain";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
+import { Sheet } from "@/ui/sheet";
 
 // Charts draw instantly: this is a dashboard you check, and animations replay on every visit.
 const axisTick = { fill: "var(--text-muted)", fontSize: 12, fontWeight: 600 };
@@ -38,17 +40,25 @@ function formatDay(date: string, locale: Locale, style: "short" | "long" = "shor
 }
 
 function ChartCard({
+    action,
     aside,
     children,
     kind,
     title,
-}: Readonly<{ aside?: ReactNode; children: ReactNode; kind: RecordKind; title: string }>) {
+}: Readonly<{
+    action?: ReactNode;
+    aside?: ReactNode;
+    children: ReactNode;
+    kind: RecordKind;
+    title: string;
+}>) {
     return (
         <section className="card" data-kind={kind}>
             <header className="chart-heading">
                 <KindIcon kind={kind} />
                 <h2>{title}</h2>
                 {aside && <span className="pill chart-aside numeric">{aside}</span>}
+                {action}
             </header>
             {children}
         </section>
@@ -168,135 +178,194 @@ export function SleepChart({
     );
 }
 
-/** Daily weight over the period, with the axis fitted to the actual range. */
+const DAY_MS = 86_400_000;
+
+/** Every weigh-in ever recorded, on a time axis so uneven gaps keep their real width. */
 export function WeightChart({
-    days,
     locale,
+    timeZone,
+    weighIns,
     weightUnit,
-}: Readonly<{ days: readonly DayTotals[]; locale: Locale; weightUnit: WeightUnit }>) {
+}: Readonly<{
+    locale: Locale;
+    timeZone: string;
+    weighIns: readonly WeighIn[];
+    weightUnit: WeightUnit;
+}>) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const title = translate(locale, "reports.weightQuestion");
-    // Start at the first weigh-in so the line uses the full width.
-    const firstRecorded = days.findIndex((day) => day.weightGrams !== null);
-    const data = days.slice(Math.max(firstRecorded, 0)).map((day) => ({
-        date: day.date,
-        grams: day.weightGrams,
-        weight:
-            day.weightGrams === null
-                ? null
-                : Math.round(gramsToUnit(day.weightGrams, weightUnit) * 10) / 10,
-    }));
-    const recorded = data.filter((day) => day.weight !== null);
-    const first = recorded[0];
-    const last = recorded.at(-1);
-    const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
-    const values = recorded.map((day) => day.weight ?? 0);
-    const ticks = niceTicks(Math.min(...values), Math.max(...values));
+    const first = weighIns[0];
+    const last = weighIns.at(-1);
+    const change = first && last ? last.weightGrams - first.weightGrams : 0;
+    const sign = change > 0 ? "+" : change < 0 ? "−" : "±";
 
     return (
-        <ChartCard kind="weight" title={title}>
+        <ChartCard
+            action={
+                first && (
+                    <button
+                        aria-label={translate(locale, "reports.expandChart")}
+                        className="icon-button chart-expand"
+                        onClick={() => setIsExpanded(true)}
+                        type="button"
+                    >
+                        <Maximize2 aria-hidden="true" size={18} />
+                    </button>
+                )
+            }
+            kind="weight"
+            title={title}
+        >
             {!first || !last ? (
                 <p className="muted">{translate(locale, "reports.empty")}</p>
             ) : (
                 <>
-                    <div aria-label={title} className="chart-frame" role="img">
-                        <ResponsiveContainer>
-                            <ComposedChart
-                                data={data}
-                                margin={{ bottom: 0, left: -4, right: 8, top: 16 }}
-                            >
-                                <defs>
-                                    <linearGradient id="weight-fill" x1="0" x2="0" y1="0" y2="1">
-                                        <stop
-                                            offset="0%"
-                                            stopColor="var(--weight-ink)"
-                                            stopOpacity={0.25}
-                                        />
-                                        <stop
-                                            offset="100%"
-                                            stopColor="var(--weight-ink)"
-                                            stopOpacity={0}
-                                        />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid
-                                    stroke={gridStroke}
-                                    strokeDasharray="4 4"
-                                    vertical={false}
-                                />
-                                <XAxis
-                                    axisLine={false}
-                                    dataKey="date"
-                                    minTickGap={24}
-                                    tick={axisTick}
-                                    tickFormatter={(date: string) => formatDay(date, locale)}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    domain={[ticks[0] ?? "auto", ticks.at(-1) ?? "auto"]}
-                                    ticks={ticks}
-                                    tick={axisTick}
-                                    tickFormatter={(value: number) => number.format(value)}
-                                    tickLine={false}
-                                    width={44}
-                                />
-                                <Tooltip
-                                    content={({ active, payload }: TooltipProps) => {
-                                        const day = payload?.[0]?.payload;
-                                        return (
-                                            <ChartTooltip
-                                                active={Boolean(active)}
-                                                heading={
-                                                    day
-                                                        ? formatDay(
-                                                              String(day.date),
-                                                              locale,
-                                                              "long",
-                                                          )
-                                                        : ""
-                                                }
-                                                value={
-                                                    typeof day?.grams === "number"
-                                                        ? formatWeight(
-                                                              day.grams,
-                                                              weightUnit,
-                                                              locale,
-                                                          )
-                                                        : null
-                                                }
-                                            />
-                                        );
-                                    }}
-                                    cursor={{ stroke: "var(--weight-ink)", strokeDasharray: "4 4" }}
-                                />
-                                <Area
-                                    isAnimationActive={false}
-                                    connectNulls
-                                    dataKey="weight"
-                                    fill="url(#weight-fill)"
-                                    stroke="none"
-                                    type="monotone"
-                                />
-                                <Line
-                                    isAnimationActive={false}
-                                    activeDot={{ r: 6 }}
-                                    connectNulls
-                                    dataKey="weight"
-                                    dot={{ fill: "var(--surface)", r: 3.5, strokeWidth: 2 }}
-                                    stroke="var(--weight-ink)"
-                                    strokeWidth={3}
-                                    type="monotone"
-                                />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </div>
+                    <WeightPlot
+                        label={title}
+                        locale={locale}
+                        timeZone={timeZone}
+                        weighIns={weighIns}
+                        weightUnit={weightUnit}
+                    />
                     <div className="chart-endpoints numeric">
-                        <span>{formatWeight(first.grams ?? 0, weightUnit, locale)}</span>
-                        <strong>{formatWeight(last.grams ?? 0, weightUnit, locale)}</strong>
+                        <span>
+                            {first === last
+                                ? null
+                                : translate(locale, "reports.weightSince", {
+                                      change: `${sign}${formatWeight(Math.abs(change), weightUnit, locale)}`,
+                                      date: formatDate(first.recordedAt, locale, timeZone),
+                                  })}
+                        </span>
+                        <strong>{formatWeight(last.weightGrams, weightUnit, locale)}</strong>
                     </div>
+                    <Sheet
+                        className="chart-sheet"
+                        closeLabel={translate(locale, "common.close")}
+                        onClose={() => setIsExpanded(false)}
+                        open={isExpanded}
+                        title={title}
+                    >
+                        <div data-kind="weight">
+                            <WeightPlot
+                                label={title}
+                                locale={locale}
+                                timeZone={timeZone}
+                                weighIns={weighIns}
+                                weightUnit={weightUnit}
+                            />
+                        </div>
+                    </Sheet>
                 </>
             )}
         </ChartCard>
+    );
+}
+
+function WeightPlot({
+    label,
+    locale,
+    timeZone,
+    weighIns,
+    weightUnit,
+}: Readonly<{
+    label: string;
+    locale: Locale;
+    timeZone: string;
+    weighIns: readonly WeighIn[];
+    weightUnit: WeightUnit;
+}>) {
+    const data = weighIns.map((weighIn) => ({
+        grams: weighIn.weightGrams,
+        recordedAt: weighIn.recordedAt,
+        time: Date.parse(weighIn.recordedAt),
+        weight: Math.round(gramsToUnit(weighIn.weightGrams, weightUnit) * 10) / 10,
+    }));
+    const start = data[0]?.time ?? 0;
+    const end = data.at(-1)?.time ?? 0;
+    // A lone weigh-in still needs a visible span around it.
+    const domain = start === end ? [start - DAY_MS, end + DAY_MS] : [start, end];
+    // Past half a year, day numbers stop helping; month and year read better.
+    const tickFormat = new Intl.DateTimeFormat(
+        locale,
+        end - start > 180 * DAY_MS
+            ? { month: "short", timeZone, year: "2-digit" }
+            : { day: "numeric", month: "short", timeZone },
+    );
+    const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const values = data.map((point) => point.weight);
+    const ticks = niceTicks(Math.min(...values), Math.max(...values));
+
+    return (
+        <div aria-label={label} className="chart-frame" role="img">
+            <ResponsiveContainer>
+                <ComposedChart data={data} margin={{ bottom: 0, left: -4, right: 16, top: 16 }}>
+                    <defs>
+                        <linearGradient id="weight-fill" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor="var(--weight-ink)" stopOpacity={0.25} />
+                            <stop offset="100%" stopColor="var(--weight-ink)" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={gridStroke} strokeDasharray="4 4" vertical={false} />
+                    <XAxis
+                        axisLine={false}
+                        dataKey="time"
+                        domain={domain}
+                        minTickGap={24}
+                        scale="time"
+                        tick={axisTick}
+                        tickFormatter={(time: number) => tickFormat.format(time)}
+                        tickLine={false}
+                        type="number"
+                    />
+                    <YAxis
+                        axisLine={false}
+                        domain={[ticks[0] ?? "auto", ticks.at(-1) ?? "auto"]}
+                        ticks={ticks}
+                        tick={axisTick}
+                        tickFormatter={(value: number) => number.format(value)}
+                        tickLine={false}
+                        width={44}
+                    />
+                    <Tooltip
+                        content={({ active, payload }: TooltipProps) => {
+                            const point = payload?.[0]?.payload;
+                            return (
+                                <ChartTooltip
+                                    active={Boolean(active)}
+                                    heading={
+                                        point
+                                            ? formatDate(String(point.recordedAt), locale, timeZone)
+                                            : ""
+                                    }
+                                    value={
+                                        typeof point?.grams === "number"
+                                            ? formatWeight(point.grams, weightUnit, locale)
+                                            : null
+                                    }
+                                />
+                            );
+                        }}
+                        cursor={{ stroke: "var(--weight-ink)", strokeDasharray: "4 4" }}
+                    />
+                    <Area
+                        isAnimationActive={false}
+                        dataKey="weight"
+                        fill="url(#weight-fill)"
+                        stroke="none"
+                        type="monotone"
+                    />
+                    <Line
+                        isAnimationActive={false}
+                        activeDot={{ r: 6 }}
+                        dataKey="weight"
+                        dot={{ fill: "var(--surface)", r: 3.5, strokeWidth: 2 }}
+                        stroke="var(--weight-ink)"
+                        strokeWidth={3}
+                        type="monotone"
+                    />
+                </ComposedChart>
+            </ResponsiveContainer>
+        </div>
     );
 }
 
