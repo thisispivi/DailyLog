@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/thisispivi/DailyLog/compare/v1.4.2...v1.4.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* complete Italian support with plurals and translated labels ([304129f](https://github.com/thisispivi/DailyLog/commit/304129fb183908650e78d499040d800ac7fba4d7))
+
 ## [1.4.2](https://github.com/thisispivi/DailyLog/compare/v1.4.1...v1.4.2) (2026-10-09)
 
 
