@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/thisispivi/DailyLog/compare/v1.8.0...v1.9.0) (2026-10-09)
+
+
+### Features
+
+* rework the PDF export in the wellness style ([67d61a5](https://github.com/thisispivi/DailyLog/commit/67d61a509f2d5e83218e3f87b039603be7ce6d22))
+* rework the PDF export in the wellness style ([6782061](https://github.com/thisispivi/DailyLog/commit/67820612b4605d117babfb1b6b4300ec15b1135c)), closes [#73](https://github.com/thisispivi/DailyLog/issues/73)
+
 ## [1.8.0](https://github.com/thisispivi/DailyLog/compare/v1.7.0...v1.8.0) (2026-10-09)
 
 
