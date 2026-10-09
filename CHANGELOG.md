@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/thisispivi/DailyLog/compare/v1.7.0...v1.8.0) (2026-10-09)
+
+
+### Features
+
+* rework the XLSX export in the wellness style ([8b50f78](https://github.com/thisispivi/DailyLog/commit/8b50f787e6a847b84d57eb54306447642e9585e6))
+
 ## [1.7.0](https://github.com/thisispivi/DailyLog/compare/v1.6.0...v1.7.0) (2026-10-09)
 
 
