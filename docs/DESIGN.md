@@ -119,7 +119,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 **Settings:** one card per preference with an icon square, title, and hint. Options are chips, and **every change saves immediately** with a floating "Saved" pill. There are no save buttons.
 
-**Profile:** reached from the account links next to sign-out (bottom of the sidebar, top bar on phones), so the tab bar keeps five destinations. A "Body" card of stats (age, height, latest weight, BMI with its WHO category on a weight tile), a BMI chart with dashed guides at 18.5, 25, and 30, the weight chart, and an "About you" form. Text fields save on blur and the birth date on pick; the birth date picker shows month and year dropdowns.
+**Profile:** reached from the account links next to sign-out (bottom of the sidebar, top bar on phones), so the tab bar keeps five destinations. A "Body" card of stats (age, height, latest weight, BMI with its WHO category on a weight tile), a BMI chart with dashed guides at 18.5, 25, and 30, the weight chart, and an "About you" form. Text fields save on blur and the birth date on pick; tapping the birth date calendar caption opens a year grid, then a month grid (Android style).
 
 **Notes:** a plain textarea that autosaves 800ms after typing stops, with a "Saving… / Saved" status.
 

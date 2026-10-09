@@ -1,7 +1,7 @@
 "use client";
 
 import * as Popover from "@radix-ui/react-popover";
-import { CalendarDays, X } from "lucide-react";
+import { CalendarDays, ChevronDown, X } from "lucide-react";
 import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { enGB, it } from "react-day-picker/locale";
@@ -36,7 +36,7 @@ export function DateTimeField({
     onChange,
     timeZone,
     value: controlledValue,
-    yearDropdown = false,
+    yearPicker = false,
 }: Readonly<{
     clearable?: boolean;
     defaultValue?: string;
@@ -51,8 +51,8 @@ export function DateTimeField({
     onChange?: (value: string) => void;
     timeZone: string;
     value?: string;
-    /** Month and year dropdowns, for dates far in the past such as a birth date. */
-    yearDropdown?: boolean;
+    /** A tappable caption that opens year and month grids, for dates far in the past. */
+    yearPicker?: boolean;
 }>) {
     const container = usePortalContainer();
     const [open, setOpen] = useState(false);
@@ -96,18 +96,11 @@ export function DateTimeField({
                     </Popover.Trigger>
                     <Popover.Portal container={container}>
                         <Popover.Content align="start" className="date-popover" sideOffset={6}>
-                            <DayPicker
-                                {...(yearDropdown
-                                    ? { captionLayout: "dropdown" as const, endMonth: new Date() }
-                                    : {})}
-                                defaultMonth={toCalendarDate(date) ?? new Date()}
-                                locale={calendarLocales[locale]}
-                                mode="single"
-                                onSelect={(selected) =>
-                                    selected && setDate(fromCalendarDate(selected))
-                                }
+                            <Calendar
+                                hasYearPicker={yearPicker}
+                                locale={locale}
+                                onSelect={setDate}
                                 selected={toCalendarDate(date)}
-                                weekStartsOn={1}
                             />
                             {mode === "datetime" && (
                                 <div className="time-row">
@@ -148,6 +141,116 @@ export function DateTimeField({
             </div>
             {name && <input disabled={disabled} name={name} type="hidden" value={value} />}
         </div>
+    );
+}
+
+type CalendarView = "days" | "months" | "years";
+
+const FIRST_YEAR = 1900;
+
+/**
+ * The day grid. With `hasYearPicker`, the caption is a button that opens a year
+ * grid and then a month grid, as on Android, instead of paging month by month.
+ * It mounts with the popover, so every opening starts on the selected month.
+ */
+function Calendar({
+    hasYearPicker,
+    locale,
+    onSelect,
+    selected,
+}: Readonly<{
+    hasYearPicker: boolean;
+    locale: Locale;
+    onSelect: (date: string) => void;
+    selected: Date | undefined;
+}>) {
+    const [month, setMonth] = useState(selected ?? new Date());
+    const [view, setView] = useState<CalendarView>("days");
+    const today = new Date();
+    const caption = (
+        <button
+            aria-expanded={view !== "days"}
+            className="date-caption-button"
+            onClick={() => setView(view === "days" ? "years" : "days")}
+            type="button"
+        >
+            {new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(month)}
+            <ChevronDown aria-hidden="true" size={16} />
+        </button>
+    );
+
+    if (view === "years") {
+        const years = Array.from(
+            { length: today.getFullYear() - FIRST_YEAR + 1 },
+            (_, index) => FIRST_YEAR + index,
+        );
+        return (
+            <div className="date-grid-view">
+                {caption}
+                <div className="date-grid date-years">
+                    {years.map((year) => (
+                        <button
+                            aria-pressed={year === month.getFullYear()}
+                            className="date-grid-option numeric"
+                            key={year}
+                            onClick={() => {
+                                setMonth(new Date(year, month.getMonth(), 1));
+                                setView("months");
+                            }}
+                            // Open the grid scrolled to the shown year.
+                            ref={(node) => {
+                                if (node && year === month.getFullYear()) {
+                                    node.scrollIntoView({ block: "center" });
+                                }
+                            }}
+                            type="button"
+                        >
+                            {year}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (view === "months") {
+        const monthName = new Intl.DateTimeFormat(locale, { month: "short" });
+        return (
+            <div className="date-grid-view">
+                {caption}
+                <div className="date-grid date-months">
+                    {Array.from({ length: 12 }, (_, index) => (
+                        <button
+                            aria-pressed={index === month.getMonth()}
+                            className="date-grid-option"
+                            key={index}
+                            onClick={() => {
+                                setMonth(new Date(month.getFullYear(), index, 1));
+                                setView("days");
+                            }}
+                            type="button"
+                        >
+                            {monthName.format(new Date(2000, index, 1))}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <DayPicker
+            {...(hasYearPicker
+                ? { components: { CaptionLabel: () => caption }, endMonth: today }
+                : {})}
+            locale={calendarLocales[locale]}
+            mode="single"
+            month={month}
+            onMonthChange={setMonth}
+            onSelect={(date) => date && onSelect(fromCalendarDate(date))}
+            selected={selected}
+            weekStartsOn={1}
+        />
     );
 }
 
