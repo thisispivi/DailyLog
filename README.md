@@ -114,7 +114,7 @@ Compose publishes the app on http://localhost:14141 and keeps the database in th
 
 For production:
 
-- Put an HTTPS reverse proxy in front.
+- Put an HTTPS reverse proxy in front. Over plain HTTP, Chrome flags every PDF and Excel export as an insecure download; the only fix is serving the app over HTTPS. On a home network, `tailscale serve 14141` or a Caddy proxy with a real domain both work.
 - Run a single instance. SQLite and the in-memory login limiter assume one process.
 - Back up the volume and test restores.
 
