@@ -6,6 +6,7 @@ import {
     ExternalLink,
     FileText,
     Info,
+    KeyRound,
     Languages,
     MonitorCog,
     Scale,
@@ -17,6 +18,7 @@ import { type ReactNode, useState } from "react";
 import { APP_VERSION, AUTHOR_URL, REPOSITORY_URL } from "@/core/config/build-info";
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
+import { ChangePasswordForm } from "@/features/auth/ui/change-password-form";
 import { BackupControls } from "@/features/backup/ui/backup-controls";
 import type { Locale, UserSettings } from "@/features/logbook/domain";
 import { LanguageFlag } from "@/ui/language-flag";
@@ -122,6 +124,13 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
                 title={translate(locale, "settings.backup")}
             >
                 <BackupControls locale={locale} />
+            </SettingSection>
+            <SettingSection
+                hint={translate(locale, "settings.passwordHint")}
+                icon={KeyRound}
+                title={translate(locale, "settings.changePassword")}
+            >
+                <ChangePasswordForm locale={locale} />
             </SettingSection>
             <SettingSection icon={Info} title={translate(locale, "about.title")}>
                 <p className="muted numeric">

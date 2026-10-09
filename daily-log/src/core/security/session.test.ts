@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { verifySessionToken } from "@/core/security/session";
+import { hashPassword, verifyPassword, verifySessionToken } from "@/core/security/session";
 
 const SECRET = "a-session-secret-that-is-at-least-32-chars";
 const OWNER = 42;
@@ -37,5 +37,14 @@ describe("verifySessionToken", () => {
 
     it("rejects tokens with extra segments", () => {
         expect(verifySessionToken(`${token(valid)}.extra`, SECRET, OWNER, NOW)).toBeNull();
+    });
+});
+
+describe("verifyPassword", () => {
+    it("checks against a stored hash once one is set", () => {
+        const stored = hashPassword("a-brand-new-password");
+        expect(verifyPassword("a-brand-new-password", stored)).toBe(true);
+        expect(verifyPassword("a-wrong-password", stored)).toBe(false);
+        expect(verifyPassword("a-brand-new-password", "scrypt:broken")).toBe(false);
     });
 });

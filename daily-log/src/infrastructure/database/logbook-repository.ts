@@ -90,6 +90,24 @@ export class LogbookRepository {
         return mapSettings(row);
     }
 
+    /** The owner's password hash, or null while APP_PASSWORD is still the password. */
+    getPasswordHash(userId: number): string | null {
+        const row = this.database
+            .prepare("SELECT password_hash FROM user_credentials WHERE user_id = ?")
+            .get(userId) as { password_hash: string } | undefined;
+        return row?.password_hash ?? null;
+    }
+
+    setPasswordHash(userId: number, passwordHash: string): void {
+        this.database
+            .prepare(
+                `INSERT INTO user_credentials (user_id, password_hash, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET
+           password_hash = excluded.password_hash, updated_at = excluded.updated_at`,
+            )
+            .run(userId, passwordHash, toStorageTimestamp(new Date().toISOString()));
+    }
+
     updateSettings(userId: number, changes: SettingsChanges): UserSettings {
         const current = this.getSettings(userId);
         this.database

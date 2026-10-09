@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
@@ -35,8 +35,24 @@ function sign(encodedPayload: string, secret: string): string {
     return createHmac("sha256", secret).update(encodedPayload).digest("base64url");
 }
 
-/** Compares a submitted password without exposing early-exit timing differences. */
-export function verifyPassword(candidate: string): boolean {
+/** A salted scrypt hash in the form `scrypt:<salt>:<key>`, both base64url. */
+export function hashPassword(password: string): string {
+    const salt = randomBytes(16);
+    return `scrypt:${salt.toString("base64url")}:${scryptSync(password, salt, 64).toString("base64url")}`;
+}
+
+/**
+ * Checks a submitted password against the stored hash once the owner has set
+ * one, otherwise against APP_PASSWORD. Both paths compare in constant time.
+ */
+export function verifyPassword(candidate: string, storedHash: string | null): boolean {
+    if (storedHash) {
+        const [scheme, salt, key] = storedHash.split(":");
+        if (scheme !== "scrypt" || !salt || !key) return false;
+        const expectedKey = Buffer.from(key, "base64url");
+        const actualKey = scryptSync(candidate, Buffer.from(salt, "base64url"), expectedKey.length);
+        return timingSafeEqual(actualKey, expectedKey);
+    }
     const expected = getEnvironment().appPassword;
     if (!expected) return false;
     // Hashing both sides first gives timingSafeEqual equal-length inputs.

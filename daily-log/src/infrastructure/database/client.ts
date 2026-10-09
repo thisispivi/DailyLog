@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */
@@ -101,6 +101,11 @@ export function migrateDatabase(db: Database.Database): void {
         last_name TEXT NOT NULL DEFAULT '' CHECK (length(last_name) <= 60),
         birth_date TEXT CHECK (birth_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
         height_cm INTEGER CHECK (height_cm BETWEEN 100 AND 250)
+      );
+      CREATE TABLE IF NOT EXISTS user_credentials (
+        user_id INTEGER PRIMARY KEY,
+        password_hash TEXT NOT NULL CHECK (password_hash LIKE 'scrypt:%'),
+        updated_at TEXT NOT NULL
       );
       PRAGMA user_version = ${SCHEMA_VERSION};
     `);

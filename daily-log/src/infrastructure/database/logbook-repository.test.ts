@@ -217,6 +217,14 @@ describe("LogbookRepository", () => {
             weightUnit: "lb",
         });
     });
+
+    it("stores one password hash per owner and replaces it on change", () => {
+        expect(logbook.getPasswordHash(OWNER)).toBeNull();
+        logbook.setPasswordHash(OWNER, "scrypt:a:b");
+        logbook.setPasswordHash(OWNER, "scrypt:c:d");
+        expect(logbook.getPasswordHash(OWNER)).toBe("scrypt:c:d");
+        expect(logbook.getPasswordHash(STRANGER)).toBeNull();
+    });
 });
 
 describe("legacy schema migration", () => {
@@ -239,7 +247,7 @@ describe("legacy schema migration", () => {
             theme: "system",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(6);
+        expect(database.pragma("user_version", { simple: true })).toBe(7);
         database.close();
     });
 });

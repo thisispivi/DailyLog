@@ -186,6 +186,13 @@ const en = {
     },
     settings: {
         appearance: "Appearance",
+        changePassword: "Change password",
+        currentPassword: "Current password",
+        newPassword: "New password",
+        passwordChanged: "Password changed. Use it the next time you sign in.",
+        passwordHint: "At least 12 characters. It replaces APP_PASSWORD from now on.",
+        passwordWrong: "The current password did not match.",
+        savePassword: "Save password",
         backup: "Backup",
         backupHint:
             "Download every record, note, setting, and your profile as a JSON file, or import one. Importing adds what is missing and never deletes anything.",
@@ -398,6 +405,13 @@ const it: CatalogShape = {
     },
     settings: {
         appearance: "Aspetto",
+        changePassword: "Cambia password",
+        currentPassword: "Password attuale",
+        newPassword: "Nuova password",
+        passwordChanged: "Password cambiata. Usala al prossimo accesso.",
+        passwordHint: "Almeno 12 caratteri. Da ora sostituisce APP_PASSWORD.",
+        passwordWrong: "La password attuale non corrisponde.",
+        savePassword: "Salva password",
         backup: "Backup",
         backupHint:
             "Scarica tutti i dati, le note, le impostazioni e il profilo in un file JSON, oppure importane uno. L’importazione aggiunge ciò che manca e non elimina nulla.",
