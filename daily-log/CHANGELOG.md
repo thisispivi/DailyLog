@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.0](https://github.com/thisispivi/DailyLog/compare/v1.12.1...v1.13.0) (2026-10-09)
+
+
+### Features
+
+* export and import all data as JSON from Settings ([3b34078](https://github.com/thisispivi/DailyLog/commit/3b340785c057960e9210a86583d54d3f5660bd61))
+* export and import all data as JSON from Settings ([a2b705c](https://github.com/thisispivi/DailyLog/commit/a2b705c6095082a9ef84a48986ee21f3b14aa4b9))
+
 ## [1.12.1](https://github.com/thisispivi/DailyLog/compare/v1.12.0...v1.12.1) (2026-10-09)
 
 
