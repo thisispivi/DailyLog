@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/thisispivi/DailyLog/compare/v1.5.1...v1.6.0) (2026-10-09)
+
+
+### Features
+
+* add a notes section for each day ([bb97301](https://github.com/thisispivi/DailyLog/commit/bb973015cd7d85e1a1386a848278f51ef5158c95))
+* add a notes section for each day ([cbc9241](https://github.com/thisispivi/DailyLog/commit/cbc9241563eaf008ff5970c0a11a122071a638b9)), closes [#74](https://github.com/thisispivi/DailyLog/issues/74)
+
 ## [1.5.1](https://github.com/thisispivi/DailyLog/compare/v1.5.0...v1.5.1) (2026-10-09)
 
 
