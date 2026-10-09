@@ -1,8 +1,9 @@
 import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/translate";
-import { localDateRangeBounds } from "@/core/time/zoned-time";
+import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import type { DayNote, Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel } from "@/features/logbook/entry-label";
+import { ageOn, bodyMassIndex, fullName, type UserProfile } from "@/features/profile/profile";
 import type { RecordKind } from "@/ui/kind-icon";
 
 /** Everything an export needs; all lists are oldest first. */
@@ -11,6 +12,7 @@ export type ReportInput = Readonly<{
     entries: readonly Entry[];
     locale: Locale;
     notes: readonly DayNote[];
+    profile: UserProfile;
     startDate: string;
     timeZone: string;
     weighIns: readonly WeighIn[];
@@ -51,6 +53,30 @@ export function reportDays(input: ReportInput, now: Date = new Date()): ReportDa
         const note = notes.get(date);
         return rows.length || note ? [{ date, note, rows }] : [];
     });
+}
+
+/**
+ * "Ada Rossi · 35 years · 180 cm · BMI 22.6" for the export header, from what the
+ * profile has set. BMI uses the period's last weigh-in. Null when nothing is set.
+ */
+export function profileLine(
+    input: ReportInput,
+    today: string = localDateInZone(new Date(), input.timeZone),
+): string | null {
+    const { birthDate, heightCm } = input.profile;
+    const latest = input.weighIns.at(-1);
+    const number = new Intl.NumberFormat(input.locale, { maximumFractionDigits: 1 });
+    const parts = [
+        fullName(input.profile),
+        birthDate
+            ? translate(input.locale, "profile.years", { count: ageOn(birthDate, today) })
+            : "",
+        heightCm ? `${heightCm} cm` : "",
+        heightCm && latest
+            ? `${translate(input.locale, "profile.bmi")} ${number.format(bodyMassIndex(latest.weightGrams, heightCm))}`
+            : "",
+    ].filter(Boolean);
+    return parts.length ? parts.join(" · ") : null;
 }
 
 /** The period's key figures, shown at the top of both exports. */

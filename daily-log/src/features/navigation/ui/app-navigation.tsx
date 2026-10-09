@@ -1,6 +1,14 @@
 "use client";
 
-import { CalendarDays, ChartNoAxesCombined, History, House, LogOut, Settings } from "lucide-react";
+import {
+    CalendarDays,
+    ChartNoAxesCombined,
+    CircleUserRound,
+    History,
+    House,
+    LogOut,
+    Settings,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -51,10 +59,21 @@ export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
                     ))}
                 </ul>
             </nav>
-            <button className="sign-out" onClick={signOut} type="button">
-                <LogOut aria-hidden="true" size={19} />
-                <span>{translate(locale, "nav.signOut")}</span>
-            </button>
+            {/* Profile sits with sign-out so the phone tab bar keeps five destinations. */}
+            <div className="sidebar-account">
+                <Link
+                    aria-current={pathname.startsWith("/profile") ? "page" : undefined}
+                    className="account-link"
+                    href="/profile"
+                >
+                    <CircleUserRound aria-hidden="true" size={19} />
+                    <span>{translate(locale, "nav.profile")}</span>
+                </Link>
+                <button className="account-link" onClick={signOut} type="button">
+                    <LogOut aria-hidden="true" size={19} />
+                    <span>{translate(locale, "nav.signOut")}</span>
+                </button>
+            </div>
         </aside>
     );
 }

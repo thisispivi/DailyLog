@@ -47,17 +47,23 @@
     color: var(--text);
 }
 
-.nav-link[aria-current="page"] {
+.nav-link[aria-current="page"],
+.account-link[aria-current="page"] {
     background: var(--primary-soft);
     color: var(--primary);
 }
 
-.sign-out {
+.sidebar-account {
+    display: grid;
+    gap: 4px;
+    margin-top: auto;
+}
+
+.account-link {
     display: flex;
     min-height: 44px;
     align-items: center;
     gap: 12px;
-    margin-top: auto;
     border: 0;
     border-radius: 14px;
     background: transparent;
@@ -66,7 +72,7 @@
     font-weight: 700;
 }
 
-.sign-out:hover {
+.account-link:hover {
     background: var(--surface-muted);
     color: var(--text);
 }
@@ -112,12 +118,16 @@
         font-size: 11px;
     }
 
-    .sign-out {
+    .sidebar-account {
+        display: flex;
         margin: 0;
+    }
+
+    .account-link {
         padding: 0 12px;
     }
 
-    .sign-out span {
+    .account-link span {
         position: absolute;
         width: 1px;
         height: 1px;

@@ -36,6 +36,7 @@ export function DateTimeField({
     onChange,
     timeZone,
     value: controlledValue,
+    yearDropdown = false,
 }: Readonly<{
     clearable?: boolean;
     defaultValue?: string;
@@ -50,6 +51,8 @@ export function DateTimeField({
     onChange?: (value: string) => void;
     timeZone: string;
     value?: string;
+    /** Month and year dropdowns, for dates far in the past such as a birth date. */
+    yearDropdown?: boolean;
 }>) {
     const container = usePortalContainer();
     const [open, setOpen] = useState(false);
@@ -94,6 +97,9 @@ export function DateTimeField({
                     <Popover.Portal container={container}>
                         <Popover.Content align="start" className="date-popover" sideOffset={6}>
                             <DayPicker
+                                {...(yearDropdown
+                                    ? { captionLayout: "dropdown" as const, endMonth: new Date() }
+                                    : {})}
                                 defaultMonth={toCalendarDate(date) ?? new Date()}
                                 locale={calendarLocales[locale]}
                                 mode="single"
