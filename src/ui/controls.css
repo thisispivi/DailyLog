@@ -116,6 +116,13 @@
 
 .date-popover {
     padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* react-day-picker declares its variables on .rdp-root, so overrides must sit
+   on that element; setting them on the popover is shadowed by the defaults. */
+.date-popover .rdp-root {
     --rdp-accent-color: var(--primary);
     --rdp-accent-background-color: var(--primary-soft);
     --rdp-day-width: 40px;
@@ -128,8 +135,6 @@
     --rdp-nav_button-width: 36px;
     --rdp-nav_button-height: 36px;
     --rdp-nav-height: 40px;
-    font-size: 14px;
-    font-weight: 600;
 }
 
 .date-popover .rdp-month_caption {
@@ -146,6 +151,34 @@
 
 .date-popover .rdp-chevron {
     fill: var(--text-muted);
+}
+
+.date-popover .rdp-button_previous,
+.date-popover .rdp-button_next {
+    border-radius: 12px;
+}
+
+.date-popover .rdp-button_previous:hover,
+.date-popover .rdp-button_next:hover {
+    background: var(--surface-muted);
+}
+
+.date-popover .rdp-button_previous:focus-visible,
+.date-popover .rdp-button_next:focus-visible,
+.date-popover .rdp-day_button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--focus), transparent 35%);
+    outline-offset: 1px;
+}
+
+/* Today: a soft ring in the brand colour, distinct from the filled selection. */
+.date-popover .rdp-today:not(.rdp-selected) .rdp-day_button {
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-weight: 800;
+}
+
+.date-popover .rdp-outside .rdp-day_button {
+    color: var(--text-muted);
 }
 
 .date-popover .rdp-day_button {
