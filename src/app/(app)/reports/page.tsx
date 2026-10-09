@@ -48,7 +48,12 @@ export default function ReportsPage() {
                     />
                     <div className="reports-charts">
                         <SleepChart days={days.slice(-SLEEP_NIGHTS)} locale={locale} />
-                        <WeightChart days={days} locale={locale} weightUnit={weightUnit} />
+                        <WeightChart
+                            locale={locale}
+                            timeZone={timezone}
+                            weighIns={logbook.listWeighIns(ownerId, { limit: null }).reverse()}
+                            weightUnit={weightUnit}
+                        />
                     </div>
                     <TrainingChart activities={trainingMinutesByLabel(entries)} locale={locale} />
                 </div>
