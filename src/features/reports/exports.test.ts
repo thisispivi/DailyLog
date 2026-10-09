@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Entry } from "@/features/logbook/domain";
 import type { ReportInput } from "@/features/reports/report-input";
-import { createPdf } from "@/features/reports/report-service";
+import { createPdf } from "@/features/reports/pdf-report";
 import { createWorkbook, neutralizeSpreadsheetFormula } from "@/features/reports/workbook";
 
 const entry: Entry = {

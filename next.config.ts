@@ -31,6 +31,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
     agentRules: false,
     output: "standalone",
+    // The PDF export embeds Nunito from node_modules; the files are read at runtime,
+    // so they must be traced into the standalone build explicitly.
+    outputFileTracingIncludes: {
+        "/api/reports/export": [
+            "./node_modules/@fontsource/nunito/files/nunito-latin-*-normal.woff",
+        ],
+    },
     poweredByHeader: false,
     experimental: {
         optimizePackageImports: ["lucide-react"],
