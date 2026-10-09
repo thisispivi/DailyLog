@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/thisispivi/DailyLog/compare/v1.9.0...v1.10.0) (2026-10-09)
+
+
+### Features
+
+* show the app version and project links ([208ce42](https://github.com/thisispivi/DailyLog/commit/208ce42808c9c11da5c35ef8235eaa64afa63ec3))
+* show the app version and project links ([d503b36](https://github.com/thisispivi/DailyLog/commit/d503b3687b089f40faf0b2456133105dddc836a4)), closes [#91](https://github.com/thisispivi/DailyLog/issues/91)
+
 ## [1.9.0](https://github.com/thisispivi/DailyLog/compare/v1.8.0...v1.9.0) (2026-10-09)
 
 
