@@ -30,12 +30,20 @@ const environmentSchema = z.object({
             typeof value === "string" ? value.toLowerCase().replace("warning", "warn") : value,
         z.enum(logLevels).default("info"),
     ),
+    BUGSINK_DSN: z
+        .url()
+        .refine((value) => {
+            const { pathname, username } = new URL(value);
+            return username !== "" && /^\/\d+$/.test(pathname);
+        }, "Must be a DSN such as https://key@bugsink.example.com/1.")
+        .optional(),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
 export type Environment = Readonly<{
     appPassword: string | null;
     databasePath: string;
+    errorReportingDsn: string | null;
     logLevel: LogLevel;
     nodeEnv: "development" | "test" | "production";
     ownerId: number;
@@ -66,6 +74,7 @@ export function parseEnvironment(source: Record<string, string | undefined>): En
     return Object.freeze({
         appPassword: env.APP_PASSWORD ?? null,
         databasePath: env.DATABASE_PATH,
+        errorReportingDsn: env.BUGSINK_DSN ?? null,
         logLevel: env.LOG_LEVEL,
         nodeEnv: env.NODE_ENV,
         ownerId: env.APP_USER_ID ?? env.ALLOWED_USER_ID ?? 1,
