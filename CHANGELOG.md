@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.2](https://github.com/thisispivi/DailyLog/compare/v1.4.1...v1.4.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* find the release pull request by branch, not through search ([54c5ddc](https://github.com/thisispivi/DailyLog/commit/54c5ddce188316601a14df92ff2610ee194247ea))
+* find the release pull request by branch, not through search ([38dbf28](https://github.com/thisispivi/DailyLog/commit/38dbf2824b8998dd4b0d20265463c455a6c31f92))
+
 ## [1.4.1](https://github.com/thisispivi/DailyLog/compare/v1.4.0...v1.4.1) (2026-10-09)
 
 
