@@ -1,0 +1,70 @@
+.profile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: var(--space-6);
+}
+
+.profile-form .form-grid {
+    grid-template-columns: 1fr;
+}
+
+.profile-status:empty {
+    display: none;
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+}
+
+.profile-stat {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    border-radius: var(--radius-tile);
+    background: var(--surface-muted);
+    padding: var(--space-4);
+}
+
+.profile-stat dt {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.profile-stat.tile dt,
+.profile-bmi-category {
+    color: var(--kind-ink);
+}
+
+.profile-stat dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.profile-stat.tile {
+    background: var(--kind-tile);
+}
+
+.profile-bmi-category {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .profile-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

@@ -3,7 +3,12 @@ import writeExcelFile, { type Cell, type SheetData } from "write-excel-file/node
 import { translate } from "@/core/i18n/translate";
 import { localInputValue } from "@/core/time/zoned-time";
 import { gramsToUnit } from "@/features/logbook/domain";
-import { reportDays, summaryTiles, type ReportInput } from "@/features/reports/report-input";
+import {
+    profileLine,
+    reportDays,
+    summaryTiles,
+    type ReportInput,
+} from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
 import type { RecordKind } from "@/ui/kind-icon";
 
@@ -26,10 +31,12 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
     const toUnit = (grams: number) => Math.round(gramsToUnit(grams, input.weightUnit) * 10) / 10;
     const longDate = new Intl.DateTimeFormat(input.locale, { dateStyle: "full", timeZone: "UTC" });
 
+    const person = profileLine(input);
     // A cell with columnSpan is followed by nulls for the columns it covers.
     const journal: SheetData = [
         [title("DailyLog", 4), null, null, null],
         [subtitle(periodLabel(input), 4), null, null, null],
+        ...(person ? [[subtitle(neutralizeSpreadsheetFormula(person), 4), null, null, null]] : []),
         [],
         ...summaryTiles(input).map((tile) => metricRow(tile.label, tile.value, tile.kind)),
         ...reportDays(input).flatMap(({ date, note, rows }): Cell[][] => [

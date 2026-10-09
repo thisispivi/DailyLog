@@ -18,6 +18,8 @@ import {
     type WeightUnit,
 } from "@/features/logbook/domain";
 import type { EntryChanges, NewEntry, SettingsChanges } from "@/features/logbook/schemas";
+import { EMPTY_PROFILE, type UserProfile } from "@/features/profile/profile";
+import type { ProfileChanges } from "@/features/profile/schemas";
 import { getDatabase } from "@/infrastructure/database/client";
 
 // Row shapes are guaranteed by the schema's CHECK constraints, so rows are mapped
@@ -49,6 +51,13 @@ type SettingsRow = {
     theme: Theme;
     user_id: number;
     weight_unit: WeightUnit;
+};
+
+type ProfileRow = {
+    birth_date: string | null;
+    first_name: string;
+    height_cm: number | null;
+    last_name: string;
 };
 
 type TrashRow = {
@@ -96,6 +105,37 @@ export class LogbookRepository {
                 userId,
             );
         return this.getSettings(userId);
+    }
+
+    getProfile(userId: number): UserProfile {
+        const row = this.database
+            .prepare(
+                "SELECT first_name, last_name, birth_date, height_cm FROM user_profiles WHERE user_id = ?",
+            )
+            .get(userId) as ProfileRow | undefined;
+        return row
+            ? {
+                  birthDate: row.birth_date,
+                  firstName: row.first_name,
+                  heightCm: row.height_cm,
+                  lastName: row.last_name,
+              }
+            : EMPTY_PROFILE;
+    }
+
+    /** Applies the given fields; `null` clears a birth date or height. */
+    updateProfile(userId: number, changes: ProfileChanges): UserProfile {
+        const next = { ...this.getProfile(userId), ...changes };
+        this.database
+            .prepare(
+                `INSERT INTO user_profiles (user_id, first_name, last_name, birth_date, height_cm)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET first_name = excluded.first_name,
+           last_name = excluded.last_name, birth_date = excluded.birth_date,
+           height_cm = excluded.height_cm`,
+            )
+            .run(userId, next.firstName, next.lastName, next.birthDate, next.heightCm);
+        return this.getProfile(userId);
     }
 
     createEntry(userId: number, input: NewEntry): Entry {

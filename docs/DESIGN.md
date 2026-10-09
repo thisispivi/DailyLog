@@ -98,7 +98,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 ## Layout
 
 - **Desktop (> 860px):** a fixed white sidebar (logo, nav, version and links, sign out) and the content area. The sidebar never scrolls with the page.
-- **Phone (≤ 860px):** a sticky top bar (logo, sign-out icon), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
+- **Phone (≤ 860px):** a sticky top bar (logo, profile and sign-out icons), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
 - Page header: `.page-header` with an `.eyebrow` and the `h1`; actions go on the right and wrap under on phones.
 - Breakpoints in use: 1100px (two-column pages stack), 960px (Today columns stack), 860px (phone shell), 720px (compact cards, 2-column tiles, calendar dots). Reuse these; don't invent new ones.
 - No horizontal scrolling at 375px. Chip rows that can't wrap scroll sideways with the scrollbar hidden.
@@ -118,6 +118,8 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 **Reports:** a "Last 7 days" summary of tiles, charts, and an export card with one download button per format.
 
 **Settings:** one card per preference with an icon square, title, and hint. Options are chips, and **every change saves immediately** with a floating "Saved" pill. There are no save buttons.
+
+**Profile:** reached from the account links next to sign-out (bottom of the sidebar, top bar on phones), so the tab bar keeps five destinations. A "Body" card of stats (age, height, latest weight, BMI with its WHO category on a weight tile), a BMI chart with dashed guides at 18.5, 25, and 30, the weight chart, and an "About you" form. Text fields save on blur and the birth date on pick; the birth date picker shows month and year dropdowns.
 
 **Notes:** a plain textarea that autosaves 800ms after typing stops, with a "Saving… / Saved" status.
 
@@ -159,6 +161,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 Both exports use the light palette from `report-palette.ts` and the same structure as the app.
 
+- Both headers carry the profile line from `profileLine` (name · age · height · BMI from the period's last weigh-in), leaving out what is not set.
 - **PDF** (`features/reports/pdf-report.ts`): lavender header band with the logo drawn as vectors, the period and export date; four summary tiles; one section per day (activities clipped per day as in the timeline) with a time column, a coloured type pill, a bold title, and a muted detail line; the note in a violet box with a left accent bar; a footer with the period and page count. Nunito WOFF files (not WOFF2) are embedded from `features/reports/fonts/`.
 - **XLSX** (`features/reports/workbook.ts`): sheets Summary, Journal, Weight, Notes. Violet title, lavender header rows, zebra rows with hairline separators, a colour-coded type column, real Excel dates in local time, and durations as numbers of minutes.
 

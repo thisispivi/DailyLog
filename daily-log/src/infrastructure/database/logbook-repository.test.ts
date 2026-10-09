@@ -53,6 +53,18 @@ describe("LogbookRepository", () => {
         expect(logbook.listEntries(STRANGER, { limit: 10, offset: 0 }).total).toBe(0);
     });
 
+    it("keeps each owner's profile separate and clears fields with null", () => {
+        expect(logbook.getProfile(OWNER).heightCm).toBeNull();
+        logbook.updateProfile(OWNER, { birthDate: "1990-05-01", firstName: "Ada", heightCm: 180 });
+        expect(logbook.updateProfile(OWNER, { heightCm: null })).toEqual({
+            birthDate: "1990-05-01",
+            firstName: "Ada",
+            heightCm: null,
+            lastName: "",
+        });
+        expect(logbook.getProfile(STRANGER).firstName).toBe("");
+    });
+
     it("rejects finishing an activity before it started", () => {
         startRun();
         expect(() => logbook.finishActivity(OWNER, "2026-08-31T07:00:00+02:00")).toThrow(
@@ -185,7 +197,7 @@ describe("legacy schema migration", () => {
             theme: "system",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(5);
+        expect(database.pragma("user_version", { simple: true })).toBe(6);
         database.close();
     });
 });

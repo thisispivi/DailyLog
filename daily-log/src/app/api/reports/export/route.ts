@@ -35,6 +35,7 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
         entries: logbook.listEntriesInRange(userId, from, to),
         locale: settings.exportLocale,
         notes: logbook.listDayNotes(userId, startDate, endDate),
+        profile: logbook.getProfile(userId),
         startDate,
         timeZone: timezone,
         weighIns: logbook.listWeighIns(userId, { from, limit: null, to }).reverse(),

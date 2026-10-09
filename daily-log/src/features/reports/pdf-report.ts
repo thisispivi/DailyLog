@@ -5,7 +5,12 @@ import PDFDocument from "pdfkit";
 
 import { translate } from "@/core/i18n/translate";
 import { localDateInZone } from "@/core/time/zoned-time";
-import { reportDays, summaryTiles, type ReportInput } from "@/features/reports/report-input";
+import {
+    profileLine,
+    reportDays,
+    summaryTiles,
+    type ReportInput,
+} from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
 
 const PAGE_MARGIN = 40;
@@ -70,6 +75,16 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
         .fontSize(11)
         .fillColor(palette.muted)
         .text(period, PAGE_MARGIN + 60, headerTop + 50);
+    const person = profileLine(input);
+    if (person) {
+        font("regular")
+            .fontSize(9.5)
+            .fillColor(palette.muted)
+            .text(person, PAGE_MARGIN + 60, headerTop + 67, {
+                lineBreak: false,
+                width: CONTENT_WIDTH - 80,
+            });
+    }
     font("regular")
         .fontSize(9)
         .fillColor(palette.muted)

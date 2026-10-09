@@ -26,8 +26,8 @@ import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 import { Sheet } from "@/ui/sheet";
 
 // Charts draw instantly: this is a dashboard you check, and animations replay on every visit.
-const axisTick = { fill: "var(--text-muted)", fontSize: 12, fontWeight: 600 };
-const gridStroke = "var(--line)";
+export const axisTick = { fill: "var(--text-muted)", fontSize: 12, fontWeight: 600 };
+export const gridStroke = "var(--line)";
 
 // Day keys are plain calendar dates, so they are formatted in UTC to avoid shifting.
 function formatDay(date: string, locale: Locale, style: "short" | "long" = "short"): string {
@@ -39,7 +39,7 @@ function formatDay(date: string, locale: Locale, style: "short" | "long" = "shor
     }).format(new Date(`${date}T12:00:00Z`));
 }
 
-function ChartCard({
+export function ChartCard({
     action,
     aside,
     children,
@@ -66,7 +66,7 @@ function ChartCard({
 }
 
 /** The shared tooltip: the day (or activity) on top, the formatted value below. */
-function ChartTooltip({
+export function ChartTooltip({
     active,
     heading,
     value,
@@ -80,7 +80,7 @@ function ChartTooltip({
     );
 }
 
-type TooltipProps = TooltipContentProps;
+export type TooltipProps = TooltipContentProps;
 
 /** Hours of sleep per night, credited to the morning you woke up. */
 export function SleepChart({
