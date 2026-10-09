@@ -7,6 +7,7 @@ import {
     loggingStreak,
     mealLabelForHour,
     summarizePeriod,
+    trainingMinutesByLabel,
 } from "@/features/insights/insights";
 
 const TZ = "Europe/Berlin";
@@ -129,6 +130,29 @@ describe("mealLabelForHour", () => {
             "Lunch",
             "Snack 2",
             "Dinner",
+        ]);
+    });
+});
+
+describe("trainingMinutesByLabel", () => {
+    it("adds finished sessions per activity, longest first, and skips open ones", () => {
+        const run = (start: string, end: string | null) =>
+            entry({ endAt: end, kind: "training", label: "Run", startAt: start });
+        expect(
+            trainingMinutesByLabel([
+                run("2026-10-07T06:00:00+00:00", "2026-10-07T06:30:00+00:00"),
+                run("2026-10-08T06:00:00+00:00", "2026-10-08T06:45:00+00:00"),
+                run("2026-10-08T18:00:00+00:00", null),
+                entry({
+                    endAt: "2026-10-08T19:00:00+00:00",
+                    kind: "training",
+                    label: "Gym",
+                    startAt: "2026-10-08T18:00:00+00:00",
+                }),
+            ]),
+        ).toEqual([
+            { label: "Run", minutes: 75 },
+            { label: "Gym", minutes: 60 },
         ]);
     });
 });

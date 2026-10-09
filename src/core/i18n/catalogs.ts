@@ -116,6 +116,7 @@ const en = {
         weighIns: "Weigh-ins",
     },
     reports: {
+        average: "Average",
         downloadPdf: "Download PDF",
         downloadXlsx: "Download XLSX",
         activeTime: "Active time",
@@ -275,6 +276,7 @@ const it: CatalogShape = {
         weighIns: "Pesate",
     },
     reports: {
+        average: "Media",
         downloadPdf: "Scarica PDF",
         downloadXlsx: "Scarica XLSX",
         activeTime: "Tempo attivo",

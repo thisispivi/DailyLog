@@ -2,7 +2,7 @@ import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { datesEndingOn, localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
-import { dailyTotals, summarizePeriod } from "@/features/insights/insights";
+import { dailyTotals, summarizePeriod, trainingMinutesByLabel } from "@/features/insights/insights";
 import { ExportPanel } from "@/features/reports/ui/export-panel";
 import { SleepChart, TrainingChart, WeightChart } from "@/features/reports/ui/trend-charts";
 import { WeeklySummary } from "@/features/reports/ui/weekly-summary";
@@ -50,7 +50,7 @@ export default function ReportsPage() {
                         <SleepChart days={days.slice(-SLEEP_NIGHTS)} locale={locale} />
                         <WeightChart days={days} locale={locale} weightUnit={weightUnit} />
                     </div>
-                    <TrainingChart entries={entries} locale={locale} />
+                    <TrainingChart activities={trainingMinutesByLabel(entries)} locale={locale} />
                 </div>
                 <ExportPanel
                     defaultFrom={dates[0] ?? today}
