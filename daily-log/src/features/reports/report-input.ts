@@ -1,5 +1,5 @@
 import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/translate";
-import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
+import { localDateInZone, localDateRangeBounds, shiftDate } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import type { DayNote, Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
@@ -35,11 +35,7 @@ export type SummaryTile = Readonly<{ kind: RecordKind; label: string; value: str
 /** Every calendar date from start to end, inclusive. */
 export function datesInRange(startDate: string, endDate: string): string[] {
     const days = Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1;
-    return Array.from({ length: Math.max(days, 0) }, (_, index) =>
-        new Date(Date.parse(`${startDate}T12:00:00Z`) + index * 86_400_000)
-            .toISOString()
-            .slice(0, 10),
-    );
+    return Array.from({ length: Math.max(days, 0) }, (_, index) => shiftDate(startDate, index));
 }
 
 /**
@@ -48,8 +44,9 @@ export function datesInRange(startDate: string, endDate: string): string[] {
  */
 export function reportDays(input: ReportInput, now: Date = new Date()): ReportDay[] {
     const notes = new Map(input.notes.map((note) => [note.day, note.text]));
+    const loneSnacks = loneSnackIds(input.entries, input.timeZone);
     return datesInRange(input.startDate, input.endDate).flatMap((date) => {
-        const rows = rowsForDay(input, date, now);
+        const rows = rowsForDay(input, date, loneSnacks, now);
         const note = notes.get(date);
         return rows.length || note ? [{ date, note, rows }] : [];
     });
@@ -116,13 +113,17 @@ export function summaryTiles(input: ReportInput): SummaryTile[] {
     ];
 }
 
-function rowsForDay(input: ReportInput, date: string, now: Date): DayRow[] {
+function rowsForDay(
+    input: ReportInput,
+    date: string,
+    loneSnacks: ReadonlySet<number>,
+    now: Date,
+): DayRow[] {
     const [dayStart, dayEnd] = localDateRangeBounds(date, date, input.timeZone);
     const time = (value: string) => formatTime(value, input.locale, input.timeZone);
     const inDay = (timestamp: string) =>
         Date.parse(timestamp) >= Date.parse(dayStart) && Date.parse(timestamp) < Date.parse(dayEnd);
     const rows: DayRow[] = [];
-    const loneSnacks = loneSnackIds(input.entries, input.timeZone);
 
     for (const entry of input.entries) {
         const title = entryDisplayLabel(entry, input.locale, loneSnacks);
