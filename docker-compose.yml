@@ -1,8 +1,8 @@
 services:
   dailylog:
-    build: .
+    build: ./daily-log
     env_file:
-      - .env
+      - ./daily-log/.env
     environment:
       DATABASE_PATH: /data/dailylog.sqlite3
       NODE_ENV: production

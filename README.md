@@ -22,6 +22,7 @@ It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 Requires Node.js 20.9+ and npm 10+.
 
 ```bash
+cd daily-log
 npm ci
 cp .env.example .env    # then set APP_PASSWORD and SESSION_SECRET
 npm run db:migrate
@@ -34,7 +35,7 @@ Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 
 ## Configuration
 
-All variables are validated with Zod in [`src/core/config/env.ts`](src/core/config/env.ts) when the server starts. Invalid values stop startup with the variable name, never its value.
+All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src/core/config/env.ts) when the server starts. Invalid values stop startup with the variable name, never its value.
 
 | Variable          | Default                    | Notes                                                                     |
 | ----------------- | -------------------------- | ------------------------------------------------------------------------- |
@@ -48,10 +49,12 @@ All variables are validated with Zod in [`src/core/config/env.ts`](src/core/conf
 
 ## Architecture
 
+The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run npm commands from `daily-log/`. See the [changelog](daily-log/CHANGELOG.md) for releases.
+
 One Next.js 16 app with a SQLite database. No ORM, no client state library, no CSS framework, no chart library.
 
 ```text
-src/
+daily-log/src/
 ├── app/              Routes: pages, layouts, API route handlers
 ├── features/<name>/  Product features: domain logic, schemas, feature UI
 ├── ui/               Shared presentational pieces: logo, record-type icons, sheet
@@ -60,8 +63,8 @@ src/
 ```
 
 - Pages are Server Components that read from the repository directly. Client components only handle interaction.
-- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](src/core/http/api.ts). The wrapper checks the origin and session, parses JSON, and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`.
-- [`LogbookRepository`](src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
+- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](daily-log/src/core/http/api.ts). The wrapper checks the origin and session, parses JSON, and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`.
+- [`LogbookRepository`](daily-log/src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
 
 ESLint enforces the import direction. The full rules are in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md).
 
@@ -69,16 +72,18 @@ ESLint enforces the import direction. The full rules are in [docs/CODING_STANDAR
 
 Zod validates every input that crosses a trust boundary, once, before it reaches domain code:
 
-| Boundary                   | Schema                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------ |
-| Request bodies and queries | [`src/features/logbook/schemas.ts`](src/features/logbook/schemas.ts), strict               |
-| Environment                | [`src/core/config/env.ts`](src/core/config/env.ts)                                         |
-| Session cookie payload     | [`src/core/security/session.ts`](src/core/security/session.ts)                             |
-| Locale and theme cookies   | [`src/core/preferences/preference-cookies.ts`](src/core/preferences/preference-cookies.ts) |
+| Boundary                   | Schema                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Request bodies and queries | [`src/features/logbook/schemas.ts`](daily-log/src/features/logbook/schemas.ts), strict               |
+| Environment                | [`src/core/config/env.ts`](daily-log/src/core/config/env.ts)                                         |
+| Session cookie payload     | [`src/core/security/session.ts`](daily-log/src/core/security/session.ts)                             |
+| Locale and theme cookies   | [`src/core/preferences/preference-cookies.ts`](daily-log/src/core/preferences/preference-cookies.ts) |
 
 Request schemas reject unknown keys. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Database rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape.
 
 ## Quality checks
+
+From `daily-log/`:
 
 ```bash
 npm run format:check   # Prettier
@@ -105,8 +110,10 @@ Before upgrading an older database, DailyLog copies it next to the original, for
 
 ## Docker
 
+From the repository root:
+
 ```bash
-cp .env.example .env    # set APP_PASSWORD and SESSION_SECRET
+cp daily-log/.env.example daily-log/.env    # set APP_PASSWORD and SESSION_SECRET
 docker compose up --build --detach
 ```
 
@@ -126,7 +133,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 - Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client and globally.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
-- CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](next.config.ts).
+- CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
 
 ## License

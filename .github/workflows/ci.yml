@@ -15,6 +15,9 @@ concurrency:
 jobs:
   quality:
     name: Quality and security
+    defaults:
+      run:
+        working-directory: daily-log
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -22,6 +25,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: daily-log/package-lock.json
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
@@ -32,6 +36,9 @@ jobs:
 
   browser:
     name: Browser flows
+    defaults:
+      run:
+        working-directory: daily-log
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -39,6 +46,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: daily-log/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -46,7 +54,7 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: playwright-report
+          path: daily-log/playwright-report
           retention-days: 14
 
   container:
@@ -55,8 +63,8 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Validate Compose configuration
-        run: cp .env.example .env && docker compose config --quiet
-      - run: docker build --tag dailylog:ci .
+        run: cp daily-log/.env.example daily-log/.env && docker compose config --quiet
+      - run: docker build --tag dailylog:ci ./daily-log
       - name: Scan container for fixable high-severity vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

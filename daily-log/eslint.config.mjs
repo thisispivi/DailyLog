@@ -3,7 +3,7 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
 // Dependency direction: app → features → ui → core, with infrastructure as an
-// adapter layer that only app routes and pages may reach. See docs/CODING_STANDARDS.md.
+// adapter layer that only app routes and pages may reach. See ../docs/CODING_STANDARDS.md.
 const restrictImports = (...patterns) => ({
     "no-restricted-imports": ["error", { patterns }],
 });

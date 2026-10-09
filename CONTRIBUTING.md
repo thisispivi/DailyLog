@@ -3,6 +3,7 @@
 ## Setup
 
 ```bash
+cd daily-log
 npm ci                  # installs dependencies and the git hooks
 cp .env.example .env    # set APP_PASSWORD and SESSION_SECRET
 npm run db:migrate
@@ -29,7 +30,7 @@ The hooks run automatically:
 - **pre-commit**: Prettier and ESLint on staged files.
 - **pre-push**: format check, lint, typecheck, unit tests.
 
-Run the full local gate before opening a pull request:
+Run the full local gate from `daily-log/` before opening a pull request:
 
 ```bash
 npm run quality

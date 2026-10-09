@@ -4,6 +4,8 @@ The single source of truth for how code is organized and written here. Rules mar
 
 ## Where things go
 
+All application paths below are relative to `daily-log/`. Run npm commands from that directory. Repository documentation, GitHub workflows, and Git hooks remain at the repository root.
+
 ```text
 src/
 ├── app/                      Next.js routes only: pages, layouts, route handlers, page CSS

@@ -5,9 +5,10 @@ set -e
 files=$(git diff --cached --name-only --diff-filter=ACMR)
 [ -z "$files" ] && exit 0
 
-echo "$files" | xargs npx --no-install prettier --check --ignore-unknown
+cd "$(git rev-parse --show-toplevel)/daily-log"
+echo "$files" | sed 's|^|../|' | xargs npx --no-install prettier --check --ignore-path ../.prettierignore --ignore-unknown
 
-lintable=$(echo "$files" | grep -E '\.(ts|tsx|mjs)$' || true)
-[ -n "$lintable" ] && echo "$lintable" | xargs npx --no-install eslint --max-warnings=0 --no-warn-ignored
+lintable=$(echo "$files" | grep -E '^daily-log/.*\.(ts|tsx|mjs)$' || true)
+[ -n "$lintable" ] && echo "$lintable" | sed 's|^|../|' | xargs npx --no-install eslint --max-warnings=0 --no-warn-ignored
 
 exit 0
