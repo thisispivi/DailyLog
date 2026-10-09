@@ -30,16 +30,16 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Release Please labels its pull request "autorelease: pending" until it is
-      # tagged. Looking it up by label also catches a PR that already existed and
-      # was not changed by this run.
+      # Release Please always uses the same branch for its pull request. The REST
+      # pulls endpoint reads live data; "gh pr list --label" goes through the
+      # search index and can miss a PR created seconds earlier in this same run.
       - name: Merge the release pull request
         id: merge
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          label="autorelease: pending"
-          numbers=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --label "$label" --json number --jq ".[].number")
+          head="$GITHUB_REPOSITORY_OWNER:release-please--branches--main--components--dailylog"
+          numbers=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&head=$head" --jq ".[].number")
           for number in $numbers; do
             gh pr merge "$number" --repo "$GITHUB_REPOSITORY" --merge --delete-branch
           done
