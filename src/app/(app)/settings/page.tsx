@@ -1,11 +1,12 @@
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
+import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { SettingsForm } from "@/features/settings/ui/settings-form";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 import "./settings.css";
 
-export const metadata = { title: "Settings" };
+export const generateMetadata = () => localizedTitle("nav.settings");
 
 export default function SettingsPage() {
     const settings = new LogbookRepository().getSettings(getEnvironment().ownerId);

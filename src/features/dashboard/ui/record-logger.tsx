@@ -9,18 +9,11 @@ import { translate } from "@/core/i18n/translate";
 import { localHour, localInputToUtc, localInputValue } from "@/core/time/zoned-time";
 import { mealLabelForHour, mealLabels } from "@/features/insights/insights";
 import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import { mealLabelKeys } from "@/features/logbook/entry-label";
 import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon, recordKinds, type RecordKind } from "@/ui/kind-icon";
 import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
-
-const mealLabelKeys = {
-    Breakfast: "entry.breakfast",
-    Dinner: "entry.dinner",
-    Lunch: "entry.lunch",
-    "Snack 1": "entry.snack1",
-    "Snack 2": "entry.snack2",
-} as const;
 
 const trainingSuggestions = ["walk", "run", "gym", "tennis", "tableTennis"] as const;
 const OTHER_ACTIVITY = "__other__";

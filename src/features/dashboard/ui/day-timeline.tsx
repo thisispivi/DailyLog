@@ -2,6 +2,7 @@ import { CalendarHeart } from "lucide-react";
 
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
+import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 type TimelineRow = Readonly<{
@@ -35,7 +36,7 @@ export function DayTimeline({
                     : translate(locale, "dashboard.inProgress")),
             id: `entry-${entry.id}`,
             kind: entry.kind,
-            title: entry.label,
+            title: entryDisplayLabel(entry, locale),
         })),
         ...weighIns.map((weighIn) => ({
             at: weighIn.recordedAt,

@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
 
 import { sendJson } from "@/core/http/client";
-import { formatDateTime, formatDuration, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatDate,
+    formatDateTime,
+    formatDuration,
+    formatWeight,
+    translate,
+} from "@/core/i18n/translate";
 import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
+import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import {
     entryKinds,
     gramsToUnit,
@@ -63,7 +70,9 @@ export function HistoryWorkspace({
             .filter(
                 (entry) =>
                     !needle ||
-                    `${entry.label} ${entry.text}`.toLocaleLowerCase(locale).includes(needle),
+                    `${entryDisplayLabel(entry, locale)} ${entry.label} ${entry.text}`
+                        .toLocaleLowerCase(locale)
+                        .includes(needle),
             )
             .filter((entry) => onDate(entry.startAt))
             .map((item) => ({ item, recordType: "entry" }));
@@ -86,7 +95,8 @@ export function HistoryWorkspace({
     }
 
     function deleteDay() {
-        if (!window.confirm(translate(locale, "history.confirmBulk", { date }))) return;
+        const day = formatDate(`${date}T12:00:00Z`, locale, "UTC");
+        if (!window.confirm(translate(locale, "history.confirmBulk", { date: day }))) return;
         void mutate(sendJson("/api/entries/day", "DELETE", { date }));
     }
 
@@ -246,6 +256,8 @@ function RecordEditor({
     const [pending, setPending] = useState(false);
     const [failed, setFailed] = useState(false);
     const id = record.item.id;
+    // Stored bot labels are shown translated; keep the stored value unless it was edited.
+    const shownLabel = record.recordType === "entry" ? entryDisplayLabel(record.item, locale) : "";
     const path = record.recordType === "entry" ? `/api/entries/${id}` : `/api/weigh-ins/${id}`;
 
     async function settle(request: Promise<{ ok: boolean }>) {
@@ -266,7 +278,10 @@ function RecordEditor({
                 ? sendJson(path, "PATCH", {
                       endAt: field("endAt") ? localInputToUtc(field("endAt"), timeZone) : null,
                       kind: field("kind"),
-                      label: field("label"),
+                      label:
+                          record.recordType === "entry" && field("label") === shownLabel
+                              ? record.item.label
+                              : field("label"),
                       startAt,
                       text: field("text"),
                   })
@@ -281,7 +296,7 @@ function RecordEditor({
     function moveToTrash() {
         const label =
             record.recordType === "entry"
-                ? record.item.label
+                ? shownLabel
                 : formatWeight(record.item.weightGrams, weightUnit, locale);
         if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
         void settle(sendJson(path, "DELETE"));
@@ -308,7 +323,7 @@ function RecordEditor({
                         <label htmlFor="edit-label">{translate(locale, "common.label")}</label>
                         <input
                             className="input"
-                            defaultValue={record.item.label}
+                            defaultValue={shownLabel}
                             id="edit-label"
                             maxLength={120}
                             name="label"
@@ -430,7 +445,7 @@ function TrashList({
                             <span className="record-text">
                                 <strong>
                                     {item.recordType === "entry"
-                                        ? item.label
+                                        ? entryDisplayLabel(item, locale)
                                         : formatWeight(item.weightGrams, weightUnit, locale)}
                                 </strong>
                                 <span>{formatDateTime(item.deletedAt, locale, timeZone)}</span>
@@ -468,7 +483,7 @@ function recordDate(record: HistoryRecord): string {
 
 function recordTitle(record: HistoryRecord, locale: Locale, unit: WeightUnit): string {
     return record.recordType === "entry"
-        ? record.item.label
+        ? entryDisplayLabel(record.item, locale)
         : formatWeight(record.item.weightGrams, unit, locale);
 }
 

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { sendJson } from "@/core/http/client";
 import { formatDuration, translate } from "@/core/i18n/translate";
 import type { Entry, Locale } from "@/features/logbook/domain";
+import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import { KindIcon } from "@/ui/kind-icon";
 
 const CLOCK_TICK_MS = 30_000;
@@ -51,7 +52,7 @@ export function ActiveActivity({
             </span>
             <div className="active-text">
                 <p className="eyebrow">{translate(locale, "dashboard.inProgress")}</p>
-                <h2>{activity.label}</h2>
+                <h2>{entryDisplayLabel(activity, locale)}</h2>
                 <p>
                     {translate(locale, "dashboard.activeFor", {
                         duration: formatDuration(activity.startAt, now, locale),

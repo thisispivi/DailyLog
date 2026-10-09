@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
-import { readPreferenceCookies } from "@/core/preferences/preference-cookies";
+import { localizedTitle, readPreferenceCookies } from "@/core/preferences/preference-cookies";
 import { readSession } from "@/core/security/session";
 import { LoginForm } from "@/features/auth/ui/login-form";
 import { KindIcon, recordKinds } from "@/ui/kind-icon";
@@ -10,7 +10,7 @@ import { Logo } from "@/ui/logo";
 
 import "./login.css";
 
-export const metadata = { title: "Sign in" };
+export const generateMetadata = () => localizedTitle("auth.heading");
 
 export default async function LoginPage() {
     if (await readSession()) redirect("/today");

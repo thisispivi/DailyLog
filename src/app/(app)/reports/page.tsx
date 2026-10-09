@@ -1,5 +1,6 @@
 import { getEnvironment } from "@/core/config/env";
 import { translate } from "@/core/i18n/translate";
+import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { datesEndingOn, localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import { ExportPanel } from "@/features/reports/ui/export-panel";
@@ -9,7 +10,7 @@ import { LogbookRepository } from "@/infrastructure/database/logbook-repository"
 
 import "./reports.css";
 
-export const metadata = { title: "Reports" };
+export const generateMetadata = () => localizedTitle("nav.reports");
 
 const TREND_DAYS = 30;
 const SLEEP_NIGHTS = 14;
