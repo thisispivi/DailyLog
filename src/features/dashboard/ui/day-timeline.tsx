@@ -6,6 +6,8 @@ import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/doma
 import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
+import "./day-timeline.css";
+
 type TimelineRow = Readonly<{
     at: string;
     detail: string;

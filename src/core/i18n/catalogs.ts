@@ -48,7 +48,14 @@ const en = {
         saving: "Saving…",
         title: "Notes",
     },
+    calendar: {
+        hasNote: "Has a note",
+        nextMonth: "Next month",
+        previousMonth: "Previous month",
+        today: "Today",
+    },
     nav: {
+        calendar: "Calendar",
         dashboard: "Today",
         primary: "Primary navigation",
         history: "History",
@@ -213,7 +220,14 @@ const it: CatalogShape = {
         saving: "Salvataggio…",
         title: "Note",
     },
+    calendar: {
+        hasNote: "Ha una nota",
+        nextMonth: "Mese successivo",
+        previousMonth: "Mese precedente",
+        today: "Oggi",
+    },
     nav: {
+        calendar: "Calendario",
         dashboard: "Oggi",
         primary: "Navigazione principale",
         history: "Cronologia",
