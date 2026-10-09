@@ -11,7 +11,7 @@ import {
 // Request schemas are strict: an unexpected key is a client bug or a probe, never
 // something to silently drop.
 
-const isoTimestamp = z.iso.datetime({ offset: true });
+export const isoTimestamp = z.iso.datetime({ offset: true });
 
 const endFollowsStart = (value: {
     endAt?: string | null | undefined;
@@ -80,13 +80,14 @@ export const updateWeighInSchema = createWeighInSchema
         path: ["unit"],
     });
 
-export const updateSettingsSchema = z
-    .strictObject({
-        exportLocale: z.enum(locales),
-        locale: z.enum(locales),
-        theme: z.enum(themes),
-        weightUnit: z.enum(weightUnits),
-    })
+export const settingsSchema = z.strictObject({
+    exportLocale: z.enum(locales),
+    locale: z.enum(locales),
+    theme: z.enum(themes),
+    weightUnit: z.enum(weightUnits),
+});
+
+export const updateSettingsSchema = settingsSchema
     .partial()
     .refine((value) => Object.keys(value).length > 0, "At least one setting is required.");
 

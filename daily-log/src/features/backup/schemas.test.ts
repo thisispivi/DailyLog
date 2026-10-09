@@ -37,4 +37,17 @@ describe("backup schema", () => {
             }).success,
         ).toBe(false);
     });
+
+    it("applies the same record rules as the API", () => {
+        const entry = backup.entries[0];
+        const variants = [
+            { entries: [{ ...entry, label: "x".repeat(121) }] },
+            { entries: [{ ...entry, userId: 7 }] },
+            { profile: { ...backup.profile, birthDate: "2999-01-01" } },
+            { settings: { ...backup.settings, theme: "sepia" } },
+        ];
+        for (const variant of variants) {
+            expect(backupSchema.safeParse({ ...backup, ...variant }).success).toBe(false);
+        }
+    });
 });
