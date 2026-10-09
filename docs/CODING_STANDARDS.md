@@ -94,13 +94,12 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 
 ## Styling
 
-- Design tokens live in `src/app/globals.css`. Use tokens, never literal colours.
-- Each colour is declared once with `light-dark(light, dark)`. The theme setting switches `color-scheme` on `<html>`; never add a separate dark-mode block.
-- Record types are colour-coded. Set `data-kind="meal|training|sleep|weight"` on an element, then use `--kind-tile` for its background and `--kind-ink` for text and icons on it. Pastel tiles are backgrounds only; text on them always uses the ink colour so contrast stays at AA.
-- Reuse the base classes before writing new ones: `.card`, `.tile`, `.chip`, `.pill`, `.button` (`-primary`, `-danger`, `-ghost`), `.field`, `.input`, `.form-grid`.
-- Modal editing goes through `Sheet` (`src/ui/sheet.tsx`), a wrapper around the native `<dialog>`. Don't build custom overlays.
+The full design system (colours, type, components, layouts, charts, copy, exports) is in [DESIGN.md](DESIGN.md). The rules that matter for code:
+
+- Use tokens from `src/app/globals.css`, never literal colours. Each colour is declared once with `light-dark(light, dark)`; don't add dark-mode blocks.
+- Record-type colours come from `data-kind` plus `--kind-tile` (background) and `--kind-ink` (text and icons).
+- Reuse the base classes and the shared `Select`, `DateTimeField`, and `Sheet` components.
 - Page styles sit next to the page (`today.css`). Component styles sit next to the component when it appears on several pages.
-- Respect `prefers-reduced-motion`.
 
 ## Naming and comments
 

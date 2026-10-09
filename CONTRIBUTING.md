@@ -12,7 +12,7 @@ npm run dev
 
 Point `DATABASE_PATH` at a throwaway file when you don't need real data. Never commit `.env`, databases, backups, or exports.
 
-Read [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) before your first change. It says where new code goes and what lint enforces.
+Read [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) before your first change. It says where new code goes and what lint enforces. For anything visible, follow [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Workflow
 
