@@ -4,7 +4,8 @@ import { getEnvironment } from "@/core/config/env";
 import { ApiError, authenticatedRoute, readQuery } from "@/core/http/api";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { exportQuerySchema } from "@/features/logbook/schemas";
-import { createPdf, createWorkbook } from "@/features/reports/report-service";
+import { createPdf } from "@/features/reports/report-service";
+import { createWorkbook } from "@/features/reports/workbook";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 const contentTypes = {
@@ -33,12 +34,13 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
         endDate,
         entries: logbook.listEntriesInRange(userId, from, to),
         locale: settings.exportLocale,
+        notes: logbook.listDayNotes(userId, startDate, endDate),
         startDate,
         timeZone: timezone,
         weighIns: logbook.listWeighIns(userId, { from, limit: null, to }).reverse(),
         weightUnit: settings.weightUnit,
     };
-    if (!input.entries.length && !input.weighIns.length) {
+    if (!input.entries.length && !input.weighIns.length && !input.notes.length) {
         throw new ApiError(404, "NO_DATA", "There is no data to export.");
     }
     const file = query.format === "pdf" ? await createPdf(input) : await createWorkbook(input);

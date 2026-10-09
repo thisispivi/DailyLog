@@ -1,82 +1,8 @@
 import PDFDocument from "pdfkit";
-import writeExcelFile, { type Cell, type SheetData } from "write-excel-file/node";
 
 import { formatDateTime, formatDuration, formatWeight, translate } from "@/core/i18n/translate";
-import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel } from "@/features/logbook/entry-label";
-
-type ReportInput = Readonly<{
-    endDate: string;
-    entries: Entry[];
-    locale: Locale;
-    startDate: string;
-    timeZone: string;
-    weighIns: WeighIn[];
-    weightUnit: WeightUnit;
-}>;
-
-/** Builds a spreadsheet-safe workbook with separate journal and weight worksheets. */
-export async function createWorkbook(input: ReportInput): Promise<Buffer> {
-    const journalHeaders = [
-        "columnDate",
-        "columnType",
-        "columnLabel",
-        "columnDetails",
-        "columnEnd",
-        "columnDuration",
-    ] as const;
-    const journal: SheetData = [
-        journalHeaders.map((key) => headerCell(translate(input.locale, `reports.${key}`))),
-        ...input.entries.map((entry, index): Cell[] => [
-            dataCell(formatDateTime(entry.startAt, input.locale, input.timeZone), index),
-            dataCell(translate(input.locale, `dashboard.${entry.kind}`), index),
-            dataCell(neutralizeSpreadsheetFormula(entryDisplayLabel(entry, input.locale)), index),
-            dataCell(neutralizeSpreadsheetFormula(entry.text), index),
-            dataCell(
-                entry.endAt ? formatDateTime(entry.endAt, input.locale, input.timeZone) : "",
-                index,
-            ),
-            dataCell(
-                entry.endAt ? formatDuration(entry.startAt, entry.endAt, input.locale) : "",
-                index,
-            ),
-        ]),
-    ];
-    const weights: SheetData = [
-        [
-            headerCell(translate(input.locale, "reports.columnDate")),
-            headerCell(translate(input.locale, "reports.columnWeight")),
-        ],
-        ...input.weighIns.map((weighIn, index): Cell[] => [
-            dataCell(formatDateTime(weighIn.recordedAt, input.locale, input.timeZone), index),
-            dataCell(formatWeight(weighIn.weightGrams, input.weightUnit, input.locale), index),
-        ]),
-    ];
-    return writeExcelFile([
-        {
-            columns: [
-                { width: 23 },
-                { width: 15 },
-                { width: 23 },
-                { width: 48 },
-                { width: 23 },
-                { width: 16 },
-            ],
-            data: journal,
-            orientation: "landscape",
-            sheet: translate(input.locale, "reports.journalSheet"),
-            showGridLines: false,
-            stickyRowsCount: 1,
-        },
-        {
-            columns: [{ width: 26 }, { width: 18 }],
-            data: weights,
-            sheet: translate(input.locale, "reports.weightSheet"),
-            showGridLines: false,
-            stickyRowsCount: 1,
-        },
-    ]).toBuffer();
-}
+import type { ReportInput } from "@/features/reports/report-input";
 
 /** Builds a compact A4 report without interpreting user text as markup. */
 export async function createPdf(input: ReportInput): Promise<Buffer> {
@@ -149,32 +75,6 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
     }
     document.end();
     return completed;
-}
-
-function headerCell(value: string): Cell {
-    return {
-        backgroundColor: "#071B3D",
-        fontWeight: "bold",
-        height: 24,
-        textColor: "#FFFFFF",
-        value,
-        alignVertical: "center",
-    };
-}
-
-function dataCell(value: string, index: number): Cell {
-    return {
-        ...(index % 2 === 1 ? { backgroundColor: "#F3F5F7" } : {}),
-        height: 24,
-        value,
-        alignVertical: "top",
-        wrap: true,
-    };
-}
-
-/** Prevents user-controlled cell text from being interpreted as a spreadsheet formula. */
-export function neutralizeSpreadsheetFormula(value: string): string {
-    return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 }
 
 function ensurePdfSpace(document: PDFKit.PDFDocument, height: number): void {
