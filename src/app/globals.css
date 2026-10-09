@@ -117,8 +117,34 @@ a {
     text-decoration: none;
 }
 
-button {
+/*
+ * Cursors live here, in one place, so every control behaves the same:
+ * a pointer for anything clickable, not-allowed for disabled controls, and
+ * progress while a button waits for the server (aria-busy).
+ */
+a[href],
+button,
+summary,
+select,
+[role="button"],
+[role="option"],
+input[type="checkbox"],
+input[type="radio"],
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
     cursor: pointer;
+}
+
+:disabled,
+[aria-disabled="true"],
+[data-disabled],
+label:has(> input:disabled) {
+    cursor: not-allowed;
+}
+
+[aria-busy="true"],
+button[aria-busy="true"]:disabled {
+    cursor: progress;
 }
 
 :focus-visible {
@@ -320,7 +346,6 @@ h2 {
 }
 
 .button:disabled {
-    cursor: not-allowed;
     opacity: 0.5;
 }
 

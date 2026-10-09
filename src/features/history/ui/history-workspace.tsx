@@ -385,6 +385,7 @@ function RecordEditor({
             <div className="form-actions form-wide editor-actions">
                 <button
                     className="button button-danger"
+                    aria-busy={pending}
                     disabled={pending}
                     onClick={moveToTrash}
                     type="button"
@@ -392,7 +393,12 @@ function RecordEditor({
                     <Trash2 aria-hidden="true" size={16} />
                     {translate(locale, "common.delete")}
                 </button>
-                <button className="button button-primary" disabled={pending} type="submit">
+                <button
+                    className="button button-primary"
+                    aria-busy={pending}
+                    disabled={pending}
+                    type="submit"
+                >
                     {translate(locale, "common.save")}
                 </button>
             </div>

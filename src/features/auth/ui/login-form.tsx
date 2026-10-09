@@ -53,6 +53,7 @@ export function LoginForm({
                 </div>
             </div>
             <button
+                aria-busy={pending}
                 className="button button-primary login-submit"
                 disabled={!configured || pending}
                 type="submit"
