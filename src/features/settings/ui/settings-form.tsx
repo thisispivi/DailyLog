@@ -1,9 +1,19 @@
 "use client";
 
-import { Check, FileText, Languages, MonitorCog, Scale, type LucideIcon } from "lucide-react";
+import {
+    Check,
+    ExternalLink,
+    FileText,
+    Info,
+    Languages,
+    MonitorCog,
+    Scale,
+    type LucideIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
+import { APP_VERSION, AUTHOR_URL, REPOSITORY_URL } from "@/core/config/build-info";
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import type { Locale, UserSettings } from "@/features/logbook/domain";
@@ -103,6 +113,26 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
                     title={translate(locale, "settings.weightUnit")}
                     value={settings.weightUnit}
                 />
+            </SettingSection>
+            <SettingSection icon={Info} title={translate(locale, "about.title")}>
+                <p className="muted numeric">
+                    {translate(locale, "about.version", { version: APP_VERSION })}
+                </p>
+                <div className="about-links">
+                    <a
+                        className="chip"
+                        href={REPOSITORY_URL}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                    >
+                        {translate(locale, "about.repository")}
+                        <ExternalLink aria-hidden="true" size={14} />
+                    </a>
+                    <a className="chip" href={AUTHOR_URL} rel="noopener noreferrer" target="_blank">
+                        {translate(locale, "about.website")}
+                        <ExternalLink aria-hidden="true" size={14} />
+                    </a>
+                </div>
             </SettingSection>
         </div>
     );
