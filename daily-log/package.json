@@ -1,6 +1,6 @@
 {
   "name": "dailylog",
-  "version": "1.19.0",
+  "version": "1.20.0",
   "private": true,
   "type": "module",
   "description": "A private, bilingual web journal for meals, activity, sleep, and body weight.",

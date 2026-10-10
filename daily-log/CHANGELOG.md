@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/thisispivi/DailyLog/compare/v1.19.0...v1.20.0) (2026-10-10)
+
+
+### Features
+
+* add the meal plan page ([6922ee6](https://github.com/thisispivi/DailyLog/commit/6922ee6908a56b1a05d53c4bba6c1496a2b5ed3a))
+
 ## [1.19.0](https://github.com/thisispivi/DailyLog/compare/v1.18.0...v1.19.0) (2026-10-10)
 
 
