@@ -1,6 +1,7 @@
 .next
 daily-log/demo/out
 daily-log/demo/public
+daily-log/demo/next-env.d.ts
 coverage
 dist
 node_modules
