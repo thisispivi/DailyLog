@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.16.0](https://github.com/thisispivi/DailyLog/compare/v1.15.3...v1.16.0) (2026-10-10)
+
+
+### Features
+
+* add a 12/24-hour time format preference ([63a73d8](https://github.com/thisispivi/DailyLog/commit/63a73d8fad2bd09127dae7ff5d32300d87b285eb))
+* add a 12/24-hour time format preference ([3e823ce](https://github.com/thisispivi/DailyLog/commit/3e823ceb8b8c9a09321b459515caa303e88971e6)), closes [#139](https://github.com/thisispivi/DailyLog/issues/139)
+
+
+### Bug Fixes
+
+* centre the navigation labels on their icons ([93f8f34](https://github.com/thisispivi/DailyLog/commit/93f8f34466105cde4ed50b30e812b5ebc4288a52))
+* centre the navigation labels on their icons ([ffc5a4b](https://github.com/thisispivi/DailyLog/commit/ffc5a4babfa5afd411919d5719e1ef91657c3650)), closes [#140](https://github.com/thisispivi/DailyLog/issues/140)
+
 ## [1.15.3](https://github.com/thisispivi/DailyLog/compare/v1.15.2...v1.15.3) (2026-10-10)
 
 
