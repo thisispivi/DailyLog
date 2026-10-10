@@ -15,7 +15,14 @@ const backup = {
     ],
     exportedAt: "2026-09-01T00:00:00+00:00",
     notes: [{ day: "2026-08-31", text: "Felt good" }],
-    profile: { birthDate: null, firstName: "", heightCm: null, lastName: "" },
+    profile: {
+        birthDate: null,
+        firstName: "",
+        goalDate: "2026-12-31",
+        goalWeightGrams: 70_000,
+        heightCm: null,
+        lastName: "",
+    },
     settings: {
         exportLocale: "en",
         locale: "en",
@@ -35,6 +42,17 @@ describe("backup schema", () => {
     it("reads backups made before the time format existed as 24-hour", () => {
         const legacy = { ...backup, settings: { ...backup.settings, timeFormat: undefined } };
         expect(backupSchema.parse(legacy).settings.timeFormat).toBe("24h");
+    });
+
+    it("reads backups made before weight goals existed as having no goal", () => {
+        const legacy = {
+            ...backup,
+            profile: { ...backup.profile, goalDate: undefined, goalWeightGrams: undefined },
+        };
+        expect(backupSchema.parse(legacy).profile).toMatchObject({
+            goalDate: null,
+            goalWeightGrams: null,
+        });
     });
 
     it("rejects other files, unknown versions, and invalid records", () => {

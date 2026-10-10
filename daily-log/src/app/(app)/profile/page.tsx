@@ -2,9 +2,17 @@ import { getEnvironment } from "@/core/config/env";
 import { formatWeight, translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { localDateInZone } from "@/core/time/zoned-time";
-import { ageOn, bmiCategory, bodyMassIndex, fullName } from "@/features/profile/profile";
+import {
+    ageOn,
+    bmiCategory,
+    bodyMassIndex,
+    fullName,
+    type WeightGoal,
+    weightGoalProgress,
+} from "@/features/profile/profile";
 import { BmiChart } from "@/features/profile/ui/bmi-chart";
 import { ProfileForm } from "@/features/profile/ui/profile-form";
+import { WeightGoalCard } from "@/features/profile/ui/weight-goal";
 import { WeightChart } from "@/features/reports/ui/trend-charts";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
@@ -23,6 +31,15 @@ export default function ProfilePage() {
     const latest = weighIns.at(-1);
     const bmi =
         latest && profile.heightCm ? bodyMassIndex(latest.weightGrams, profile.heightCm) : null;
+    const goal: WeightGoal | null =
+        profile.goalWeightGrams === null
+            ? null
+            : {
+                  date: profile.goalDate,
+                  setAt: logbook.getGoalSetAt(ownerId),
+                  weightGrams: profile.goalWeightGrams,
+              };
+    const goalProgress = goal ? weightGoalProgress(weighIns, goal, new Date().getTime()) : null;
     const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
     const stats = [
         {
@@ -79,6 +96,13 @@ export default function ProfilePage() {
                             </div>
                         </dl>
                     </section>
+                    <WeightGoalCard
+                        goal={goal}
+                        locale={locale}
+                        progress={goalProgress}
+                        timeZone={timezone}
+                        weightUnit={weightUnit}
+                    />
                     <div className="reports-charts">
                         <BmiChart
                             heightCm={profile.heightCm}
@@ -87,6 +111,7 @@ export default function ProfilePage() {
                             weighIns={weighIns}
                         />
                         <WeightChart
+                            goalGrams={profile.goalWeightGrams}
                             locale={locale}
                             timeZone={timezone}
                             weighIns={weighIns}
@@ -94,7 +119,12 @@ export default function ProfilePage() {
                         />
                     </div>
                 </div>
-                <ProfileForm initial={profile} locale={locale} timeZone={timezone} />
+                <ProfileForm
+                    initial={profile}
+                    locale={locale}
+                    timeZone={timezone}
+                    weightUnit={weightUnit}
+                />
             </div>
         </>
     );

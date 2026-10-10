@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */
@@ -112,6 +112,18 @@ export function migrateDatabase(db: Database.Database): void {
         password_hash TEXT NOT NULL CHECK (password_hash LIKE 'scrypt:%'),
         updated_at TEXT NOT NULL
       );
+    `);
+        const profileColumns = db.pragma("table_info(user_profiles)") as Array<{ name: string }>;
+        if (!profileColumns.some((column) => column.name === "goal_weight_grams")) {
+            db.exec(`
+        ALTER TABLE user_profiles ADD COLUMN goal_weight_grams INTEGER
+          CHECK (goal_weight_grams BETWEEN 1 AND 1000000);
+        ALTER TABLE user_profiles ADD COLUMN goal_date TEXT
+          CHECK (goal_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]');
+        ALTER TABLE user_profiles ADD COLUMN goal_set_at TEXT;
+      `);
+        }
+        db.exec(`
       PRAGMA user_version = ${SCHEMA_VERSION};
     `);
     })();

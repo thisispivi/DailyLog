@@ -59,6 +59,8 @@ type SettingsRow = {
 type ProfileRow = {
     birth_date: string | null;
     first_name: string;
+    goal_date: string | null;
+    goal_weight_grams: number | null;
     height_cm: number | null;
     last_name: string;
 };
@@ -132,32 +134,64 @@ export class LogbookRepository {
     getProfile(userId: number): UserProfile {
         const row = this.database
             .prepare(
-                "SELECT first_name, last_name, birth_date, height_cm FROM user_profiles WHERE user_id = ?",
+                `SELECT first_name, last_name, birth_date, height_cm, goal_weight_grams, goal_date
+         FROM user_profiles WHERE user_id = ?`,
             )
             .get(userId) as ProfileRow | undefined;
         return row
             ? {
                   birthDate: row.birth_date,
                   firstName: row.first_name,
+                  goalDate: row.goal_date,
+                  goalWeightGrams: row.goal_weight_grams,
                   heightCm: row.height_cm,
                   lastName: row.last_name,
               }
             : EMPTY_PROFILE;
     }
 
-    /** Applies the given fields; `null` clears a birth date or height. */
+    /**
+     * Applies the given fields; `null` clears a field. A new goal weight restarts
+     * the goal, so its progress is measured from the weight at that moment.
+     */
     updateProfile(userId: number, changes: ProfileChanges): UserProfile {
-        const next = { ...this.getProfile(userId), ...changes };
+        const current = this.getProfile(userId);
+        const next = { ...current, ...changes };
+        const goalSetAt =
+            next.goalWeightGrams === current.goalWeightGrams
+                ? this.getGoalSetAt(userId)
+                : next.goalWeightGrams === null
+                  ? null
+                  : toStorageTimestamp(new Date().toISOString());
         this.database
             .prepare(
-                `INSERT INTO user_profiles (user_id, first_name, last_name, birth_date, height_cm)
-         VALUES (?, ?, ?, ?, ?)
+                `INSERT INTO user_profiles (user_id, first_name, last_name, birth_date, height_cm,
+           goal_weight_grams, goal_date, goal_set_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (user_id) DO UPDATE SET first_name = excluded.first_name,
            last_name = excluded.last_name, birth_date = excluded.birth_date,
-           height_cm = excluded.height_cm`,
+           height_cm = excluded.height_cm, goal_weight_grams = excluded.goal_weight_grams,
+           goal_date = excluded.goal_date, goal_set_at = excluded.goal_set_at`,
             )
-            .run(userId, next.firstName, next.lastName, next.birthDate, next.heightCm);
+            .run(
+                userId,
+                next.firstName,
+                next.lastName,
+                next.birthDate,
+                next.heightCm,
+                next.goalWeightGrams,
+                next.goalDate,
+                goalSetAt,
+            );
         return this.getProfile(userId);
+    }
+
+    /** When the current goal weight was set, or null without a goal. */
+    getGoalSetAt(userId: number): string | null {
+        const row = this.database
+            .prepare("SELECT goal_set_at FROM user_profiles WHERE user_id = ?")
+            .get(userId) as { goal_set_at: string | null } | undefined;
+        return row?.goal_set_at ?? null;
     }
 
     /** Every live record, the notes, settings, and profile, in the backup file shape. */

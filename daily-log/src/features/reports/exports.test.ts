@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Entry } from "@/features/logbook/domain";
+import { EMPTY_PROFILE } from "@/features/profile/profile";
 import { profileLine, reportDays, type ReportInput } from "@/features/reports/report-input";
 import { createPdf } from "@/features/reports/pdf-report";
 import { createWorkbook, neutralizeSpreadsheetFormula } from "@/features/reports/workbook";
@@ -33,7 +34,14 @@ const input: ReportInput = {
     ],
     locale: "it",
     notes: [{ day: "2026-08-31", text: "+ felt great", updatedAt: "2026-08-31T22:00:00+00:00" }],
-    profile: { birthDate: "1990-10-10", firstName: "Ada", heightCm: 180, lastName: "Rossi" },
+    profile: {
+        birthDate: "1990-10-10",
+        firstName: "Ada",
+        goalDate: null,
+        goalWeightGrams: null,
+        heightCm: 180,
+        lastName: "Rossi",
+    },
     startDate: "2026-08-30",
     timeZone: "Europe/Berlin",
     weighIns: [
@@ -72,7 +80,7 @@ describe("report generation", () => {
         expect(
             profileLine({
                 ...input,
-                profile: { birthDate: null, firstName: "", heightCm: null, lastName: "" },
+                profile: EMPTY_PROFILE,
             }),
         ).toBeNull();
     });
