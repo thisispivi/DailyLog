@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.18.0](https://github.com/thisispivi/DailyLog/compare/v1.17.1...v1.18.0) (2026-10-10)
+
+
+### Features
+
+* add the diet schema, LLM prompt, and meal plan generator ([4ad39d6](https://github.com/thisispivi/DailyLog/commit/4ad39d64b52e4fa2321239999ad3fd9bd2fa6876))
+* add the diet schema, LLM prompt, and meal plan generator ([271af5c](https://github.com/thisispivi/DailyLog/commit/271af5c9c4c106e018e3c174c9386c225e7e14ff)), closes [#150](https://github.com/thisispivi/DailyLog/issues/150)
+
 ## [1.17.1](https://github.com/thisispivi/DailyLog/compare/v1.17.0...v1.17.1) (2026-10-10)
 
 
