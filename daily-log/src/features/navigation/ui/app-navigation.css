@@ -42,6 +42,14 @@
         color 120ms ease;
 }
 
+/* Nunito's line box carries more room above the letters than below, so a
+   centred label sat off the icon's centre. Trimming it to cap height and
+   baseline makes flex centring match what the eye sees. */
+.nav-link > span,
+.account-link > span {
+    text-box: trim-both cap alphabetic;
+}
+
 .nav-link:hover {
     background: var(--surface-muted);
     color: var(--text);
