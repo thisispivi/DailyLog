@@ -168,6 +168,17 @@ export function rerollMeal(
     };
 }
 
+/** An amount with its unit, e.g. "200 ml"; pieces use the translated short word. */
+export function formatAmount(
+    amount: number,
+    unit: FoodUnit | null,
+    locale: string,
+    piecesLabel: string,
+): string {
+    const value = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(amount);
+    return unit ? `${value} ${unit === "pcs" ? piecesLabel : unit}` : value;
+}
+
 export type ShoppingItem = Readonly<{
     /** Total across the week, or null when the diet gives no amount. */
     amount: number | null;
