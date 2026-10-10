@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.0](https://github.com/thisispivi/DailyLog/compare/v1.18.0...v1.19.0) (2026-10-10)
+
+
+### Features
+
+* store the diet and meal plan, with API routes ([4ed8749](https://github.com/thisispivi/DailyLog/commit/4ed87498876e93cd11e8d1505ca30e9ec0ccc931))
+
 ## [1.18.0](https://github.com/thisispivi/DailyLog/compare/v1.17.1...v1.18.0) (2026-10-10)
 
 
