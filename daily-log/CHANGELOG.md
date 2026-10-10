@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.20.1](https://github.com/thisispivi/DailyLog/compare/v1.20.0...v1.20.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* make placeholders readable in the dark theme ([74dcfc6](https://github.com/thisispivi/DailyLog/commit/74dcfc64911f251bc2a3c0a1d489029aa52215ab))
+* make placeholders readable in the dark theme ([a886d1b](https://github.com/thisispivi/DailyLog/commit/a886d1be4a40379479b2a3719e55870d935a5b9b)), closes [#154](https://github.com/thisispivi/DailyLog/issues/154)
+
 ## [1.20.0](https://github.com/thisispivi/DailyLog/compare/v1.19.0...v1.20.0) (2026-10-10)
 
 
