@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.21.0](https://github.com/thisispivi/DailyLog/compare/v1.20.1...v1.21.0) (2026-10-10)
+
+
+### Features
+
+* add a playable demo for GitHub Pages ([acfa465](https://github.com/thisispivi/DailyLog/commit/acfa4654092ec027c8d27e2e87e6dba93dd3c79e))
+* add a playable demo for GitHub Pages ([b6b26b9](https://github.com/thisispivi/DailyLog/commit/b6b26b9f01d6d2cbed0a9394d8feeb442b30b8fd)), closes [#157](https://github.com/thisispivi/DailyLog/issues/157)
+
+
+### Bug Fixes
+
+* typecheck the demo before it has been built ([10a9b41](https://github.com/thisispivi/DailyLog/commit/10a9b41e2043e3bad1209ea96fed8bc5593b7c67))
+
 ## [1.20.1](https://github.com/thisispivi/DailyLog/compare/v1.20.0...v1.20.1) (2026-10-10)
 
 
