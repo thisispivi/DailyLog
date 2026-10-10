@@ -1,13 +1,15 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 import { cookies } from "next/headers";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
 
 const COOKIE_NAME = "dailylog_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
+/** A session in use is reissued at most once a day, so it only lapses after a week idle. */
+const RENEW_AFTER_SECONDS = 60 * 60 * 24;
 
 const sessionPayloadSchema = z.strictObject({
     expiresAt: z.number().int(),
@@ -61,34 +63,59 @@ export function verifyPassword(candidate: string, storedHash: string | null): bo
     return timingSafeEqual(actualDigest, expectedDigest);
 }
 
-export async function createSession(request: NextRequest): Promise<void> {
-    const environment = getEnvironment();
-    if (!environment.sessionSecret) throw new Error("Authentication is not configured.");
-
+function issueSessionToken(userId: number, secret: string): string {
     const payload: SessionPayload = {
         expiresAt: Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS,
         nonce: randomBytes(16).toString("base64url"),
-        userId: environment.ownerId,
+        userId,
     };
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
-    const token = `${encodedPayload}.${sign(encodedPayload, environment.sessionSecret)}`;
-    (await cookies()).set(COOKIE_NAME, token, {
+    return `${encodedPayload}.${sign(encodedPayload, secret)}`;
+}
+
+function sessionCookieOptions(request: NextRequest, maxAge: number) {
+    // Lax, not Strict: Chrome drops Strict cookies on the first request when an
+    // installed app is launched, which forced a new sign-in on every launch.
+    // Mutations are still guarded by the same-origin check in authenticatedRoute.
+    return {
         httpOnly: true,
-        maxAge: SESSION_DURATION_SECONDS,
+        maxAge,
         path: "/",
-        sameSite: "strict",
+        sameSite: "lax",
         secure: isSecureRequest(request),
-    });
+    } as const;
+}
+
+export async function createSession(request: NextRequest): Promise<void> {
+    const environment = getEnvironment();
+    if (!environment.sessionSecret) throw new Error("Authentication is not configured.");
+    (await cookies()).set(
+        COOKIE_NAME,
+        issueSessionToken(environment.ownerId, environment.sessionSecret),
+        sessionCookieOptions(request, SESSION_DURATION_SECONDS),
+    );
+}
+
+export function needsRenewal(expiresAt: number, nowSeconds: number): boolean {
+    return expiresAt - nowSeconds < SESSION_DURATION_SECONDS - RENEW_AFTER_SECONDS;
+}
+
+/** Reissues a valid session cookie that is more than a day old, from the proxy. */
+export function renewSession(request: NextRequest, response: NextResponse): void {
+    const environment = getEnvironment();
+    const token = request.cookies.get(COOKIE_NAME)?.value;
+    if (!environment.sessionSecret || !token) return;
+    const session = verifySessionToken(token, environment.sessionSecret, environment.ownerId);
+    if (!session || !needsRenewal(session.expiresAt, Math.floor(Date.now() / 1000))) return;
+    response.cookies.set(
+        COOKIE_NAME,
+        issueSessionToken(session.userId, environment.sessionSecret),
+        sessionCookieOptions(request, SESSION_DURATION_SECONDS),
+    );
 }
 
 export async function destroySession(request: NextRequest): Promise<void> {
-    (await cookies()).set(COOKIE_NAME, "", {
-        httpOnly: true,
-        maxAge: 0,
-        path: "/",
-        sameSite: "strict",
-        secure: isSecureRequest(request),
-    });
+    (await cookies()).set(COOKIE_NAME, "", sessionCookieOptions(request, 0));
 }
 
 /** Validates signature, expiry, shape, and owner binding for the current session cookie. */

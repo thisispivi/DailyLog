@@ -2,7 +2,12 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { hashPassword, verifyPassword, verifySessionToken } from "@/core/security/session";
+import {
+    hashPassword,
+    needsRenewal,
+    verifyPassword,
+    verifySessionToken,
+} from "@/core/security/session";
 
 const SECRET = "a-session-secret-that-is-at-least-32-chars";
 const OWNER = 42;
@@ -46,5 +51,16 @@ describe("verifyPassword", () => {
         expect(verifyPassword("a-brand-new-password", stored)).toBe(true);
         expect(verifyPassword("a-wrong-password", stored)).toBe(false);
         expect(verifyPassword("a-brand-new-password", "scrypt:broken")).toBe(false);
+    });
+});
+
+describe("needsRenewal", () => {
+    const WEEK = 60 * 60 * 24 * 7;
+    const DAY = 60 * 60 * 24;
+
+    it("renews a session only once it is more than a day old", () => {
+        expect(needsRenewal(NOW + WEEK, NOW)).toBe(false);
+        expect(needsRenewal(NOW + WEEK - DAY + 1, NOW)).toBe(false);
+        expect(needsRenewal(NOW + WEEK - DAY - 1, NOW)).toBe(true);
     });
 });

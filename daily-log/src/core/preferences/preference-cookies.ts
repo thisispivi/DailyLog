@@ -32,7 +32,7 @@ export function writePreferenceCookies(
     const options = {
         maxAge: ONE_YEAR_SECONDS,
         path: "/",
-        sameSite: "strict",
+        sameSite: "lax",
         secure: isSecureRequest(request),
     } as const;
     response.cookies.set(LOCALE_COOKIE, preferences.locale, options);
