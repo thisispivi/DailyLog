@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.3](https://github.com/thisispivi/DailyLog/compare/v1.15.2...v1.15.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* keep the session when the installed app is reopened ([64b7551](https://github.com/thisispivi/DailyLog/commit/64b7551d3f0ce68dc6d875d798c2c2aaf883bc96))
+* keep the session when the installed app is reopened ([5531732](https://github.com/thisispivi/DailyLog/commit/553173240abb88cfb4c6506d95d93ab245dcac13))
+
 ## [1.15.2](https://github.com/thisispivi/DailyLog/compare/v1.15.1...v1.15.2) (2026-10-10)
 
 
