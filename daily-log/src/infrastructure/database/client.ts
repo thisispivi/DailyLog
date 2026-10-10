@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */
@@ -124,6 +124,16 @@ export function migrateDatabase(db: Database.Database): void {
       `);
         }
         db.exec(`
+      CREATE TABLE IF NOT EXISTS diets (
+        user_id INTEGER PRIMARY KEY,
+        document TEXT NOT NULL CHECK (json_valid(document)),
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS meal_plans (
+        user_id INTEGER PRIMARY KEY,
+        plan TEXT NOT NULL CHECK (json_valid(plan)),
+        updated_at TEXT NOT NULL
+      );
       PRAGMA user_version = ${SCHEMA_VERSION};
     `);
     })();
