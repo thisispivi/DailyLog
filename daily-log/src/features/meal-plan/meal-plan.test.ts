@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { generateWeek, rerollMeal, shoppingList } from "@/features/meal-plan/meal-plan";
+import { generateWeek, mondayOf, rerollMeal, shoppingList } from "@/features/meal-plan/meal-plan";
 import { dietPrompt } from "@/features/meal-plan/prompt";
 import { type Diet, dietSchema, type MealPlan } from "@/features/meal-plan/schemas";
 
@@ -194,6 +194,13 @@ describe("meal plan generator", () => {
             );
             expectWithinLimits(rerolled);
         }
+    });
+
+    it("starts weeks on Monday", () => {
+        expect(mondayOf("2026-10-05")).toBe("2026-10-05");
+        expect(mondayOf("2026-10-10")).toBe("2026-10-05");
+        expect(mondayOf("2026-10-11")).toBe("2026-10-05");
+        expect(mondayOf("2026-10-12")).toBe("2026-10-12");
     });
 
     it("adds up the shopping list per food and unit", () => {

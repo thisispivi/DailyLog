@@ -22,6 +22,7 @@ import { BACKUP_VERSION, type Backup, type ImportResult } from "@/features/backu
 import type { EntryChanges, NewEntry, SettingsChanges } from "@/features/logbook/schemas";
 import { EMPTY_PROFILE, type UserProfile } from "@/features/profile/profile";
 import type { ProfileChanges } from "@/features/profile/schemas";
+import { type Diet, dietSchema, type MealPlan, mealPlanSchema } from "@/features/meal-plan/schemas";
 import { getDatabase } from "@/infrastructure/database/client";
 
 // Row shapes are guaranteed by the schema's CHECK constraints, so rows are mapped
@@ -531,6 +532,44 @@ export class LogbookRepository {
             )
             .run(now, now, userId, weighInId);
         if (result.changes === 0) throw new RecordNotFoundError("Weigh-in not found.");
+    }
+
+    /** The owner's diet, or null before one is uploaded. Stored JSON is validated again on read. */
+    getDiet(userId: number): Diet | null {
+        const row = this.database
+            .prepare("SELECT document FROM diets WHERE user_id = ?")
+            .get(userId) as { document: string } | undefined;
+        return row ? dietSchema.parse(JSON.parse(row.document)) : null;
+    }
+
+    /** Replaces the diet and drops the meal plan, whose picks point at the old diet's ids. */
+    saveDiet(userId: number, diet: Diet): void {
+        this.database.transaction(() => {
+            this.database
+                .prepare(
+                    `INSERT INTO diets (user_id, document, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT (user_id) DO UPDATE SET
+             document = excluded.document, updated_at = excluded.updated_at`,
+                )
+                .run(userId, JSON.stringify(diet), toStorageTimestamp(new Date().toISOString()));
+            this.database.prepare("DELETE FROM meal_plans WHERE user_id = ?").run(userId);
+        })();
+    }
+
+    getMealPlan(userId: number): MealPlan | null {
+        const row = this.database
+            .prepare("SELECT plan FROM meal_plans WHERE user_id = ?")
+            .get(userId) as { plan: string } | undefined;
+        return row ? mealPlanSchema.parse(JSON.parse(row.plan)) : null;
+    }
+
+    saveMealPlan(userId: number, plan: MealPlan): void {
+        this.database
+            .prepare(
+                `INSERT INTO meal_plans (user_id, plan, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET plan = excluded.plan, updated_at = excluded.updated_at`,
+            )
+            .run(userId, JSON.stringify(plan), toStorageTimestamp(new Date().toISOString()));
     }
 
     getDayNote(userId: number, day: string): DayNote | null {

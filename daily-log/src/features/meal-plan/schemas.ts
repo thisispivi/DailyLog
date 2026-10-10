@@ -103,7 +103,10 @@ export const dietSchema = z
                 ),
             ),
         ];
-        for (const message of problems) if (message) context.addIssue({ code: "custom", message });
+        // A path puts the message in the API's field errors, so the upload can show it.
+        for (const message of problems) {
+            if (message) context.addIssue({ code: "custom", message, path: ["meals"] });
+        }
     });
 
 export type Diet = z.infer<typeof dietSchema>;
@@ -125,6 +128,9 @@ export const mealPlanSchema = z.strictObject({
 
 export type MealPlan = z.infer<typeof mealPlanSchema>;
 export type PlannedMeal = MealPlan["days"][number]["meals"][number];
+
+/** Generating a week takes no input; the empty object keeps the body strict. */
+export const generatePlanSchema = z.strictObject({});
 
 export const rerollSchema = z.strictObject({
     day: z.number().int().min(0).max(6),

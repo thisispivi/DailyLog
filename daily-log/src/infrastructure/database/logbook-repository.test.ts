@@ -6,6 +6,7 @@ import {
     InvalidEntryRangeError,
     RecordNotFoundError,
 } from "@/features/logbook/domain";
+import type { Diet, MealPlan } from "@/features/meal-plan/schemas";
 import { migrateDatabase } from "@/infrastructure/database/client";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
@@ -65,6 +66,51 @@ describe("LogbookRepository", () => {
             lastName: "",
         });
         expect(logbook.getProfile(STRANGER).firstName).toBe("");
+    });
+
+    it("keeps one diet per owner and drops the plan when the diet is replaced", () => {
+        const diet: Diet = {
+            meals: [
+                {
+                    key: "lunch",
+                    variants: [
+                        {
+                            id: "pranzo",
+                            name: "Pranzo",
+                            slots: [{ name: "Pasta", optionIds: ["pasta"] }],
+                        },
+                    ],
+                },
+            ],
+            name: "Dieta",
+            notes: [],
+            options: [
+                { id: "pasta", items: [{ amount: 80, food: "Pasta", unit: "g" }], name: "Pasta" },
+            ],
+            version: 1,
+        };
+        const plan: MealPlan = {
+            days: Array.from({ length: 7 }, () => ({
+                meals: [
+                    {
+                        key: "lunch",
+                        picks: [{ optionId: "pasta", slot: "Pasta" }],
+                        variantId: "pranzo",
+                    },
+                ],
+            })),
+            startDate: "2026-10-05",
+        };
+        expect(logbook.getDiet(OWNER)).toBeNull();
+        logbook.saveDiet(OWNER, diet);
+        logbook.saveMealPlan(OWNER, plan);
+        expect(logbook.getDiet(OWNER)).toEqual(diet);
+        expect(logbook.getMealPlan(OWNER)).toEqual(plan);
+        expect(logbook.getDiet(STRANGER)).toBeNull();
+        expect(logbook.getMealPlan(STRANGER)).toBeNull();
+        logbook.saveDiet(OWNER, { ...diet, name: "Nuova dieta" });
+        expect(logbook.getDiet(OWNER)?.name).toBe("Nuova dieta");
+        expect(logbook.getMealPlan(OWNER)).toBeNull();
     });
 
     it("restarts the goal only when the goal weight changes", () => {
@@ -267,7 +313,7 @@ describe("legacy schema migration", () => {
             time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(9);
+        expect(database.pragma("user_version", { simple: true })).toBe(10);
         database.close();
     });
 });

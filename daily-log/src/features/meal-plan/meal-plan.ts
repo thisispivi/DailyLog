@@ -1,3 +1,4 @@
+import { shiftDate } from "@/core/time/zoned-time";
 import {
     type Diet,
     type DietOption,
@@ -9,6 +10,12 @@ import {
 } from "@/features/meal-plan/schemas";
 
 type Random = () => number;
+
+/** The Monday on or before a calendar day (`YYYY-MM-DD`). */
+export function mondayOf(day: string): string {
+    const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+    return shiftDate(day, -((weekday + 6) % 7));
+}
 
 /** How often each option and variant is already used, in the week and on each day. */
 type Usage = { days: Array<Map<string, number>>; week: Map<string, number> };
