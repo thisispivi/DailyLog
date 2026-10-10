@@ -5,7 +5,12 @@ import { useState } from "react";
 
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
-import type { Locale } from "@/features/logbook/domain";
+import {
+    gramsToUnit,
+    type Locale,
+    weightToGrams,
+    type WeightUnit,
+} from "@/features/logbook/domain";
 import type { UserProfile } from "@/features/profile/profile";
 import { HEIGHT_RANGE_CM } from "@/features/profile/schemas";
 import { DateTimeField } from "@/ui/date-time-field";
@@ -17,7 +22,8 @@ export function ProfileForm({
     initial,
     locale,
     timeZone,
-}: Readonly<{ initial: UserProfile; locale: Locale; timeZone: string }>) {
+    weightUnit,
+}: Readonly<{ initial: UserProfile; locale: Locale; timeZone: string; weightUnit: WeightUnit }>) {
     const router = useRouter();
     const [saved, setSaved] = useState(initial);
     const [status, setStatus] = useState<Status>(null);
@@ -43,6 +49,11 @@ export function ProfileForm({
     function saveHeight(value: string) {
         const heightCm = value ? Number(value) : null;
         if (heightCm !== saved.heightCm) void save({ heightCm });
+    }
+
+    function saveGoalWeight(value: string) {
+        const goalWeightGrams = value ? weightToGrams(Number(value), weightUnit) : null;
+        if (goalWeightGrams !== saved.goalWeightGrams) void save({ goalWeightGrams });
     }
 
     return (
@@ -109,6 +120,38 @@ export function ProfileForm({
                         type="number"
                     />
                 </div>
+                <div className="field">
+                    <label htmlFor="profile-goal-weight">
+                        {translate(locale, "profile.goalWeight", { unit: weightUnit })}
+                    </label>
+                    <input
+                        className="input numeric"
+                        defaultValue={
+                            initial.goalWeightGrams === null
+                                ? ""
+                                : Math.round(
+                                      gramsToUnit(initial.goalWeightGrams, weightUnit) * 10,
+                                  ) / 10
+                        }
+                        id="profile-goal-weight"
+                        inputMode="decimal"
+                        max={1000}
+                        min={1}
+                        onBlur={(event) => saveGoalWeight(event.currentTarget.value)}
+                        step={0.1}
+                        type="number"
+                    />
+                </div>
+                <DateTimeField
+                    clearable
+                    defaultValue={initial.goalDate ?? ""}
+                    id="profile-goal-date"
+                    label={translate(locale, "profile.goalDate")}
+                    locale={locale}
+                    mode="date"
+                    onChange={(value) => void save({ goalDate: value || null })}
+                    timeZone={timeZone}
+                />
             </div>
         </section>
     );

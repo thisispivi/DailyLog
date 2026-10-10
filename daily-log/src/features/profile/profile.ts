@@ -1,6 +1,11 @@
+import type { WeighIn } from "@/features/logbook/domain";
+
 /** Personal details shown on the profile page and at the top of exports. */
 export type UserProfile = Readonly<{
     birthDate: string | null;
+    /** Optional day (`YYYY-MM-DD`) by which to reach the goal weight. */
+    goalDate: string | null;
+    goalWeightGrams: number | null;
     firstName: string;
     heightCm: number | null;
     lastName: string;
@@ -9,6 +14,8 @@ export type UserProfile = Readonly<{
 export const EMPTY_PROFILE: UserProfile = {
     birthDate: null,
     firstName: "",
+    goalDate: null,
+    goalWeightGrams: null,
     heightCm: null,
     lastName: "",
 };
@@ -39,4 +46,101 @@ export function bmiCategory(bmi: number): BmiCategory {
 
 export function fullName(profile: UserProfile): string {
     return [profile.firstName, profile.lastName].filter(Boolean).join(" ");
+}
+
+const WEEK_MS = 7 * 86_400_000;
+/** Pace comes from the last four weeks of weigh-ins, so old trends don't linger. */
+const PACE_WINDOW_MS = 4 * WEEK_MS;
+
+export type WeightGoal = Readonly<{
+    date: string | null;
+    /** When the goal weight was last set; the start weight is read from then. */
+    setAt: string | null;
+    weightGrams: number;
+}>;
+
+export type WeightGoalProgress = Readonly<{
+    changeGrams: number;
+    currentGrams: number;
+    /** When the goal is reached at the recent pace, or null if that pace never gets there. */
+    estimatedAt: number | null;
+    /** Weekly change needed to reach the goal by its date, or null without a future date. */
+    neededWeeklyGrams: number | null;
+    /** Share of the way from the start weight to the goal, 0 to 1. */
+    progress: number;
+    reached: boolean;
+    remainingGrams: number;
+    startGrams: number;
+    targetGrams: number;
+    /** Least-squares trend of recent weigh-ins, or null with less than a week of them. */
+    weeklyPaceGrams: number | null;
+}>;
+
+/** Progress towards a goal weight; `weighIns` are oldest first. */
+export function weightGoalProgress(
+    weighIns: readonly WeighIn[],
+    goal: WeightGoal,
+    now: number,
+): WeightGoalProgress | null {
+    const current = weighIns.at(-1);
+    if (!current) return null;
+    const setAt = goal.setAt ? Date.parse(goal.setAt) : -Infinity;
+    const start =
+        weighIns.findLast((weighIn) => Date.parse(weighIn.recordedAt) <= setAt) ??
+        weighIns.find((weighIn) => Date.parse(weighIn.recordedAt) > setAt) ??
+        current;
+    const startGrams = start.weightGrams;
+    const currentGrams = current.weightGrams;
+    const targetGrams = goal.weightGrams;
+    const total = targetGrams - startGrams;
+    const remainingGrams = targetGrams - currentGrams;
+    const reached = total <= 0 ? currentGrams <= targetGrams : currentGrams >= targetGrams;
+    const progress =
+        total === 0
+            ? Number(reached)
+            : Math.min(1, Math.max(0, (currentGrams - startGrams) / total));
+
+    const currentAt = Date.parse(current.recordedAt);
+    const weeklyPaceGrams = weeklyTrend(
+        weighIns.filter((weighIn) => Date.parse(weighIn.recordedAt) >= currentAt - PACE_WINDOW_MS),
+    );
+    const towardsGoal =
+        weeklyPaceGrams !== null && Math.sign(weeklyPaceGrams) === Math.sign(remainingGrams);
+    const weeksLeft = goal.date ? (Date.parse(goal.date) - now) / WEEK_MS : 0;
+
+    return {
+        changeGrams: currentGrams - startGrams,
+        currentGrams,
+        estimatedAt:
+            !reached && towardsGoal
+                ? Math.round(currentAt + (remainingGrams / weeklyPaceGrams) * WEEK_MS)
+                : null,
+        neededWeeklyGrams: !reached && weeksLeft > 0 ? remainingGrams / weeksLeft : null,
+        progress,
+        reached,
+        remainingGrams,
+        startGrams,
+        targetGrams,
+        weeklyPaceGrams,
+    };
+}
+
+/** Grams per week from a least-squares line, or null if the points span under a week. */
+function weeklyTrend(weighIns: readonly WeighIn[]): number | null {
+    const points = weighIns.map((weighIn) => ({
+        x: Date.parse(weighIn.recordedAt),
+        y: weighIn.weightGrams,
+    }));
+    const first = points[0];
+    const last = points.at(-1);
+    if (!first || !last || last.x - first.x < WEEK_MS) return null;
+    const meanX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+    const meanY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+    let covariance = 0;
+    let variance = 0;
+    for (const point of points) {
+        covariance += (point.x - meanX) * (point.y - meanY);
+        variance += (point.x - meanX) ** 2;
+    }
+    return (covariance / variance) * WEEK_MS;
 }

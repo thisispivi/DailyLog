@@ -59,10 +59,24 @@ describe("LogbookRepository", () => {
         expect(logbook.updateProfile(OWNER, { heightCm: null })).toEqual({
             birthDate: "1990-05-01",
             firstName: "Ada",
+            goalDate: null,
+            goalWeightGrams: null,
             heightCm: null,
             lastName: "",
         });
         expect(logbook.getProfile(STRANGER).firstName).toBe("");
+    });
+
+    it("restarts the goal only when the goal weight changes", () => {
+        expect(logbook.getGoalSetAt(OWNER)).toBeNull();
+        logbook.updateProfile(OWNER, { goalWeightGrams: 70_000 });
+        const setAt = logbook.getGoalSetAt(OWNER);
+        expect(setAt).not.toBeNull();
+        logbook.updateProfile(OWNER, { firstName: "Ada", goalDate: "2026-12-31" });
+        expect(logbook.getGoalSetAt(OWNER)).toBe(setAt);
+        logbook.updateProfile(OWNER, { goalWeightGrams: null });
+        expect(logbook.getGoalSetAt(OWNER)).toBeNull();
+        expect(logbook.getGoalSetAt(STRANGER)).toBeNull();
     });
 
     it("round-trips a backup and skips records that already exist", () => {
@@ -253,7 +267,7 @@ describe("legacy schema migration", () => {
             time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(8);
+        expect(database.pragma("user_version", { simple: true })).toBe(9);
         database.close();
     });
 });

@@ -182,11 +182,14 @@ const DAY_MS = 86_400_000;
 
 /** Every weigh-in ever recorded, on a time axis so uneven gaps keep their real width. */
 export function WeightChart({
+    goalGrams = null,
     locale,
     timeZone,
     weighIns,
     weightUnit,
 }: Readonly<{
+    /** Drawn as a dashed line when set. */
+    goalGrams?: number | null;
     locale: Locale;
     timeZone: string;
     weighIns: readonly WeighIn[];
@@ -221,6 +224,7 @@ export function WeightChart({
             ) : (
                 <>
                     <WeightPlot
+                        goalGrams={goalGrams}
                         label={title}
                         locale={locale}
                         timeZone={timeZone}
@@ -247,6 +251,7 @@ export function WeightChart({
                     >
                         <div data-kind="weight">
                             <WeightPlot
+                                goalGrams={goalGrams}
                                 label={title}
                                 locale={locale}
                                 timeZone={timeZone}
@@ -262,12 +267,14 @@ export function WeightChart({
 }
 
 function WeightPlot({
+    goalGrams,
     label,
     locale,
     timeZone,
     weighIns,
     weightUnit,
 }: Readonly<{
+    goalGrams: number | null;
     label: string;
     locale: Locale;
     timeZone: string;
@@ -292,7 +299,10 @@ function WeightPlot({
             : { day: "numeric", month: "short", timeZone },
     );
     const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
-    const values = data.map((point) => point.weight);
+    const goal =
+        goalGrams === null ? null : Math.round(gramsToUnit(goalGrams, weightUnit) * 10) / 10;
+    // The goal line must stay on the chart, even far from the recorded weights.
+    const values = [...data.map((point) => point.weight), ...(goal === null ? [] : [goal])];
     const ticks = niceTicks(Math.min(...values), Math.max(...values));
 
     return (
@@ -326,6 +336,14 @@ function WeightPlot({
                         tickLine={false}
                         width={44}
                     />
+                    {goal !== null && (
+                        <ReferenceLine
+                            stroke="var(--weight-ink)"
+                            strokeDasharray="6 4"
+                            strokeOpacity={0.7}
+                            y={goal}
+                        />
+                    )}
                     <Tooltip
                         content={({ active, payload }: TooltipProps) => {
                             const point = payload?.[0]?.payload;
