@@ -18,9 +18,9 @@ const CONTENT_WIDTH = 595.28 - PAGE_MARGIN * 2;
 const FOOTER_SPACE = 56;
 // Wide enough for a range such as "01:30–09:00".
 const TIME_COLUMN = 66;
-const PILL_WIDTH = 64;
-const TEXT_X = PAGE_MARGIN + TIME_COLUMN + PILL_WIDTH + 12;
-const TEXT_WIDTH = CONTENT_WIDTH - (TEXT_X - PAGE_MARGIN);
+// Space on each side of the widest type label inside its pill.
+const PILL_PADDING = 8;
+const PILL_FONT_SIZE = 7.5;
 
 // Nunito, as in the app (OFL, see fonts/OFL.txt). WOFF rather than WOFF2: PDFKit
 // embeds WOFF2 glyphs that PDF viewers draw as blank. new URL(..., import.meta.url)
@@ -54,6 +54,17 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
         dateStyle: "long",
         timeZone: "UTC",
     });
+    // Every pill fits the widest label in this language, so the columns stay aligned.
+    font("extraBold").fontSize(PILL_FONT_SIZE);
+    const pillWidth =
+        Math.max(
+            ...(Object.keys(kindColors) as Array<keyof typeof kindColors>).map((kind) =>
+                document.widthOfString(t(`dashboard.${kind}`).toUpperCase()),
+            ),
+        ) +
+        PILL_PADDING * 2;
+    const textX = PAGE_MARGIN + TIME_COLUMN + pillWidth + 12;
+    const textWidth = CONTENT_WIDTH - (textX - PAGE_MARGIN);
     const period = `${mediumDate.format(asDay(input.startDate))} – ${mediumDate.format(asDay(input.endDate))}`;
 
     const ensureSpace = (height: number) => {
@@ -141,7 +152,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
         for (const row of rows) {
             font("regular").fontSize(9);
             const detailHeight = row.detail
-                ? document.heightOfString(row.detail, { width: TEXT_WIDTH })
+                ? document.heightOfString(row.detail, { width: textWidth })
                 : 0;
             const rowHeight = Math.max(30, 16 + detailHeight + 8);
             ensureSpace(rowHeight);
@@ -155,10 +166,10 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
                     width: TIME_COLUMN,
                 });
             document
-                .roundedRect(PAGE_MARGIN + TIME_COLUMN, top, PILL_WIDTH, 16, 8)
+                .roundedRect(PAGE_MARGIN + TIME_COLUMN, top, pillWidth, 16, 8)
                 .fill(colors.tile);
             font("extraBold")
-                .fontSize(7.5)
+                .fontSize(PILL_FONT_SIZE)
                 .fillColor(colors.ink)
                 .text(
                     t(`dashboard.${row.kind}`).toUpperCase(),
@@ -167,19 +178,19 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
                     {
                         align: "center",
                         lineBreak: false,
-                        width: PILL_WIDTH,
+                        width: pillWidth,
                     },
                 );
-            font("bold").fontSize(10.5).fillColor(palette.text).text(row.title, TEXT_X, top, {
+            font("bold").fontSize(10.5).fillColor(palette.text).text(row.title, textX, top, {
                 lineBreak: false,
-                width: TEXT_WIDTH,
+                width: textWidth,
             });
             if (row.detail) {
                 font("regular")
                     .fontSize(9)
                     .fillColor(palette.muted)
-                    .text(row.detail, TEXT_X, top + 15, {
-                        width: TEXT_WIDTH,
+                    .text(row.detail, textX, top + 15, {
+                        width: textWidth,
                     });
             }
             document.y = top + rowHeight;
@@ -194,7 +205,14 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
             document
                 .roundedRect(PAGE_MARGIN, top, CONTENT_WIDTH, boxHeight, 12)
                 .fill(palette.primarySoft);
-            document.roundedRect(PAGE_MARGIN, top, 4, boxHeight, 2).fill(palette.primary);
+            // The accent bar is clipped to the box, so it follows its rounded corners.
+            document
+                .save()
+                .roundedRect(PAGE_MARGIN, top, CONTENT_WIDTH, boxHeight, 12)
+                .clip()
+                .rect(PAGE_MARGIN, top, 4, boxHeight)
+                .fill(palette.primary)
+                .restore();
             font("extraBold")
                 .fontSize(8)
                 .fillColor(palette.primary)
