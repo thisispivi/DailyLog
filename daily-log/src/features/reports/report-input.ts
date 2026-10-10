@@ -1,7 +1,14 @@
 import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import { localDateInZone, localDateRangeBounds, shiftDate } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
-import type { DayNote, Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
+import type {
+    DayNote,
+    Entry,
+    Locale,
+    TimeFormat,
+    WeighIn,
+    WeightUnit,
+} from "@/features/logbook/domain";
 import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
 import { ageOn, bodyMassIndex, fullName, type UserProfile } from "@/features/profile/profile";
 import type { RecordKind } from "@/ui/kind-icon";
@@ -14,6 +21,7 @@ export type ReportInput = Readonly<{
     notes: readonly DayNote[];
     profile: UserProfile;
     startDate: string;
+    timeFormat: TimeFormat;
     timeZone: string;
     weighIns: readonly WeighIn[];
     weightUnit: WeightUnit;
@@ -120,7 +128,8 @@ function rowsForDay(
     now: Date,
 ): DayRow[] {
     const [dayStart, dayEnd] = localDateRangeBounds(date, date, input.timeZone);
-    const time = (value: string) => formatTime(value, input.locale, input.timeZone);
+    const time = (value: string) =>
+        formatTime(value, input.locale, input.timeZone, input.timeFormat);
     const inDay = (timestamp: string) =>
         Date.parse(timestamp) >= Date.parse(dayStart) && Date.parse(timestamp) < Date.parse(dayEnd);
     const rows: DayRow[] = [];

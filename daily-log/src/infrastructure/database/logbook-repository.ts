@@ -12,6 +12,7 @@ import {
     type EntryKind,
     type Locale,
     type Theme,
+    type TimeFormat,
     type TrashItem,
     type UserSettings,
     type WeighIn,
@@ -50,6 +51,7 @@ type SettingsRow = {
     export_locale: Locale;
     locale: Locale;
     theme: Theme;
+    time_format: TimeFormat;
     user_id: number;
     weight_unit: WeightUnit;
 };
@@ -113,7 +115,7 @@ export class LogbookRepository {
         this.database
             .prepare(
                 `UPDATE user_settings
-         SET locale = ?, export_locale = ?, weight_unit = ?, theme = ?
+         SET locale = ?, export_locale = ?, weight_unit = ?, theme = ?, time_format = ?
          WHERE user_id = ?`,
             )
             .run(
@@ -121,6 +123,7 @@ export class LogbookRepository {
                 changes.exportLocale ?? current.exportLocale,
                 changes.weightUnit ?? current.weightUnit,
                 changes.theme ?? current.theme,
+                changes.timeFormat ?? current.timeFormat,
                 userId,
             );
         return this.getSettings(userId);
@@ -159,7 +162,7 @@ export class LogbookRepository {
 
     /** Every live record, the notes, settings, and profile, in the backup file shape. */
     exportBackup(userId: number, exportedAt: string): Backup {
-        const { exportLocale, locale, theme, weightUnit } = this.getSettings(userId);
+        const { exportLocale, locale, theme, timeFormat, weightUnit } = this.getSettings(userId);
         const entries = this.database
             .prepare(
                 `SELECT kind, label, text, start_at, end_at FROM entries
@@ -189,7 +192,7 @@ export class LogbookRepository {
             exportedAt,
             notes,
             profile: this.getProfile(userId),
-            settings: { exportLocale, locale, theme, weightUnit },
+            settings: { exportLocale, locale, theme, timeFormat, weightUnit },
             version: BACKUP_VERSION,
             weighIns: weighIns.map((row) => ({
                 recordedAt: row.recorded_at,
@@ -648,6 +651,7 @@ function mapSettings(row: SettingsRow): UserSettings {
         exportLocale: row.export_locale,
         locale: row.locale,
         theme: row.theme,
+        timeFormat: row.time_format,
         userId: row.user_id,
         weightUnit: row.weight_unit,
     };

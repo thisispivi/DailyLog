@@ -27,7 +27,7 @@ export default async function CalendarPage({
     const query = querySchema.parse(await searchParams);
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
     const today = localDateInZone(new Date(), timezone);
     const month = query.month ?? query.day?.slice(0, 7) ?? today.slice(0, 7);
     const selected = query.day?.startsWith(month)
@@ -74,6 +74,7 @@ export default async function CalendarPage({
                         dayStart={dayStart}
                         entries={logbook.listEntriesInRange(ownerId, dayStart, dayEnd)}
                         locale={locale}
+                        timeFormat={timeFormat}
                         timeZone={timezone}
                         title={dayTitle}
                         weighIns={logbook.listWeighIns(ownerId, { from: dayStart, to: dayEnd })}

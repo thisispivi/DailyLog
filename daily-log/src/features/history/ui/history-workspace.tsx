@@ -19,6 +19,7 @@ import {
     gramsToUnit,
     type Entry,
     type Locale,
+    type TimeFormat,
     type TrashItem,
     type WeighIn,
     type WeightUnit,
@@ -42,11 +43,17 @@ const filters = [
 
 type Filter = (typeof filters)[number]["value"];
 
-type Shared = Readonly<{ locale: Locale; timeZone: string; weightUnit: WeightUnit }>;
+type Shared = Readonly<{
+    locale: Locale;
+    timeFormat: TimeFormat;
+    timeZone: string;
+    weightUnit: WeightUnit;
+}>;
 
 export function HistoryWorkspace({
     entries,
     locale,
+    timeFormat,
     timeZone,
     trash,
     weighIns,
@@ -58,7 +65,7 @@ export function HistoryWorkspace({
     const [date, setDate] = useState("");
     const [editing, setEditing] = useState<HistoryRecord | null>(null);
     const [failed, setFailed] = useState(false);
-    const shared = { locale, timeZone, weightUnit };
+    const shared = { locale, timeFormat, timeZone, weightUnit };
 
     const loneSnacks = useMemo(() => loneSnackIds(entries, timeZone), [entries, timeZone]);
     const records = useMemo(() => {
@@ -217,7 +224,12 @@ export function HistoryWorkspace({
                                             <span>{recordDetail(record, locale)}</span>
                                         </span>
                                         <time className="numeric" dateTime={recordDate(record)}>
-                                            {formatDateTime(recordDate(record), locale, timeZone)}
+                                            {formatDateTime(
+                                                recordDate(record),
+                                                locale,
+                                                timeZone,
+                                                timeFormat,
+                                            )}
                                         </time>
                                         <ChevronRight
                                             aria-hidden="true"
@@ -256,6 +268,7 @@ function RecordEditor({
     locale,
     onDone,
     record,
+    timeFormat,
     timeZone,
     weightUnit,
 }: Shared & Readonly<{ onDone: () => void; record: HistoryRecord }>) {
@@ -342,6 +355,7 @@ function RecordEditor({
                         label={translate(locale, "entry.startTime")}
                         locale={locale}
                         name="startAt"
+                        timeFormat={timeFormat}
                         timeZone={timeZone}
                     />
                     <DateTimeField
@@ -355,6 +369,7 @@ function RecordEditor({
                         label={translate(locale, "entry.endTime")}
                         locale={locale}
                         name="endAt"
+                        timeFormat={timeFormat}
                         timeZone={timeZone}
                     />
                     <div className="field form-wide">
@@ -396,6 +411,7 @@ function RecordEditor({
                         label={translate(locale, "entry.time")}
                         locale={locale}
                         name="startAt"
+                        timeFormat={timeFormat}
                         timeZone={timeZone}
                     />
                 </>
@@ -431,6 +447,7 @@ function TrashList({
     items,
     locale,
     onRestore,
+    timeFormat,
     timeZone,
     weightUnit,
 }: Shared & Readonly<{ items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
@@ -454,7 +471,9 @@ function TrashList({
                                         ? entryDisplayLabel(item, locale)
                                         : formatWeight(item.weightGrams, weightUnit, locale)}
                                 </strong>
-                                <span>{formatDateTime(item.deletedAt, locale, timeZone)}</span>
+                                <span>
+                                    {formatDateTime(item.deletedAt, locale, timeZone, timeFormat)}
+                                </span>
                             </span>
                             <button
                                 className="button"

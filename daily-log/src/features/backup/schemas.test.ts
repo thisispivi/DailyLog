@@ -16,7 +16,13 @@ const backup = {
     exportedAt: "2026-09-01T00:00:00+00:00",
     notes: [{ day: "2026-08-31", text: "Felt good" }],
     profile: { birthDate: null, firstName: "", heightCm: null, lastName: "" },
-    settings: { exportLocale: "en", locale: "en", theme: "system", weightUnit: "kg" },
+    settings: {
+        exportLocale: "en",
+        locale: "en",
+        theme: "system",
+        timeFormat: "12h",
+        weightUnit: "kg",
+    },
     version: 1,
     weighIns: [{ recordedAt: "2026-08-31T07:00:00+00:00", weightGrams: 73_200 }],
 };
@@ -24,6 +30,11 @@ const backup = {
 describe("backup schema", () => {
     it("accepts an exported backup", () => {
         expect(backupSchema.parse(backup)).toEqual(backup);
+    });
+
+    it("reads backups made before the time format existed as 24-hour", () => {
+        const legacy = { ...backup, settings: { ...backup.settings, timeFormat: undefined } };
+        expect(backupSchema.parse(legacy).settings.timeFormat).toBe("24h");
     });
 
     it("rejects other files, unknown versions, and invalid records", () => {

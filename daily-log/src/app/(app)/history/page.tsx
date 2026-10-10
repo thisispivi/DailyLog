@@ -15,7 +15,7 @@ const HISTORY_LIMIT = 100;
 export default function HistoryPage() {
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
     return (
         <>
             <header className="page-header">
@@ -27,6 +27,7 @@ export default function HistoryPage() {
             <HistoryWorkspace
                 entries={logbook.listEntries(ownerId, { limit: HISTORY_LIMIT, offset: 0 }).items}
                 locale={locale}
+                timeFormat={timeFormat}
                 timeZone={timezone}
                 trash={logbook.listTrash(ownerId)}
                 weighIns={logbook.listWeighIns(ownerId, { limit: HISTORY_LIMIT })}

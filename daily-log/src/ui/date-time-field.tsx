@@ -6,9 +6,9 @@ import { Fragment, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { enGB, it } from "react-day-picker/locale";
 
-import { translate } from "@/core/i18n/translate";
-import { localInputValue } from "@/core/time/zoned-time";
-import type { Locale } from "@/features/logbook/domain";
+import { hourCycle, translate } from "@/core/i18n/translate";
+import { localInputValue, toTwelveHour, toTwentyFourHour } from "@/core/time/zoned-time";
+import type { Locale, TimeFormat } from "@/features/logbook/domain";
 import { usePortalContainer } from "@/ui/sheet";
 
 import "react-day-picker/style.css";
@@ -34,6 +34,7 @@ export function DateTimeField({
     mode = "datetime",
     name,
     onChange,
+    timeFormat = "24h",
     timeZone,
     value: controlledValue,
     yearPicker = false,
@@ -49,6 +50,8 @@ export function DateTimeField({
     mode?: Mode;
     name?: string;
     onChange?: (value: string) => void;
+    /** Only used in datetime mode. */
+    timeFormat?: TimeFormat;
     timeZone: string;
     value?: string;
     /** A tappable caption that opens year and month grids, for dates far in the past. */
@@ -89,7 +92,7 @@ export function DateTimeField({
                             <CalendarDays aria-hidden="true" size={18} />
                             <span className={value ? undefined : "muted"}>
                                 {value
-                                    ? formatValue(value, mode, locale)
+                                    ? formatValue(value, mode, locale, timeFormat)
                                     : translate(locale, "common.notSet")}
                             </span>
                         </button>
@@ -104,7 +107,12 @@ export function DateTimeField({
                             />
                             {mode === "datetime" && (
                                 <div className="time-row">
-                                    <TimeInput locale={locale} onChange={setTime} time={time} />
+                                    <TimeInput
+                                        locale={locale}
+                                        onChange={setTime}
+                                        time={time}
+                                        twelveHour={timeFormat === "12h"}
+                                    />
                                     <button
                                         className="button button-ghost"
                                         onClick={() =>
@@ -138,30 +146,41 @@ export function DateTimeField({
     );
 }
 
-type TimeParts = { hour: string; minute: string };
+type TimeParts = { hour: string; minute: string; pm: boolean };
 
 /**
- * Hour and minute as two numeric text fields. A native `type="time"` input
- * inside the popover does not raise the keyboard on some phones, while
- * `inputMode="numeric"` always does. Partial typing is kept as a draft until
- * both parts are valid, and dropped when focus leaves the pair.
+ * Hour and minute as two numeric text fields, plus an AM/PM toggle on a
+ * 12-hour clock. A native `type="time"` input inside the popover does not raise
+ * the keyboard on some phones, while `inputMode="numeric"` always does. Partial
+ * typing is kept as a draft until it is a valid time, and dropped when focus
+ * leaves the group.
  */
 function TimeInput({
     locale,
     onChange,
     time,
-}: Readonly<{ locale: Locale; onChange: (time: string) => void; time: string }>) {
+    twelveHour,
+}: Readonly<{
+    locale: Locale;
+    onChange: (time: string) => void;
+    time: string;
+    twelveHour: boolean;
+}>) {
     const [hour = "", minute = ""] = time.split(":");
     const [draft, setDraft] = useState<TimeParts | null>(null);
-    const shown = draft ?? { hour, minute };
+    const shown = draft ?? {
+        hour: hour && twelveHour ? pad(toTwelveHour(Number(hour))) : hour,
+        minute,
+        pm: Number(hour) >= 12,
+    };
 
-    function edit(part: keyof TimeParts, raw: string) {
-        const next = { ...shown, [part]: raw.replaceAll(/\D/g, "").slice(0, 2) };
+    function commit(next: TimeParts) {
         setDraft(next);
         const [nextHour, nextMinute] = [Number(next.hour), Number(next.minute)];
-        if (next.hour && next.minute && nextHour < 24 && nextMinute < 60) {
-            onChange(`${pad(nextHour)}:${pad(nextMinute)}`);
-        }
+        const validHour = twelveHour ? nextHour >= 1 && nextHour <= 12 : nextHour <= 23;
+        if (!next.hour || !next.minute || !validHour || nextMinute > 59) return;
+        const hours = twelveHour ? toTwentyFourHour(nextHour, next.pm) : nextHour;
+        onChange(`${pad(hours)}:${pad(nextMinute)}`);
     }
 
     return (
@@ -185,7 +204,12 @@ function TimeInput({
                         enterKeyHint="done"
                         inputMode="numeric"
                         maxLength={2}
-                        onChange={(event) => edit(part, event.currentTarget.value)}
+                        onChange={(event) =>
+                            commit({
+                                ...shown,
+                                [part]: event.currentTarget.value.replaceAll(/\D/g, "").slice(0, 2),
+                            })
+                        }
                         onFocus={(event) => event.currentTarget.select()}
                         pattern="[0-9]*"
                         placeholder="--"
@@ -194,6 +218,15 @@ function TimeInput({
                     />
                 </Fragment>
             ))}
+            {twelveHour && (
+                <button
+                    className="time-period"
+                    onClick={() => commit({ ...shown, pm: !shown.pm })}
+                    type="button"
+                >
+                    {translate(locale, shown.pm ? "entry.pm" : "entry.am")}
+                </button>
+            )}
         </div>
     );
 }
@@ -322,7 +355,7 @@ function fromCalendarDate(value: Date): string {
     return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 }
 
-function formatValue(value: string, mode: Mode, locale: Locale): string {
+function formatValue(value: string, mode: Mode, locale: Locale, timeFormat: TimeFormat): string {
     const [date = "", time = "00:00"] = value.split("T");
     const calendar = toCalendarDate(date);
     if (!calendar) return value;
@@ -330,6 +363,16 @@ function formatValue(value: string, mode: Mode, locale: Locale): string {
     calendar.setHours(hour, minute);
     return new Intl.DateTimeFormat(
         locale,
-        mode === "date" ? { dateStyle: "medium" } : { dateStyle: "medium", timeStyle: "short" },
+        mode === "date"
+            ? { dateStyle: "medium" }
+            : {
+                  // timeStyle ignores hourCycle, so the fields are spelled out.
+                  day: "numeric",
+                  hour: "2-digit",
+                  hourCycle: hourCycle(timeFormat),
+                  minute: "2-digit",
+                  month: "short",
+                  year: "numeric",
+              },
     ).format(calendar);
 }

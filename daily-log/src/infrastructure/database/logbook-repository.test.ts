@@ -208,12 +208,17 @@ describe("LogbookRepository", () => {
 
     it("keeps weigh-ins in canonical grams while preferences remain independent", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
-        const settings = logbook.updateSettings(OWNER, { exportLocale: "it", weightUnit: "lb" });
+        const settings = logbook.updateSettings(OWNER, {
+            exportLocale: "it",
+            timeFormat: "12h",
+            weightUnit: "lb",
+        });
         expect(weighIn.weightGrams).toBe(72400);
         expect(settings).toMatchObject({
             exportLocale: "it",
             locale: "en",
             theme: "system",
+            timeFormat: "12h",
             weightUnit: "lb",
         });
     });
@@ -245,9 +250,10 @@ describe("legacy schema migration", () => {
             export_locale: "it",
             locale: "it",
             theme: "system",
+            time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(7);
+        expect(database.pragma("user_version", { simple: true })).toBe(8);
         database.close();
     });
 });

@@ -7,6 +7,9 @@ export type Locale = (typeof locales)[number];
 export const themes = ["system", "light", "dark"] as const;
 export type Theme = (typeof themes)[number];
 
+export const timeFormats = ["24h", "12h"] as const;
+export type TimeFormat = (typeof timeFormats)[number];
+
 export const weightUnits = ["kg", "lb"] as const;
 export type WeightUnit = (typeof weightUnits)[number];
 
@@ -40,6 +43,7 @@ export type UserSettings = Readonly<{
     exportLocale: Locale;
     locale: Locale;
     theme: Theme;
+    timeFormat: TimeFormat;
     userId: number;
     weightUnit: WeightUnit;
 }>;

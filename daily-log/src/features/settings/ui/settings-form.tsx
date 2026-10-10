@@ -2,6 +2,7 @@
 
 import {
     Check,
+    Clock,
     DatabaseBackup,
     ExternalLink,
     FileText,
@@ -24,7 +25,10 @@ import type { Locale, UserSettings } from "@/features/logbook/domain";
 import { LanguageFlag } from "@/ui/language-flag";
 
 type Status = { message: string; tone: "error" | "success" } | null;
-type Preferences = Pick<UserSettings, "exportLocale" | "locale" | "theme" | "weightUnit">;
+type Preferences = Pick<
+    UserSettings,
+    "exportLocale" | "locale" | "theme" | "timeFormat" | "weightUnit"
+>;
 
 /** Every choice saves as soon as it is made; there is no separate save step. */
 export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
@@ -116,6 +120,18 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
                     ]}
                     title={translate(locale, "settings.weightUnit")}
                     value={settings.weightUnit}
+                />
+            </SettingSection>
+            <SettingSection icon={Clock} title={translate(locale, "settings.timeFormat")}>
+                <OptionGroup
+                    name="timeFormat"
+                    onChange={(value) => void change("timeFormat", value)}
+                    options={[
+                        { label: translate(locale, "settings.twentyFourHour"), value: "24h" },
+                        { label: translate(locale, "settings.twelveHour"), value: "12h" },
+                    ]}
+                    title={translate(locale, "settings.timeFormat")}
+                    value={settings.timeFormat}
                 />
             </SettingSection>
             <SettingSection
