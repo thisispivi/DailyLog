@@ -64,6 +64,16 @@ export function localDateInZone(value: Date, timeZone: string): string {
     }).format(value);
 }
 
+/** A 12-hour clock hour (1–12) and AM/PM as a 24-hour hour (0–23). */
+export function toTwentyFourHour(hour: number, pm: boolean): number {
+    return (hour % 12) + (pm ? 12 : 0);
+}
+
+/** A 24-hour hour (0–23) on a 12-hour clock: midnight and noon are 12. */
+export function toTwelveHour(hour: number): number {
+    return hour % 12 || 12;
+}
+
 export function localInputValue(value: Date, timeZone: string): string {
     const parts = new Intl.DateTimeFormat("en-CA", {
         day: "2-digit",

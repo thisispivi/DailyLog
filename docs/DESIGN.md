@@ -148,7 +148,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 - Empty states invite the next step: "Nothing logged yet. Add the first detail while it is still fresh."
 - Every string lives in `src/core/i18n/catalogs.ts` in English and Italian. Strings with a `{count}` use `{ one, other }` plural forms.
 - Meal types and sleep are stored with the bot's English labels; show them through `entryDisplayLabel` so they're translated.
-- Dates, times, and numbers go through `Intl` with the user's locale and the configured time zone.
+- Dates, times, and numbers go through `Intl` with the user’s locale, 12- or 24-hour preference, and the configured time zone.
 
 ## Accessibility
 

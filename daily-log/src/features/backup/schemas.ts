@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { DAY_NOTE_MAX_LENGTH } from "@/features/logbook/domain";
+import { DAY_NOTE_MAX_LENGTH, timeFormats } from "@/features/logbook/domain";
 import { createEntrySchema, isoTimestamp, settingsSchema } from "@/features/logbook/schemas";
 import { profileSchema } from "@/features/profile/schemas";
 
@@ -24,7 +24,8 @@ export const backupSchema = z.strictObject({
         )
         .max(50_000),
     profile: profileSchema,
-    settings: settingsSchema,
+    // Backups made before the time format existed have no timeFormat.
+    settings: settingsSchema.extend({ timeFormat: z.enum(timeFormats).default("24h") }),
     version: z.literal(BACKUP_VERSION),
     weighIns: z
         .array(

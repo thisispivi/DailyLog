@@ -8,7 +8,12 @@ import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
 import { localHour, localInputToUtc, localInputValue } from "@/core/time/zoned-time";
 import { mealLabelForHour, mealLabels } from "@/features/insights/insights";
-import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import {
+    gramsToUnit,
+    type Locale,
+    type TimeFormat,
+    type WeightUnit,
+} from "@/features/logbook/domain";
 import { mealLabelKeys } from "@/features/logbook/entry-label";
 import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon, recordKinds, type RecordKind } from "@/ui/kind-icon";
@@ -23,6 +28,7 @@ type Context = Readonly<{
     lastWeightGrams: number | null;
     locale: Locale;
     recentTrainingLabels: readonly string[];
+    timeFormat: TimeFormat;
     timeZone: string;
     weightUnit: WeightUnit;
 }>;
@@ -151,6 +157,7 @@ function RecordForm({
     onBack,
     onSaved,
     recentTrainingLabels,
+    timeFormat,
     timeZone,
     weightUnit,
 }: Context & Readonly<{ kind: RecordKind; onBack: () => void; onSaved: () => void }>) {
@@ -292,6 +299,7 @@ function RecordForm({
                     label={translate(locale, isActivity ? "entry.startTime" : "entry.time")}
                     locale={locale}
                     name="startAt"
+                    timeFormat={timeFormat}
                     timeZone={timeZone}
                 />
                 {isActivity && (
@@ -302,6 +310,7 @@ function RecordForm({
                         locale={locale}
                         name="endAt"
                         onChange={(value) => setHasEnd(value !== "")}
+                        timeFormat={timeFormat}
                         timeZone={timeZone}
                     />
                 )}

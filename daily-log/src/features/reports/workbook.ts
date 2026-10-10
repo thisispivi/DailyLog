@@ -26,7 +26,7 @@ export function neutralizeSpreadsheetFormula(value: string): string {
 export async function createWorkbook(input: ReportInput): Promise<Buffer> {
     const t = (key: Parameters<typeof translate>[1]) => translate(input.locale, key);
     const dateFormat = input.locale === "it" ? "dd/mm/yyyy" : "dd mmm yyyy";
-    const dateTimeFormat = `${dateFormat} hh:mm`;
+    const dateTimeFormat = `${dateFormat} ${input.timeFormat === "12h" ? "h:mm AM/PM" : "hh:mm"}`;
     const localDate = (timestamp: string) => wallClock(timestamp, input.timeZone);
     const toUnit = (grams: number) => Math.round(gramsToUnit(grams, input.weightUnit) * 10) / 10;
     const longDate = new Intl.DateTimeFormat(input.locale, { dateStyle: "full", timeZone: "UTC" });

@@ -31,7 +31,7 @@ const STREAK_LOOKBACK_DAYS = 365;
 export default function TodayPage() {
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
     const now = new Date();
     const today = localDateInZone(now, timezone);
     const [from, to] = localDateRangeBounds(today, today, timezone);
@@ -84,6 +84,7 @@ export default function TodayPage() {
             lastWeightGrams={lastWeighIn?.weightGrams ?? null}
             locale={locale}
             recentTrainingLabels={logbook.recentLabels(ownerId, "training")}
+            timeFormat={timeFormat}
             timeZone={timezone}
             weightUnit={weightUnit}
         >
@@ -120,6 +121,7 @@ export default function TodayPage() {
                     dayStart={from}
                     entries={entries}
                     locale={locale}
+                    timeFormat={timeFormat}
                     timeZone={timezone}
                     weighIns={weighIns}
                     weightUnit={weightUnit}

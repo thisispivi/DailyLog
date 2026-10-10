@@ -37,6 +37,7 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
         notes: logbook.listDayNotes(userId, startDate, endDate),
         profile: logbook.getProfile(userId),
         startDate,
+        timeFormat: settings.timeFormat,
         timeZone: timezone,
         weighIns: logbook.listWeighIns(userId, { from, limit: null, to }).reverse(),
         weightUnit: settings.weightUnit,

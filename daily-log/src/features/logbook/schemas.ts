@@ -5,6 +5,7 @@ import {
     entryKinds,
     locales,
     themes,
+    timeFormats,
     weightUnits,
 } from "@/features/logbook/domain";
 
@@ -84,6 +85,7 @@ export const settingsSchema = z.strictObject({
     exportLocale: z.enum(locales),
     locale: z.enum(locales),
     theme: z.enum(themes),
+    timeFormat: z.enum(timeFormats),
     weightUnit: z.enum(weightUnits),
 });
 

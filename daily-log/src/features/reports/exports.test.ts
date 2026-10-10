@@ -46,6 +46,7 @@ const input: ReportInput = {
             weightGrams: 73_200,
         },
     ],
+    timeFormat: "24h",
     weightUnit: "kg",
 };
 

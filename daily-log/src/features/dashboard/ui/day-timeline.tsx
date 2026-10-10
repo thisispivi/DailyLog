@@ -2,7 +2,7 @@ import { CalendarHeart } from "lucide-react";
 
 import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
 import { clipToDay } from "@/features/insights/insights";
-import type { Entry, Locale, WeighIn, WeightUnit } from "@/features/logbook/domain";
+import type { Entry, Locale, TimeFormat, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
@@ -25,6 +25,7 @@ export function DayTimeline({
     dayStart,
     entries,
     locale,
+    timeFormat,
     timeZone,
     title,
     weighIns,
@@ -34,12 +35,13 @@ export function DayTimeline({
     dayStart: string;
     entries: Entry[];
     locale: Locale;
+    timeFormat: TimeFormat;
     timeZone: string;
     title?: string;
     weighIns: WeighIn[];
     weightUnit: WeightUnit;
 }>) {
-    const time = (value: string) => formatTime(value, locale, timeZone);
+    const time = (value: string) => formatTime(value, locale, timeZone, timeFormat);
     const loneSnacks = loneSnackIds(entries, timeZone);
     const rows: TimelineRow[] = [
         ...entries.map((entry) => {
@@ -92,7 +94,7 @@ export function DayTimeline({
                     {rows.map((row) => (
                         <li className="timeline-row" key={row.id}>
                             <time className="numeric" dateTime={row.at}>
-                                {formatTime(row.at, locale, timeZone)}
+                                {formatTime(row.at, locale, timeZone, timeFormat)}
                             </time>
                             <KindIcon kind={row.kind} />
                             <div className="timeline-text">

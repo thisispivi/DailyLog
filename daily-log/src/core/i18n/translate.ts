@@ -1,5 +1,10 @@
 import { catalogs, type PluralForms, type TranslationKey } from "@/core/i18n/catalogs";
-import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import {
+    gramsToUnit,
+    type Locale,
+    type TimeFormat,
+    type WeightUnit,
+} from "@/features/logbook/domain";
 
 export function translate(
     locale: Locale,
@@ -22,11 +27,26 @@ function pluralCategory(locale: Locale, count: string | number | undefined): key
     return new Intl.PluralRules(locale).select(Number(count ?? 0)) === "one" ? "one" : "other";
 }
 
-export function formatDateTime(value: string | Date, locale: Locale, timeZone: string): string {
+/** The Intl hour cycle for the owner's 12- or 24-hour preference. */
+export function hourCycle(timeFormat: TimeFormat): "h12" | "h23" {
+    return timeFormat === "12h" ? "h12" : "h23";
+}
+
+export function formatDateTime(
+    value: string | Date,
+    locale: Locale,
+    timeZone: string,
+    timeFormat: TimeFormat,
+): string {
+    // timeStyle ignores hourCycle, so the time fields are spelled out.
     return new Intl.DateTimeFormat(locale, {
-        dateStyle: "medium",
-        timeStyle: "short",
+        day: "numeric",
+        hour: "2-digit",
+        hourCycle: hourCycle(timeFormat),
+        minute: "2-digit",
+        month: "short",
         timeZone,
+        year: "numeric",
     }).format(new Date(value));
 }
 
@@ -34,10 +54,18 @@ export function formatDate(value: string | Date, locale: Locale, timeZone: strin
     return new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone }).format(new Date(value));
 }
 
-export function formatTime(value: string | Date, locale: Locale, timeZone: string): string {
-    return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone }).format(
-        new Date(value),
-    );
+export function formatTime(
+    value: string | Date,
+    locale: Locale,
+    timeZone: string,
+    timeFormat: TimeFormat,
+): string {
+    return new Intl.DateTimeFormat(locale, {
+        hour: "2-digit",
+        hourCycle: hourCycle(timeFormat),
+        minute: "2-digit",
+        timeZone,
+    }).format(new Date(value));
 }
 
 export function formatWeight(grams: number, unit: WeightUnit, locale: Locale): string {

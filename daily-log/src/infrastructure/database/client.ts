@@ -6,7 +6,7 @@ import Database from "better-sqlite3";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */
@@ -78,6 +78,11 @@ export function migrateDatabase(db: Database.Database): void {
         }
         if (!settingsColumns.some((column) => column.name === "theme")) {
             db.exec("ALTER TABLE user_settings ADD COLUMN theme TEXT NOT NULL DEFAULT 'system'");
+        }
+        if (!settingsColumns.some((column) => column.name === "time_format")) {
+            db.exec(
+                "ALTER TABLE user_settings ADD COLUMN time_format TEXT NOT NULL DEFAULT '24h' CHECK (time_format IN ('24h', '12h'))",
+            );
         }
         db.exec(`
       CREATE INDEX IF NOT EXISTS idx_entries_user_start ON entries(user_id, start_at);
