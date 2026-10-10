@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import { APP_VERSION } from "@/core/config/build-info";
 import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
@@ -43,7 +41,7 @@ export function errorEnvelope(
     now = new Date(),
 ): { body: string; headers: Record<string, string>; url: string } {
     const { host, pathname, protocol, username } = new URL(dsn);
-    const eventId = randomUUID().replaceAll("-", "");
+    const eventId = crypto.randomUUID().replaceAll("-", "");
     const exception =
         error instanceof Error
             ? {

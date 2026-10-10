@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,6 +24,8 @@ jobs:
   release:
     name: Publish release
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.publish.outputs.release_created }}
     steps:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
@@ -46,9 +49,45 @@ jobs:
           echo "merged=${numbers:+true}" >> "$GITHUB_OUTPUT"
 
       - name: Tag and publish the release
+        id: publish
         if: steps.merge.outputs.merged == 'true'
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           skip-github-pull-request: true
+
+  # The playable demo at demo.dailylog.pivi.dev is rebuilt for every release and
+  # force-pushed to the gh-pages branch, which GitHub Pages serves. Run it by hand
+  # (workflow_dispatch) to redeploy without a release.
+  demo:
+    name: Deploy the demo
+    needs: release
+    if: needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: daily-log
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          # The release commit Release Please just pushed, not the triggering one.
+          ref: main
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: daily-log/package-lock.json
+      - run: npm ci
+      - run: npm run demo:build
+      - name: Publish to the gh-pages branch
+        working-directory: daily-log/demo/out
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init --quiet --initial-branch=gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit --quiet --message "chore: deploy the demo for $(node -p "require('../../package.json').version")"
+          git push --force --quiet "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

@@ -1,0 +1,31 @@
+.demo-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    border-radius: var(--radius-card);
+    background: var(--primary-soft);
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.demo-banner p {
+    margin: 0;
+}
+
+/* On the sign-in page the banner floats above the centred card. */
+body > .demo-banner {
+    position: fixed;
+    inset: 16px 16px auto;
+    z-index: 10;
+}
+
+.demo-message {
+    padding: 40px;
+    color: var(--text-muted);
+    text-align: center;
+}

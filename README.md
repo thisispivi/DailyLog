@@ -8,6 +8,8 @@ A private, single-owner web journal for meals, training, sleep, and body weight.
 
 It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 
+**Try it:** [demo.dailylog.pivi.dev](https://demo.dailylog.pivi.dev) runs the real app in your browser with sample data. Nothing leaves the browser, and any password signs you in. See [daily-log/demo/README.md](daily-log/demo/README.md).
+
 ## What it does
 
 - Log meals, training, sleep, and weigh-ins from one **Add record** sheet, now or backdated. The meal type, last activity, and last weight are prefilled.

@@ -122,6 +122,10 @@ The full design system (colours, type, components, layouts, charts, copy, export
 - For schemas, test the accepted shape, the important rejections, and any default or coercion. Skip trivial constraint-by-constraint tests.
 - Browser flows live in `tests/e2e`. Run `npm run test:e2e` when you change a user workflow.
 
+## Demo
+
+The GitHub Pages demo (`daily-log/demo/`) runs the real pages and API route handlers in the browser on SQLite compiled to WebAssembly. The demo build swaps the server-only modules listed in `demo/next.config.ts` for browser versions in `demo/shims/`. When you add an export to one of those modules, add it to its shim too, or `npm run demo:build` (run in CI) fails. Keep Node APIs out of everything else that pages and route handlers import; use web APIs such as `crypto.randomUUID()` instead.
+
 ## Dependencies
 
 - Prefer the platform: Node, the browser, React, Next.js. A new package needs one clear job and no overlap with existing ones.
