@@ -33,6 +33,7 @@ jobs:
       - run: npm test
       - run: npm audit --audit-level=low
       - run: npm run build
+      - run: npm run demo:build
 
   browser:
     name: Browser flows

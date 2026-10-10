@@ -106,6 +106,16 @@ const en = {
         settings: "Settings",
         signOut: "Sign out",
     },
+    demo: {
+        banner: "This is a demo with sample data. Changes stay in this browser, and any password signs you in.",
+        failed: "The demo could not start in this browser.",
+        label: "Demo",
+        loading: "Loading the demo…",
+        reset: "Reset demo",
+        resetConfirm: "Start the demo over with the sample data? Your changes here will be lost.",
+        unavailable:
+            "PDF and spreadsheet exports need the full app; they are not part of the demo.",
+    },
     dashboard: {
         addRecord: "Add record",
         streak: { one: "{count}-day streak", other: "{count}-day streak" },
@@ -385,6 +395,17 @@ const it: CatalogShape = {
         reports: "Report",
         settings: "Impostazioni",
         signOut: "Esci",
+    },
+    demo: {
+        banner: "Questa è una demo con dati di esempio. Le modifiche restano in questo browser e qualsiasi password ti fa entrare.",
+        failed: "Non è stato possibile avviare la demo in questo browser.",
+        label: "Demo",
+        loading: "Caricamento della demo…",
+        reset: "Reimposta demo",
+        resetConfirm:
+            "Ricominciare la demo con i dati di esempio? Le modifiche fatte qui andranno perse.",
+        unavailable:
+            "Le esportazioni PDF e foglio di calcolo richiedono l’app completa; non fanno parte della demo.",
     },
     dashboard: {
         addRecord: "Aggiungi",

@@ -1,5 +1,3 @@
-import { randomUUID } from "node:crypto";
-
 import { type NextRequest, NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
@@ -145,7 +143,7 @@ const requestIdPattern = /^[\w-]{1,64}$/;
 /** Reuses a proxy-supplied request ID only when it is safe to echo into logs. */
 function readRequestId(request: NextRequest): string {
     const supplied = request.headers.get("x-request-id");
-    return supplied && requestIdPattern.test(supplied) ? supplied : randomUUID();
+    return supplied && requestIdPattern.test(supplied) ? supplied : crypto.randomUUID();
 }
 
 function firstHeaderValue(request: NextRequest, name: string): string | null {

@@ -1,4 +1,6 @@
 .next
+daily-log/demo/out
+daily-log/demo/public
 coverage
 dist
 node_modules
