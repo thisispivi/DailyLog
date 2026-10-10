@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.17.0](https://github.com/thisispivi/DailyLog/compare/v1.16.0...v1.17.0) (2026-10-10)
+
+
+### Features
+
+* add weight goals with progress stats ([8611cca](https://github.com/thisispivi/DailyLog/commit/8611cca6f817aff87d6b27069bd754dd999c1f24))
+* add weight goals with progress stats ([16318a1](https://github.com/thisispivi/DailyLog/commit/16318a19ad9fd61e406e3ab9b40620fd03a3e8c3)), closes [#141](https://github.com/thisispivi/DailyLog/issues/141)
+
 ## [1.16.0](https://github.com/thisispivi/DailyLog/compare/v1.15.3...v1.16.0) (2026-10-10)
 
 
