@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.2](https://github.com/thisispivi/DailyLog/compare/v1.15.1...v1.15.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* raise the numeric keyboard when editing the time on mobile ([98a93c7](https://github.com/thisispivi/DailyLog/commit/98a93c7bbc855b48031370a6f5572cbb1011dd71))
+* raise the numeric keyboard when editing the time on mobile ([83c8640](https://github.com/thisispivi/DailyLog/commit/83c86401652cfdffc190353d76e33cdd62f5b649)), closes [#134](https://github.com/thisispivi/DailyLog/issues/134)
+
 ## [1.15.1](https://github.com/thisispivi/DailyLog/compare/v1.15.0...v1.15.1) (2026-10-10)
 
 
