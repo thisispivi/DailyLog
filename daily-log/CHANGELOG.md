@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.17.1](https://github.com/thisispivi/DailyLog/compare/v1.17.0...v1.17.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* polish the PDF note bar and type pills ([d3b566f](https://github.com/thisispivi/DailyLog/commit/d3b566f9750eaf43e0e5eebde8e5d2b58dbf95e9))
+* polish the PDF note bar and type pills ([6f8429d](https://github.com/thisispivi/DailyLog/commit/6f8429df0fa7e7c0c1f59f04bd545a866bede563)), closes [#146](https://github.com/thisispivi/DailyLog/issues/146)
+
 ## [1.17.0](https://github.com/thisispivi/DailyLog/compare/v1.16.0...v1.17.0) (2026-10-10)
 
 
