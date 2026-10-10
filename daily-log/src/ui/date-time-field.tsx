@@ -2,7 +2,7 @@
 
 import * as Popover from "@radix-ui/react-popover";
 import { CalendarDays, ChevronDown, X } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { enGB, it } from "react-day-picker/locale";
 
@@ -104,13 +104,7 @@ export function DateTimeField({
                             />
                             {mode === "datetime" && (
                                 <div className="time-row">
-                                    <input
-                                        aria-label={translate(locale, "entry.time")}
-                                        className="input time-input numeric"
-                                        onChange={(event) => setTime(event.currentTarget.value)}
-                                        type="time"
-                                        value={time}
-                                    />
+                                    <TimeInput locale={locale} onChange={setTime} time={time} />
                                     <button
                                         className="button button-ghost"
                                         onClick={() =>
@@ -143,6 +137,68 @@ export function DateTimeField({
         </div>
     );
 }
+
+type TimeParts = { hour: string; minute: string };
+
+/**
+ * Hour and minute as two numeric text fields. A native `type="time"` input
+ * inside the popover does not raise the keyboard on some phones, while
+ * `inputMode="numeric"` always does. Partial typing is kept as a draft until
+ * both parts are valid, and dropped when focus leaves the pair.
+ */
+function TimeInput({
+    locale,
+    onChange,
+    time,
+}: Readonly<{ locale: Locale; onChange: (time: string) => void; time: string }>) {
+    const [hour = "", minute = ""] = time.split(":");
+    const [draft, setDraft] = useState<TimeParts | null>(null);
+    const shown = draft ?? { hour, minute };
+
+    function edit(part: keyof TimeParts, raw: string) {
+        const next = { ...shown, [part]: raw.replaceAll(/\D/g, "").slice(0, 2) };
+        setDraft(next);
+        const [nextHour, nextMinute] = [Number(next.hour), Number(next.minute)];
+        if (next.hour && next.minute && nextHour < 24 && nextMinute < 60) {
+            onChange(`${pad(nextHour)}:${pad(nextMinute)}`);
+        }
+    }
+
+    return (
+        <div
+            className="input time-input numeric"
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setDraft(null);
+            }}
+            role="group"
+            aria-label={translate(locale, "entry.time")}
+        >
+            {(["hour", "minute"] as const).map((part, index) => (
+                <Fragment key={part}>
+                    {index > 0 && <span aria-hidden="true">:</span>}
+                    <input
+                        aria-label={translate(
+                            locale,
+                            part === "hour" ? "entry.hours" : "entry.minutes",
+                        )}
+                        autoComplete="off"
+                        enterKeyHint="done"
+                        inputMode="numeric"
+                        maxLength={2}
+                        onChange={(event) => edit(part, event.currentTarget.value)}
+                        onFocus={(event) => event.currentTarget.select()}
+                        pattern="[0-9]*"
+                        placeholder="--"
+                        type="text"
+                        value={shown[part]}
+                    />
+                </Fragment>
+            ))}
+        </div>
+    );
+}
+
+const pad = (number: number) => String(number).padStart(2, "0");
 
 type CalendarView = "days" | "months" | "years";
 
@@ -263,7 +319,6 @@ function toCalendarDate(date: string): Date | undefined {
 }
 
 function fromCalendarDate(value: Date): string {
-    const pad = (number: number) => String(number).padStart(2, "0");
     return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 }
 
