@@ -1,0 +1,200 @@
+.meal-plan-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: var(--space-6);
+}
+
+.meal-plan-side {
+    display: grid;
+    gap: var(--space-6);
+}
+
+.week-plan {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.week-plan-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+}
+
+.week-plan-toolbar .status-message {
+    margin: 0 auto 0 0;
+}
+
+.meal-days {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.meal-day[aria-current="date"] {
+    box-shadow:
+        0 0 0 2px var(--primary),
+        var(--shadow-soft);
+}
+
+.meal-day-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.meal-day-heading h2 {
+    margin: 0;
+    font-size: 17px;
+}
+
+/* Weekday names are lowercase in Italian; capitalise the first letter only. */
+.meal-day-heading h2::first-letter {
+    text-transform: uppercase;
+}
+
+.meal-rows,
+.meal-picks,
+.shopping-list ul,
+.diet-notes ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.meal-rows {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.meal-row {
+    display: grid;
+    gap: 6px;
+    border-radius: var(--radius-tile);
+    background: var(--surface-muted);
+    padding: 10px 12px;
+}
+
+.meal-row-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.meal-row h3 {
+    margin: 0;
+    color: var(--kind-ink);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.meal-row h3 .muted {
+    font-weight: 700;
+}
+
+.meal-row .icon-button {
+    width: 36px;
+    height: 36px;
+    flex: none;
+}
+
+.meal-row p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.meal-picks {
+    display: grid;
+    gap: 4px;
+    font-size: 14px;
+}
+
+.meal-picks li {
+    display: grid;
+}
+
+.meal-picks .muted {
+    font-size: 13px;
+}
+
+.diet-setup {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.diet-setup .card-heading {
+    margin: 0;
+}
+
+.diet-setup p {
+    margin: 0;
+}
+
+.diet-steps {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-left: 22px;
+}
+
+.diet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.diet-status:empty {
+    display: none;
+}
+
+.diet-notes h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.diet-notes ul {
+    display: grid;
+    gap: 4px;
+    border-radius: var(--radius-tile);
+    background: var(--surface-muted);
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.shopping-list p {
+    margin: 0 0 var(--space-3);
+}
+
+.shopping-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    border-top: 1px solid var(--line);
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.shopping-list li:first-child {
+    border-top: 0;
+}
+
+.shopping-list .numeric {
+    color: var(--text-muted);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+    .meal-plan-layout {
+        grid-template-columns: 1fr;
+    }
+}
