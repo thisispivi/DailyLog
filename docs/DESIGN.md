@@ -24,7 +24,7 @@ All colours are CSS custom properties in `src/app/globals.css`, each written onc
 | `--surface`                  | `#ffffff`             | `#221e3d`             | Cards, sheet, sidebar                                     |
 | `--surface-muted`            | `#ece8fb`             | `#2c2750`             | Inputs, hover fills, neutral chips                        |
 | `--text`                     | `#2e2a4f`             | `#ece9ff`             | Body text and headings                                    |
-| `--text-muted`               | `#6e6a8f`             | `#a9a4cc`             | Secondary text, labels, axis ticks                        |
+| `--text-muted`               | `#6e6a8f`             | `#a9a4cc`             | Secondary text, labels, axis ticks, placeholders          |
 | `--line`                     | `#e3def7`             | `#343058`             | Hairlines, chart grid, chip outlines                      |
 | `--primary`                  | `#6a5ae0`             | `#9d90ff`             | Primary buttons, active nav, links, focus                 |
 | `--primary-hover`            | `#5a4bcc`             | `#b2a8ff`             | Hover on primary                                          |
