@@ -25,7 +25,9 @@ jobs:
     name: Publish release
     runs-on: ubuntu-latest
     outputs:
-      released: ${{ steps.publish.outputs.release_created }}
+      # The package lives in daily-log/, so Release Please reports releases_created,
+      # not the release_created it sets for a package at the repository root.
+      released: ${{ steps.publish.outputs.releases_created }}
     steps:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
