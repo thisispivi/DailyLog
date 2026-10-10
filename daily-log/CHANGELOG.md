@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.1](https://github.com/thisispivi/DailyLog/compare/v1.15.0...v1.15.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* warn when sessions are signed with the app password ([b162a8c](https://github.com/thisispivi/DailyLog/commit/b162a8c6a6b0ccc7c6033fe16555dfab49631379))
+
 ## [1.15.0](https://github.com/thisispivi/DailyLog/compare/v1.14.0...v1.15.0) (2026-10-09)
 
 
