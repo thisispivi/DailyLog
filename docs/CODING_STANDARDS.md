@@ -45,7 +45,7 @@ app → features → ui → core
 - `core/` never imports from `app/`, `infrastructure/`, or any feature's `ui/`.
 - `ui/` never imports from `app/`, `infrastructure/`, or a feature's `ui/`.
 - `features/logbook` holds the shared domain (record types, schemas, domain errors). Everything may import it.
-- Inside `src`, import with `@/`, never `../` (enforced).
+- In `src`, `scripts`, and `tests`, import application code with `@/`, never `../` (enforced).
 - No barrel files. Import from the file that owns the symbol.
 
 ## Runtime validation
@@ -56,6 +56,7 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 - **Use the route helpers.** `readJson(request, schema)` and `readQuery(request, schema)` turn malformed JSON and schema failures into a 400 response. Never call `request.json()` directly.
 - **Strict request schemas.** Use `z.strictObject` so unknown keys are rejected rather than silently dropped. Update schemas list exactly the fields a client may change.
 - **One contract per shape.** Define the schema and derive the type with `z.infer`. Do not write a matching interface by hand.
+- **Compose, don't copy.** A larger contract reuses the schemas it contains. The backup schema is built from `createEntrySchema`, `settingsSchema`, and `profileSchema`, and update schemas are `.partial()` of the full one.
 - **No casts on external data.** `as SomeType` on parsed JSON, cookies, or env is a bug. Casts are acceptable for database rows, whose shape the schema's `CHECK` constraints guarantee, and for widening a literal type.
 - **Keep transforms simple.** Trimming and coercing query numbers is fine. Business rules belong in domain code.
 - **Validation is not authorization.** A valid payload still needs a session, and every query is scoped by `userId`.

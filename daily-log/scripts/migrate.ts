@@ -1,4 +1,4 @@
-import { getDatabase } from "../src/infrastructure/database/client";
+import { getDatabase } from "@/infrastructure/database/client";
 
 const database = getDatabase();
 const version = database.pragma("user_version", { simple: true }) as number;

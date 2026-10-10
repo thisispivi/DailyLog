@@ -2,7 +2,13 @@
 export async function register(): Promise<void> {
     if (process.env.NEXT_RUNTIME !== "nodejs") return;
     const { getEnvironment } = await import("@/core/config/env");
-    getEnvironment();
+    const { appPassword, sessionSecret } = getEnvironment();
+    if (appPassword && sessionSecret === appPassword) {
+        // Changing the password in Settings does not change this key, so anyone who
+        // knew the original APP_PASSWORD could keep signing valid session cookies.
+        const { log } = await import("@/core/observability/logger");
+        log("warn", "config.session_secret_is_password");
+    }
 }
 
 /** Server rendering and route errors that escape the API wrappers. */

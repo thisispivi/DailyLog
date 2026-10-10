@@ -1,9 +1,21 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ApiError, ok, publicRoute, readJson } from "@/core/http/api";
+import { ApiError, authenticatedRoute, ok, publicRoute, readJson } from "@/core/http/api";
+import { createSession } from "@/core/security/session";
 import { DuplicateOpenActivityError, RecordNotFoundError } from "@/features/logbook/domain";
+
+const cookieJar = vi.hoisted(() => new Map<string, string>());
+
+vi.mock("next/headers", () => ({
+    cookies: async () => ({
+        get: (name: string) => (cookieJar.has(name) ? { value: cookieJar.get(name) } : undefined),
+        set: (name: string, value: string) => cookieJar.set(name, value),
+    }),
+}));
+
+vi.stubEnv("SESSION_SECRET", "api-test-session-secret-at-least-32-characters");
 
 const ORIGIN = "https://dailylog.example";
 
@@ -72,5 +84,32 @@ describe("publicRoute", () => {
             requestId: expect.any(String),
             status: 500,
         });
+    });
+});
+
+describe("authenticatedRoute", () => {
+    const whoAmI = authenticatedRoute(async (_request, { userId }) => ok({ userId }));
+
+    beforeEach(() => cookieJar.clear());
+
+    it("rejects requests without a valid session cookie", async () => {
+        expect(await errorOf(await whoAmI(post("{}"), undefined))).toMatchObject({
+            code: "UNAUTHENTICATED",
+            status: 401,
+        });
+        cookieJar.set("dailylog_session", "forged.signature");
+        expect((await whoAmI(post("{}"), undefined)).status).toBe(401);
+    });
+
+    it("passes the signed-in owner to the handler", async () => {
+        await createSession(post("{}"));
+        const response = await whoAmI(post("{}"), undefined);
+        expect(await response.json()).toEqual({ data: { userId: 1 } });
+    });
+
+    it("checks the origin before the session", async () => {
+        await createSession(post("{}"));
+        const response = await whoAmI(post("{}", { origin: "https://evil.example" }), undefined);
+        expect(response.status).toBe(403);
     });
 });

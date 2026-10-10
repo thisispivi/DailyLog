@@ -10,7 +10,7 @@ const restrictImports = (...patterns) => ({
 
 const noParentImports = {
     group: ["../*"],
-    message: "Use the @/ alias inside src.",
+    message: "Import application code through the @/ alias.",
 };
 
 export default defineConfig([
@@ -29,7 +29,7 @@ export default defineConfig([
         },
     },
     {
-        files: ["src/**/*.{ts,tsx}"],
+        files: ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "tests/**/*.ts"],
         rules: restrictImports(noParentImports),
     },
     {
