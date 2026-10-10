@@ -449,6 +449,13 @@ h2 {
     transition: box-shadow 120ms ease;
 }
 
+/* Browsers default placeholders to a fixed grey that is too dark on the dark
+   theme's fields; the muted token reads in both themes. */
+::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
 .input:focus,
 .select:focus,
 .textarea:focus {
