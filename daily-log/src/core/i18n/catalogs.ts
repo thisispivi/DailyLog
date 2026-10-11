@@ -86,6 +86,16 @@ const en = {
         uploading: "Uploading…",
         weekCaption: "This week’s meals, one row per day",
     },
+    toast: {
+        activityDiscarded: "Activity discarded.",
+        activityFinished: "Activity finished.",
+        activityStarted: "Activity started.",
+        changesSaved: "Changes saved.",
+        dayMovedToTrash: "The day’s records were moved to trash.",
+        movedToTrash: "Moved to trash. You can restore it from the trash.",
+        recordAdded: "Record added.",
+        restored: "Record restored.",
+    },
     notes: {
         placeholder: "How did the day go? Feelings, work, anything worth remembering.",
         saving: "Saving…",
@@ -377,6 +387,16 @@ const it: CatalogShape = {
         uploaded: "Dieta salvata.",
         uploading: "Caricamento…",
         weekCaption: "I pasti della settimana, una riga per giorno",
+    },
+    toast: {
+        activityDiscarded: "Attività annullata.",
+        activityFinished: "Attività conclusa.",
+        activityStarted: "Attività avviata.",
+        changesSaved: "Modifiche salvate.",
+        dayMovedToTrash: "Le registrazioni del giorno sono state spostate nel cestino.",
+        movedToTrash: "Spostato nel cestino. Puoi ripristinarlo dal cestino.",
+        recordAdded: "Registrazione aggiunta.",
+        restored: "Registrazione ripristinata.",
     },
     notes: {
         placeholder: "Come è andata la giornata? Emozioni, lavoro, qualsiasi cosa da ricordare.",

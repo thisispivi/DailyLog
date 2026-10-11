@@ -139,6 +139,8 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 - **Cursors** live in one block in `globals.css`: pointer for anything clickable (including chip and switch labels), not-allowed for disabled controls, progress for buttons with `aria-busy`. Set `aria-busy={pending}` on buttons that wait for the server.
 - **Feedback:** every mutation shows pending (busy button), success ("Saved"), and failure ("Something went wrong…") inline. Destructive actions confirm first and say the item can be restored from trash.
+- **Spinners:** a `.button`, `.chip`, `.icon-button`, or `.account-link` with `aria-busy="true"` swaps its icon for a spinner automatically; never draw one by hand. Page loads use the three-dot `.page-loading` (the route `loading.tsx` and the demo's first load).
+- **Toasts:** `showToast` from `src/ui/toast.tsx` (rendered by the `Toaster` in the app shell) confirms a success whose control is gone afterwards: the logger sheet closing, the running activity finishing, an edited, trashed, or restored record. A floating pill at the bottom, above the phone tab bar, gone after 4 seconds. Errors stay inline next to their control.
 - **Motion:** short and functional only: 120ms hover and press, a 180ms sheet slide, a slow pulse on the running activity. Everything is disabled under `prefers-reduced-motion`.
 - **Focus:** a visible 3px `--focus` ring (35% transparent) on every interactive element. Never remove outlines without a replacement.
 - **Touch targets:** at least 44px.

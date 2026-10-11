@@ -18,6 +18,7 @@ import { readSession } from "@/core/security/session";
 import type { Locale } from "@/features/logbook/domain";
 import { AppNavigation } from "@/features/navigation/ui/app-navigation";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
+import { Toaster } from "@/ui/toast";
 
 import { handleDemoRequest } from "@demo/shell/api";
 import { forgetDemoDatabase, openDemoDatabase, saveDemoDatabase } from "@demo/shell/database";
@@ -167,7 +168,16 @@ export function DemoApp({ view }: Readonly<{ view: string }>) {
     if (state === "failed") {
         return <p className="demo-message">{translate("en", "demo.failed")}</p>;
     }
-    if (!rendered) return <p className="demo-message">{translate("en", "demo.loading")}</p>;
+    if (!rendered) {
+        return (
+            <div className="page-loading" role="status">
+                <span className="sr-only">{translate("en", "demo.loading")}</span>
+                <i />
+                <i />
+                <i />
+            </div>
+        );
+    }
 
     const banner = <DemoBanner locale={rendered.locale} />;
     if (view === "login") {
@@ -188,6 +198,7 @@ export function DemoApp({ view }: Readonly<{ view: string }>) {
                 {banner}
                 {rendered.content}
             </main>
+            <Toaster />
         </div>
     );
 }

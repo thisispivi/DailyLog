@@ -28,6 +28,7 @@ import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon } from "@/ui/kind-icon";
 import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
+import { showToast } from "@/ui/toast";
 
 type HistoryRecord =
     { item: Entry; recordType: "entry" } | { item: WeighIn; recordType: "weighIn" };
@@ -42,6 +43,10 @@ const filters = [
 ] as const;
 
 type Filter = (typeof filters)[number]["value"];
+
+type EditorMessage = "toast.changesSaved" | "toast.movedToTrash";
+
+const trashKey = (item: TrashItem) => `${item.recordType}-${item.recordId}`;
 
 type Shared = Readonly<{
     locale: Locale;
@@ -65,6 +70,7 @@ export function HistoryWorkspace({
     const [date, setDate] = useState("");
     const [editing, setEditing] = useState<HistoryRecord | null>(null);
     const [failed, setFailed] = useState(false);
+    const [busy, setBusy] = useState<string | null>(null);
     const shared = { locale, timeFormat, timeZone, weightUnit };
 
     const loneSnacks = useMemo(() => loneSnackIds(entries, timeZone), [entries, timeZone]);
@@ -96,24 +102,38 @@ export function HistoryWorkspace({
         );
     }, [date, entries, filter, locale, query, timeZone, weighIns]);
 
-    async function mutate(request: Promise<{ ok: boolean }>) {
+    async function mutate(
+        key: string,
+        request: Promise<{ ok: boolean }>,
+        message: "toast.dayMovedToTrash" | "toast.restored",
+    ) {
+        setBusy(key);
         const { ok } = await request;
+        setBusy(null);
         setFailed(!ok);
-        if (ok) router.refresh();
+        if (!ok) return;
+        showToast(translate(locale, message));
+        router.refresh();
     }
 
     function deleteDay() {
         const day = formatDate(`${date}T12:00:00Z`, locale, "UTC");
         if (!window.confirm(translate(locale, "history.confirmBulk", { date: day }))) return;
-        void mutate(sendJson("/api/entries/day", "DELETE", { date }));
+        void mutate(
+            "day",
+            sendJson("/api/entries/day", "DELETE", { date }),
+            "toast.dayMovedToTrash",
+        );
     }
 
     function restore(item: TrashItem) {
         void mutate(
+            trashKey(item),
             sendJson("/api/trash", "POST", {
                 recordId: item.recordId,
                 recordType: item.recordType,
             }),
+            "toast.restored",
         );
     }
 
@@ -166,7 +186,9 @@ export function HistoryWorkspace({
             </section>
             {date && filter !== "trash" && (
                 <button
+                    aria-busy={busy === "day"}
                     className="button button-danger history-bulk"
+                    disabled={busy !== null}
                     onClick={deleteDay}
                     type="button"
                 >
@@ -178,7 +200,7 @@ export function HistoryWorkspace({
                 {failed ? translate(locale, "common.error") : ""}
             </p>
             {filter === "trash" ? (
-                <TrashList items={trash} onRestore={restore} {...shared} />
+                <TrashList busy={busy} items={trash} onRestore={restore} {...shared} />
             ) : (
                 <section className="card">
                     <div className="card-heading">
@@ -251,8 +273,9 @@ export function HistoryWorkspace({
             >
                 {editing && (
                     <RecordEditor
-                        onDone={() => {
+                        onDone={(message) => {
                             setEditing(null);
+                            showToast(translate(locale, message));
                             router.refresh();
                         }}
                         record={editing}
@@ -271,7 +294,7 @@ function RecordEditor({
     timeFormat,
     timeZone,
     weightUnit,
-}: Shared & Readonly<{ onDone: () => void; record: HistoryRecord }>) {
+}: Shared & Readonly<{ onDone: (message: EditorMessage) => void; record: HistoryRecord }>) {
     const [pending, setPending] = useState(false);
     const [failed, setFailed] = useState(false);
     const id = record.item.id;
@@ -279,12 +302,12 @@ function RecordEditor({
     const shownLabel = record.recordType === "entry" ? entryDisplayLabel(record.item, locale) : "";
     const path = record.recordType === "entry" ? `/api/entries/${id}` : `/api/weigh-ins/${id}`;
 
-    async function settle(request: Promise<{ ok: boolean }>) {
+    async function settle(request: Promise<{ ok: boolean }>, message: EditorMessage) {
         setPending(true);
         const { ok } = await request;
         setPending(false);
         setFailed(!ok);
-        if (ok) onDone();
+        if (ok) onDone(message);
     }
 
     function save(event: FormEvent<HTMLFormElement>) {
@@ -309,6 +332,7 @@ function RecordEditor({
                       unit: weightUnit,
                       weight: Number(field("weight")),
                   }),
+            "toast.changesSaved",
         );
     }
 
@@ -318,7 +342,7 @@ function RecordEditor({
                 ? shownLabel
                 : formatWeight(record.item.weightGrams, weightUnit, locale);
         if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
-        void settle(sendJson(path, "DELETE"));
+        void settle(sendJson(path, "DELETE"), "toast.movedToTrash");
     }
 
     return (
@@ -446,11 +470,13 @@ function RecordEditor({
 function TrashList({
     items,
     locale,
+    busy,
     onRestore,
     timeFormat,
     timeZone,
     weightUnit,
-}: Shared & Readonly<{ items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
+}: Shared &
+    Readonly<{ busy: string | null; items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
     return (
         <section className="card">
             <div className="card-heading">
@@ -476,7 +502,9 @@ function TrashList({
                                 </span>
                             </span>
                             <button
+                                aria-busy={busy === trashKey(item)}
                                 className="button"
+                                disabled={busy !== null}
                                 onClick={() => onRestore(item)}
                                 type="button"
                             >

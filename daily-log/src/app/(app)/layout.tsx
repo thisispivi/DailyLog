@@ -5,6 +5,7 @@ import { translate } from "@/core/i18n/translate";
 import { readSession } from "@/core/security/session";
 import { AppNavigation } from "@/features/navigation/ui/app-navigation";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
+import { Toaster } from "@/ui/toast";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function AuthenticatedLayout({ children }: Readonly<{ child
             <main className="main-content" id="main-content">
                 {children}
             </main>
+            <Toaster />
         </div>
     );
 }
