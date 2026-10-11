@@ -23,6 +23,7 @@ concurrency:
 jobs:
   release:
     name: Publish release
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       # The package lives in daily-log/, so Release Please reports releases_created,
@@ -59,14 +60,21 @@ jobs:
           manifest-file: .release-please-manifest.json
           skip-github-pull-request: true
 
-  # The playable demo at demo.dailylog.pivi.dev is rebuilt for every release and
-  # force-pushed to the gh-pages branch, which GitHub Pages serves. Run it by hand
+  # The playable demo at demo.dailylog.pivi.dev is deployed from an artifact.
+  # Rebuild it for every release, or run it by hand
   # (workflow_dispatch) to redeploy without a release.
   demo:
     name: Deploy the demo
     needs: release
-    if: needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch'
+    if: always() && (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     defaults:
       run:
         working-directory: daily-log
@@ -75,21 +83,16 @@ jobs:
         with:
           # The release commit Release Please just pushed, not the triggering one.
           ref: main
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: daily-log/package-lock.json
       - run: npm ci
       - run: npm run demo:build
-      - name: Publish to the gh-pages branch
-        working-directory: daily-log/demo/out
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git init --quiet --initial-branch=gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add --all
-          git commit --quiet --message "chore: deploy the demo for $(node -p "require('../../package.json').version")"
-          git push --force --quiet "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: daily-log/demo/out
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

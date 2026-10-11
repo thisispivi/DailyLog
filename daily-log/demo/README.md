@@ -23,4 +23,4 @@ npm run demo:dev
 npm run demo:build
 ```
 
-`demo:build` writes `demo/out`, including `CNAME` and `.nojekyll`. CI builds it on every pull request; the Release workflow builds it for every release and force-pushes it to the `gh-pages` branch, which GitHub Pages serves.
+`demo:build` writes `demo/out`, including `CNAME` and `.nojekyll`. CI builds it on every pull request; the Release workflow builds it for every release and deploys it as a GitHub Pages artifact. GitHub Pages must use GitHub Actions as its deployment source. Run the Release workflow manually to redeploy from `main` without creating a release or a deployment branch.
