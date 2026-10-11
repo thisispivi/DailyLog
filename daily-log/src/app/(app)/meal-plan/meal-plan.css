@@ -1,12 +1,13 @@
 .meal-plan-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
     gap: var(--space-6);
 }
 
+/* Under the week, the diet and the shopping list sit side by side. */
 .meal-plan-side {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: var(--space-6);
 }
 
@@ -27,40 +28,63 @@
     margin: 0 auto 0 0;
 }
 
-.meal-days {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-4);
-    margin: 0;
-    padding: 0;
-    list-style: none;
+/* The week reads across: a row per day, a column per meal. */
+.meal-week {
+    overflow-x: auto;
+    padding: var(--space-2);
 }
 
-.meal-day[aria-current="date"] {
-    box-shadow:
-        0 0 0 2px var(--primary),
-        var(--shadow-soft);
+.meal-week table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 6px;
+    table-layout: fixed;
 }
 
-.meal-day-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
+.meal-week thead th {
+    padding: 4px 8px;
+    color: var(--kind-ink, var(--text-muted));
+    font-size: 13px;
+    font-weight: 800;
+    text-align: left;
 }
 
-.meal-day-heading h2 {
-    margin: 0;
-    font-size: 17px;
+.meal-week thead th:first-child,
+.meal-week tbody th {
+    width: 128px;
+}
+
+.meal-week tbody th {
+    padding: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+    vertical-align: top;
+}
+
+.meal-week tbody th .pill {
+    margin-top: 6px;
+}
+
+.meal-day-name {
+    display: block;
 }
 
 /* Weekday names are lowercase in Italian; capitalise the first letter only. */
-.meal-day-heading h2::first-letter {
+.meal-day-name::first-letter {
     text-transform: uppercase;
 }
 
-.meal-rows,
+.meal-week tr[aria-current="date"] th,
+.meal-week tr[aria-current="date"] td {
+    background: var(--primary-soft);
+}
+
+.meal-week tr[aria-current="date"] th {
+    border-radius: var(--radius-tile);
+    color: var(--primary);
+}
+
 .meal-picks,
 .shopping-list ul,
 .diet-notes ul {
@@ -69,46 +93,49 @@
     list-style: none;
 }
 
-.meal-rows {
-    display: grid;
-    gap: var(--space-2);
-}
-
-.meal-row {
-    display: grid;
-    gap: 6px;
+.meal-cell {
     border-radius: var(--radius-tile);
     background: var(--surface-muted);
-    padding: 10px 12px;
+    padding: 8px 10px;
+    vertical-align: top;
 }
 
-.meal-row-heading {
+.meal-cell-heading {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: var(--space-2);
+    gap: var(--space-1);
 }
 
-.meal-row h3 {
+.meal-cell h3 {
+    display: grid;
     margin: 0;
     color: var(--kind-ink);
     font-size: 13px;
     font-weight: 800;
 }
 
-.meal-row h3 .muted {
+/* The column header already names the meal; phones show it again in each cell. */
+.meal-cell-name {
+    display: none;
+}
+
+.meal-variant {
+    color: var(--text-muted);
     font-weight: 700;
 }
 
-.meal-row .icon-button {
-    width: 36px;
-    height: 36px;
+.meal-cell .icon-button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
     flex: none;
+    margin: -4px -6px 0 auto;
 }
 
-.meal-row p {
+.meal-cell p {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .meal-picks {
@@ -122,7 +149,7 @@
 }
 
 .meal-picks .muted {
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .diet-setup {
@@ -174,6 +201,15 @@
     margin: 0 0 var(--space-3);
 }
 
+.shopping-list ul {
+    columns: 2 220px;
+    column-gap: var(--space-6);
+}
+
+.shopping-list li {
+    break-inside: avoid;
+}
+
 .shopping-list li {
     display: flex;
     justify-content: space-between;
@@ -194,7 +230,68 @@
 }
 
 @media (max-width: 1100px) {
-    .meal-plan-layout {
+    .meal-plan-side {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Phones: each day becomes a block of meal tiles, still read left to right. */
+@media (max-width: 720px) {
+    .meal-week {
+        padding: var(--space-3);
+    }
+
+    .meal-week table,
+    .meal-week tbody,
+    .meal-week tr,
+    .meal-week th,
+    .meal-week td {
+        display: block;
+        width: auto;
+    }
+
+    .meal-week thead {
+        display: none;
+    }
+
+    .meal-week tr {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 6px;
+        border-radius: var(--radius-tile);
+        padding: 6px;
+    }
+
+    .meal-week tr + tr {
+        margin-top: var(--space-2);
+    }
+
+    .meal-week tbody th {
+        display: flex;
+        grid-column: 1 / -1;
+        width: auto;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2px 4px;
+    }
+
+    .meal-week tbody th .pill {
+        margin-top: 0;
+    }
+
+    .meal-week tr[aria-current="date"] {
+        background: var(--primary-soft);
+    }
+
+    .meal-week tr[aria-current="date"] td {
+        background: var(--surface);
+    }
+
+    .meal-cell-empty {
+        display: none;
+    }
+
+    .meal-cell-name {
+        display: inline;
     }
 }

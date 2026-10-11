@@ -9,17 +9,18 @@ import { translate } from "@/core/i18n/translate";
 import { shiftDate } from "@/core/time/zoned-time";
 import type { Locale } from "@/features/logbook/domain";
 import { formatAmount } from "@/features/meal-plan/meal-plan";
-import type {
-    Diet,
-    DietOption,
-    MealKey,
-    MealPlan,
-    PlannedMeal,
+import {
+    type Diet,
+    type DietOption,
+    type MealKey,
+    mealKeys,
+    type MealPlan,
+    type PlannedMeal,
 } from "@/features/meal-plan/schemas";
 
 type Status = { message: string; tone: "error" | "success" } | null;
 
-/** The week's meals, one card per day, with a new roll for a meal or the whole week. */
+/** The week's meals as a table, a row per day and a column per meal, with a new roll for a meal or the whole week. */
 export function WeekPlan({
     diet,
     locale,
@@ -60,6 +61,11 @@ export function WeekPlan({
         );
     }
 
+    // One column per meal the week uses, in the order of the day.
+    const columns = mealKeys.filter((key) =>
+        plan?.days.some((day) => day.meals.some((meal) => meal.key === key)),
+    );
+
     const weekButton = (
         <button
             aria-busy={pending === "week"}
@@ -93,48 +99,69 @@ export function WeekPlan({
                     <p>{translate(locale, "mealPlan.noPlan")}</p>
                 </section>
             ) : (
-                <ol className="meal-days">
-                    {plan.days.map((day, index) => {
-                        const date = shiftDate(plan.startDate, index);
-                        const label = dayName.format(new Date(`${date}T00:00:00Z`));
-                        return (
-                            <li
-                                aria-current={date === today ? "date" : undefined}
-                                className="card meal-day"
-                                key={date}
-                            >
-                                <div className="meal-day-heading">
-                                    <h2>{label}</h2>
-                                    {date === today && (
-                                        <span className="pill">
-                                            {translate(locale, "mealPlan.today")}
-                                        </span>
-                                    )}
-                                </div>
-                                <ul className="meal-rows">
-                                    {day.meals.map((meal) => (
-                                        <MealRow
-                                            busy={pending === `${index}-${meal.key}`}
-                                            dayLabel={label}
-                                            diet={diet}
-                                            disabled={pending !== null}
-                                            key={meal.key}
-                                            locale={locale}
-                                            meal={meal}
-                                            onReroll={() =>
-                                                void send(
-                                                    `${index}-${meal.key}`,
-                                                    "/api/meal-plan/reroll",
-                                                    { day: index, meal: meal.key },
-                                                )
-                                            }
-                                        />
-                                    ))}
-                                </ul>
-                            </li>
-                        );
-                    })}
-                </ol>
+                <div className="card meal-week">
+                    <table>
+                        <caption className="sr-only">
+                            {translate(locale, "mealPlan.weekCaption")}
+                        </caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">{translate(locale, "mealPlan.day")}</th>
+                                {columns.map((key) => (
+                                    <th data-kind="meal" key={key} scope="col">
+                                        {mealName(locale, key)}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {plan.days.map((day, index) => {
+                                const date = shiftDate(plan.startDate, index);
+                                const label = dayName.format(new Date(`${date}T00:00:00Z`));
+                                return (
+                                    <tr
+                                        aria-current={date === today ? "date" : undefined}
+                                        key={date}
+                                    >
+                                        <th scope="row">
+                                            <span className="meal-day-name">{label}</span>
+                                            {date === today && (
+                                                <span className="pill">
+                                                    {translate(locale, "mealPlan.today")}
+                                                </span>
+                                            )}
+                                        </th>
+                                        {columns.map((key) => {
+                                            const meal = day.meals.find(
+                                                (candidate) => candidate.key === key,
+                                            );
+                                            return meal ? (
+                                                <MealCell
+                                                    busy={pending === `${index}-${key}`}
+                                                    dayLabel={label}
+                                                    diet={diet}
+                                                    disabled={pending !== null}
+                                                    key={key}
+                                                    locale={locale}
+                                                    meal={meal}
+                                                    onReroll={() =>
+                                                        void send(
+                                                            `${index}-${key}`,
+                                                            "/api/meal-plan/reroll",
+                                                            { day: index, meal: key },
+                                                        )
+                                                    }
+                                                />
+                                            ) : (
+                                                <td className="meal-cell-empty" key={key} />
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </div>
     );
@@ -155,7 +182,7 @@ function mealName(locale: Locale, key: MealKey): string {
     return translate(locale, `entry.${key}`);
 }
 
-function MealRow({
+function MealCell({
     busy,
     dayLabel,
     diet,
@@ -177,16 +204,25 @@ function MealRow({
     const options = new Map(diet.options.map((option) => [option.id, option]));
     const pieces = translate(locale, "mealPlan.pieces");
     const name = mealName(locale, meal.key);
+    // The variant only says something when the meal has alternatives, and not
+    // when its single pick already carries the same name ("Eggs on toast").
+    const [onlyPick] = meal.picks;
+    const showVariant =
+        variant !== undefined &&
+        variants.length > 1 &&
+        !(
+            meal.picks.length === 1 &&
+            onlyPick?.optionId &&
+            options.get(onlyPick.optionId)?.name === variant.name
+        );
 
     return (
-        <li className="meal-row" data-kind="meal">
-            <div className="meal-row-heading">
+        <td className="meal-cell" data-kind="meal">
+            <div className="meal-cell-heading">
+                {/* The column header names the meal on wide screens; phones stack the cells. */}
                 <h3>
-                    {name}
-                    {/* The variant only says something when the meal has alternatives. */}
-                    {variant && variants.length > 1 && (
-                        <span className="muted"> · {variant.name}</span>
-                    )}
+                    <span className="meal-cell-name">{name}</span>
+                    {showVariant && <span className="meal-variant">{variant.name}</span>}
                 </h3>
                 <button
                     aria-busy={busy}
@@ -229,6 +265,6 @@ function MealRow({
                     </ul>
                 )
             )}
-        </li>
+        </td>
     );
 }

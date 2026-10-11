@@ -53,6 +53,7 @@ const en = {
         copied: "Prompt copied. Paste it into an AI assistant, then your diet after it.",
         copyFailed: "Could not copy the prompt.",
         copyPrompt: "Copy prompt",
+        day: "Day",
         dietTitle: "Your diet",
         everyMeal: "With every meal",
         generateWeek: "Generate week",
@@ -83,6 +84,7 @@ const en = {
         uploadDiet: "Upload diet",
         uploaded: "Diet saved.",
         uploading: "Uploading…",
+        weekCaption: "This week’s meals, one row per day",
     },
     notes: {
         placeholder: "How did the day go? Feelings, work, anything worth remembering.",
@@ -342,6 +344,7 @@ const it: CatalogShape = {
         copied: "Prompt copiato. Incollalo in un assistente IA, seguito dalla tua dieta.",
         copyFailed: "Impossibile copiare il prompt.",
         copyPrompt: "Copia prompt",
+        day: "Giorno",
         dietTitle: "La tua dieta",
         everyMeal: "A ogni pasto",
         generateWeek: "Genera settimana",
@@ -373,6 +376,7 @@ const it: CatalogShape = {
         uploadDiet: "Carica dieta",
         uploaded: "Dieta salvata.",
         uploading: "Caricamento…",
+        weekCaption: "I pasti della settimana, una riga per giorno",
     },
     notes: {
         placeholder: "Come è andata la giornata? Emozioni, lavoro, qualsiasi cosa da ricordare.",
