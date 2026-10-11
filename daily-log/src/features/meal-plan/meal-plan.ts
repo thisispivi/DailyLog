@@ -22,6 +22,7 @@ type Usage = { days: Array<Map<string, number>>; week: Map<string, number> };
 
 const MAX_ATTEMPTS = 50;
 const variantKey = (id: string) => `variant:${id}`;
+const groupKey = (group: string) => `group:${group}`;
 
 function emptyUsage(): Usage {
     return { days: Array.from({ length: 7 }, () => new Map()), week: new Map() };
@@ -31,17 +32,29 @@ function count(map: Map<string, number>, key: string): number {
     return map.get(key) ?? 0;
 }
 
-function record(usage: Usage, day: number, meal: PlannedMeal): void {
+function record(diet: Diet, usage: Usage, day: number, meal: PlannedMeal): void {
+    const daily = usage.days[day];
+    const bump = (map: Map<string, number> | undefined, key: string) =>
+        map?.set(key, count(map, key) + 1);
     if (meal.variantId) {
-        const key = variantKey(meal.variantId);
-        usage.week.set(key, count(usage.week, key) + 1);
+        bump(usage.week, variantKey(meal.variantId));
+        const variant = diet.meals
+            .flatMap((candidate) => candidate.variants)
+            .find((candidate) => candidate.id === meal.variantId);
+        if (variant?.group) bump(daily, groupKey(variant.group));
     }
     for (const { optionId } of meal.picks) {
         if (!optionId) continue;
-        usage.week.set(optionId, count(usage.week, optionId) + 1);
-        const daily = usage.days[day];
-        daily?.set(optionId, count(daily, optionId) + 1);
+        bump(usage.week, optionId);
+        bump(daily, optionId);
+        const option = diet.options.find((candidate) => candidate.id === optionId);
+        if (option?.group) bump(daily, groupKey(option.group));
     }
+}
+
+/** False when something of the same group is already planned that day. */
+function groupFree(usage: Usage, day: number, group: string | undefined): boolean {
+    return group === undefined || count(usage.days[day] ?? new Map(), groupKey(group)) === 0;
 }
 
 function pickWeighted<T extends { weight?: number | undefined }>(
@@ -72,8 +85,9 @@ function planMeal(
     const variant = pickWeighted(
         (meal?.variants ?? []).filter(
             (candidate) =>
-                candidate.maxPerWeek === undefined ||
-                count(usage.week, variantKey(candidate.id)) < candidate.maxPerWeek,
+                (candidate.maxPerWeek === undefined ||
+                    count(usage.week, variantKey(candidate.id)) < candidate.maxPerWeek) &&
+                groupFree(usage, day, candidate.group),
         ),
         random,
     );
@@ -87,7 +101,8 @@ function planMeal(
     const options = new Map(diet.options.map((option) => [option.id, option]));
     const fits = (option: DietOption) =>
         (option.maxPerWeek === undefined || count(local.week, option.id) < option.maxPerWeek) &&
-        count(local.days[day] ?? new Map(), option.id) < (option.maxPerDay ?? 1);
+        count(local.days[day] ?? new Map(), option.id) < (option.maxPerDay ?? 1) &&
+        groupFree(local, day, option.group);
 
     const picks: PlannedMeal["picks"] = [];
     for (const slot of variant.slots) {
@@ -98,7 +113,7 @@ function planMeal(
         const option = pickWeighted(candidates, random);
         picks.push({ optionId: option?.id ?? null, slot: slot.name });
         if (option)
-            record(local, day, {
+            record(diet, local, day, {
                 key,
                 picks: [{ optionId: option.id, slot: slot.name }],
                 variantId: null,
@@ -124,7 +139,7 @@ export function generateWeek(diet: Diet, startDate: string, random: Random): Mea
         const days = Array.from({ length: 7 }, (_, day) => ({
             meals: orderedMealKeys(diet).map((key) => {
                 const meal = planMeal(diet, key, day, usage, random);
-                record(usage, day, meal);
+                record(diet, usage, day, meal);
                 return meal;
             }),
         }));
@@ -149,7 +164,7 @@ export function rerollMeal(
     const usage = emptyUsage();
     plan.days.forEach((day, index) => {
         for (const meal of day.meals) {
-            if (index !== dayIndex || meal.key !== key) record(usage, index, meal);
+            if (index !== dayIndex || meal.key !== key) record(diet, usage, index, meal);
         }
     });
     let best: PlannedMeal | null = null;
@@ -208,6 +223,17 @@ export function shoppingList(diet: Diet, plan: MealPlan): ShoppingItem[] {
                 });
             }
         }
+    }
+    // An unmeasured use ("un velo di ricotta") joins the measured line of the same food.
+    for (const [key, item] of totals) {
+        if (item.unit !== null || item.amount !== null) continue;
+        const food = key.slice(0, -1);
+        const measured = [...totals.entries()].find(
+            ([other, candidate]) => candidate.unit !== null && other.startsWith(`${food}|`),
+        );
+        if (!measured) continue;
+        totals.set(measured[0], { ...measured[1], count: measured[1].count + item.count });
+        totals.delete(key);
     }
     return [...totals.values()].sort((a, b) => a.food.localeCompare(b.food));
 }

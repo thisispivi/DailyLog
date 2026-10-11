@@ -28,6 +28,11 @@ const maxPerWeek = z
     .max(21)
     .optional()
     .describe("Hard limit on how many times a week this can be picked.");
+const group = id
+    .optional()
+    .describe(
+        "Things sharing a group appear at most once per day, e.g. all white meats, or the fruit snack of both snack meals.",
+    );
 
 const itemSchema = z.strictObject({
     amount: z.number().positive().max(100_000).optional(),
@@ -36,6 +41,7 @@ const itemSchema = z.strictObject({
 });
 
 const optionSchema = z.strictObject({
+    group,
     id,
     items: z.array(itemSchema).min(1).max(20),
     maxPerDay: z
@@ -57,6 +63,7 @@ const slotSchema = z.strictObject({
 });
 
 const variantSchema = z.strictObject({
+    group,
     id,
     maxPerWeek,
     name,
