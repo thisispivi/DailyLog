@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.24.0](https://github.com/thisispivi/DailyLog/compare/v1.23.0...v1.24.0) (2026-10-11)
+
+
+### Features
+
+* **meal-plan:** add groups for daily variety and tighten the diet prompt ([a06b9e1](https://github.com/thisispivi/DailyLog/commit/a06b9e17472a0817ceff0ab5f06e26a23f2b4e7f))
+* **meal-plan:** add groups for daily variety and tighten the diet prompt ([5722b30](https://github.com/thisispivi/DailyLog/commit/5722b30e0b2d409d6b3c890a3a82f3ade6fc2919))
+
 ## [1.23.0](https://github.com/thisispivi/DailyLog/compare/v1.22.0...v1.23.0) (2026-10-11)
 
 
