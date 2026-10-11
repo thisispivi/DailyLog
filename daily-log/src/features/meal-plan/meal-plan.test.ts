@@ -196,6 +196,50 @@ describe("meal plan generator", () => {
         }
     });
 
+    it("never plans two things of the same group on one day", () => {
+        const grouped = dietSchema.parse({
+            ...diet,
+            meals: diet.meals.map((meal) =>
+                meal.key === "snack1" || meal.key === "snack2"
+                    ? {
+                          ...meal,
+                          variants: [
+                              ...meal.variants.map((variant) => ({ ...variant, group: "frutta" })),
+                              { id: `nessuno-${meal.key}`, name: "Nessuno", slots: [] },
+                          ],
+                      }
+                    : meal,
+            ),
+            options: diet.options.map((option) =>
+                option.id === "pollo" || option.id === "manzo"
+                    ? { ...option, group: "carne" }
+                    : option,
+            ),
+        });
+        const meat = (id: string | null | undefined) => id === "pollo" || id === "manzo";
+        for (let seed = 1; seed <= 100; seed += 1) {
+            const random = seeded(seed);
+            const plan = rerollMeal(
+                grouped,
+                generateWeek(grouped, "2026-10-05", random),
+                2,
+                "dinner",
+                random,
+            );
+            plan.days.forEach((day, index) => {
+                const snacks = day.meals.filter((meal) => meal.key.startsWith("snack"));
+                expect(
+                    snacks.filter((meal) => meal.variantId?.startsWith("spuntino")),
+                ).not.toHaveLength(2);
+                if (plan.days[index]?.meals.at(-1)?.variantId === "cena") {
+                    expect(
+                        meat(protein(plan, index, "lunch")) && meat(protein(plan, index, "dinner")),
+                    ).toBe(false);
+                }
+            });
+        }
+    });
+
     it("starts weeks on Monday", () => {
         expect(mondayOf("2026-10-05")).toBe("2026-10-05");
         expect(mondayOf("2026-10-10")).toBe("2026-10-05");
