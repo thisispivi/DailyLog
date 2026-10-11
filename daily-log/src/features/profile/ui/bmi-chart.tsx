@@ -14,7 +14,7 @@ import {
 import { formatDate, translate } from "@/core/i18n/translate";
 import type { Locale, WeighIn } from "@/features/logbook/domain";
 import { bodyMassIndex } from "@/features/profile/profile";
-import { niceTicks } from "@/features/reports/chart-scale";
+import { niceTicks, timeTicks } from "@/features/reports/chart-scale";
 import {
     axisTick,
     ChartCard,
@@ -56,6 +56,7 @@ export function BmiChart({
     }));
     const start = data[0]?.time ?? 0;
     const end = data.at(-1)?.time ?? 0;
+    const domain = start === end ? [start - DAY_MS, end + DAY_MS] : [start, end];
     const values = data.map((point) => point.bmi);
     const ticks = niceTicks(Math.min(...values), Math.max(...values));
     const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
@@ -75,12 +76,13 @@ export function BmiChart({
                         <XAxis
                             axisLine={false}
                             dataKey="time"
-                            domain={start === end ? [start - DAY_MS, end + DAY_MS] : [start, end]}
-                            minTickGap={24}
+                            domain={domain}
+                            interval={0}
                             scale="time"
                             tick={axisTick}
                             tickFormatter={(time: number) => tickFormat.format(time)}
                             tickLine={false}
+                            ticks={timeTicks(domain[0] ?? start, domain[1] ?? end)}
                             type="number"
                         />
                         <YAxis

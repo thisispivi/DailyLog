@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { niceTicks } from "@/features/reports/chart-scale";
+import { niceTicks, timeTicks } from "@/features/reports/chart-scale";
 
 describe("niceTicks", () => {
     it("uses round steps around a narrow weight range", () => {
@@ -16,5 +16,18 @@ describe("niceTicks", () => {
 
     it("gives a single weigh-in some room", () => {
         expect(niceTicks(73, 73)).toEqual([72.5, 73, 73.5]);
+    });
+});
+
+describe("timeTicks", () => {
+    const day = 86_400_000;
+
+    it("spreads a few whole-day ticks over a long range", () => {
+        const ticks = timeTicks(0, 42 * day);
+        expect(ticks).toEqual([0, 11 * day, 22 * day, 33 * day]);
+    });
+
+    it("never goes below one tick per day", () => {
+        expect(timeTicks(0, 2 * day)).toEqual([0, day, 2 * day]);
     });
 });

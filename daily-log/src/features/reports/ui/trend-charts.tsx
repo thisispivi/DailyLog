@@ -20,7 +20,7 @@ import {
 
 import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
 import type { ActivityTotal, DayTotals } from "@/features/insights/insights";
-import { niceTicks } from "@/features/reports/chart-scale";
+import { niceTicks, timeTicks } from "@/features/reports/chart-scale";
 import { gramsToUnit, type Locale, type WeighIn, type WeightUnit } from "@/features/logbook/domain";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 import { Sheet } from "@/ui/sheet";
@@ -320,11 +320,12 @@ function WeightPlot({
                         axisLine={false}
                         dataKey="time"
                         domain={domain}
-                        minTickGap={24}
+                        interval={0}
                         scale="time"
                         tick={axisTick}
                         tickFormatter={(time: number) => tickFormat.format(time)}
                         tickLine={false}
+                        ticks={timeTicks(domain[0] ?? start, domain[1] ?? end)}
                         type="number"
                     />
                     <YAxis

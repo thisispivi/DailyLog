@@ -43,6 +43,25 @@ export type DemoView = keyof typeof demoViews;
 
 type Rendered = { content: ReactNode; locale: Locale };
 
+// Each link is a new static page that mounts DemoApp again. These live for the
+// whole tab, so the database opens and seeds once and the previous page stays on
+// screen until the next one has rendered, instead of a loading message per click.
+let opened: Promise<void> | null = null;
+let isOpen = false;
+let lastRendered: Rendered | null = null;
+
+function openOnce(): Promise<void> {
+    opened ??= openDemoDatabase().then((isNew) => {
+        if (isNew) {
+            // Start in the visitor's language; the settings page can switch it later.
+            seedDemo(getEnvironment().timezone, navigator.language.startsWith("it") ? "it" : "en");
+            saveDemoDatabase();
+        }
+        isOpen = true;
+    });
+    return opened;
+}
+
 /** next/navigation's redirect() throws an error whose digest carries the target. */
 function redirectTarget(error: unknown): string | null {
     const digest = (error as { digest?: unknown } | null)?.digest;
@@ -60,18 +79,14 @@ export function DemoApp({ view }: Readonly<{ view: string }>) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const version = useSyncExternalStore(subscribeToDemo, demoVersion, () => 0);
-    const [state, setState] = useState<"failed" | "loading" | "ready">("loading");
-    const [rendered, setRendered] = useState<Rendered | null>(null);
+    const [state, setState] = useState<"failed" | "loading" | "ready">(() =>
+        isOpen ? "ready" : "loading",
+    );
+    const [rendered, setRendered] = useState<Rendered | null>(lastRendered);
 
     useEffect(() => {
-        openDemoDatabase().then(
-            (isNew) => {
-                if (isNew) {
-                    seedDemo(getEnvironment().timezone);
-                    saveDemoDatabase();
-                }
-                setState("ready");
-            },
+        openOnce().then(
+            () => setState("ready"),
             () => setState("failed"),
         );
     }, []);
@@ -92,7 +107,10 @@ export function DemoApp({ view }: Readonly<{ view: string }>) {
                 const content = await page?.({
                     searchParams: Promise.resolve(Object.fromEntries(searchParams)),
                 });
-                if (!cancelled) setRendered({ content, locale });
+                if (!cancelled) {
+                    lastRendered = { content, locale };
+                    setRendered(lastRendered);
+                }
             } catch (error) {
                 const target = redirectTarget(error);
                 if (target) router.replace(target);

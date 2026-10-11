@@ -16,7 +16,10 @@ import * as trash from "@/app/api/trash/route";
 import * as weighIn from "@/app/api/weigh-ins/[id]/route";
 import * as weighIns from "@/app/api/weigh-ins/route";
 
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
+
 import { saveDemoDatabase } from "@demo/shell/database";
+import { localizeDemo } from "@demo/shell/seed";
 import { notifyDemoChanged } from "@demo/shell/store";
 import { NextRequest } from "@demo/shims/next-server";
 
@@ -71,10 +74,14 @@ export async function handleDemoRequest(
         if (!params) continue;
         const handler = (module as Record<string, Handler | undefined>)[method];
         if (!handler) return new Response(null, { status: 405 });
+        const logbook = new LogbookRepository();
+        const before = logbook.getSettings(1).locale;
         const response = await handler(new NextRequest(url, method, body), {
             params: Promise.resolve(params),
         });
         if (method !== "GET") {
+            // The sample records follow the language, as if the person wrote them in it.
+            localizeDemo(before, logbook.getSettings(1).locale);
             saveDemoDatabase();
             notifyDemoChanged();
         }
