@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.1](https://github.com/thisispivi/DailyLog/compare/v1.24.0...v1.24.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* **ui:** vertically centre the app name on the logo mark ([4e6bd5a](https://github.com/thisispivi/DailyLog/commit/4e6bd5af12ffa534f95449e9f453777074364372))
+
 ## [1.24.0](https://github.com/thisispivi/DailyLog/compare/v1.23.0...v1.24.0) (2026-10-11)
 
 
