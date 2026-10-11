@@ -9,6 +9,7 @@ import { formatDuration, translate } from "@/core/i18n/translate";
 import type { Entry, Locale } from "@/features/logbook/domain";
 import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import { KindIcon } from "@/ui/kind-icon";
+import { showToast } from "@/ui/toast";
 
 const CLOCK_TICK_MS = 30_000;
 
@@ -26,23 +27,30 @@ export function ActiveActivity({
         return () => window.clearInterval(timer);
     }, []);
 
-    async function settle(request: Promise<{ ok: boolean }>) {
+    async function settle(
+        request: Promise<{ ok: boolean }>,
+        message: "toast.activityDiscarded" | "toast.activityFinished",
+    ) {
         setPending(true);
         const { ok } = await request;
         setPending(false);
         setFailed(!ok);
-        if (ok) router.refresh();
+        if (!ok) return;
+        // The card disappears on success, taking its inline status with it.
+        showToast(translate(locale, message));
+        router.refresh();
     }
 
     function finish() {
         void settle(
             sendJson("/api/activities/current", "PATCH", { endAt: new Date().toISOString() }),
+            "toast.activityFinished",
         );
     }
 
     function cancel() {
         if (!window.confirm(translate(locale, "dashboard.confirmCancel"))) return;
-        void settle(sendJson("/api/activities/current", "DELETE"));
+        void settle(sendJson("/api/activities/current", "DELETE"), "toast.activityDiscarded");
     }
 
     return (

@@ -19,6 +19,7 @@ import { DateTimeField } from "@/ui/date-time-field";
 import { KindIcon, recordKinds, type RecordKind } from "@/ui/kind-icon";
 import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
+import { showToast } from "@/ui/toast";
 
 const trainingSuggestions = ["walk", "run", "gym", "tennis", "tableTennis"] as const;
 const OTHER_ACTIVITY = "__other__";
@@ -36,6 +37,8 @@ type Context = Readonly<{
 /** Opens the logger sheet, either on the type picker (null) or straight on a form. */
 const OpenLogger = createContext<(kind: RecordKind | null) => void>(() => undefined);
 
+type SavedMessage = "toast.activityStarted" | "toast.recordAdded";
+
 const isActivityKind = (kind: RecordKind) => kind === "training" || kind === "sleep";
 
 /** Owns the logger sheet; anything inside can open it with `useOpenLogger`. */
@@ -44,28 +47,24 @@ export function RecordLoggerProvider({ children, ...context }: Context & { child
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [kind, setKind] = useState<RecordKind | null>(null);
-    const [savedMessage, setSavedMessage] = useState("");
     const isBlocked = (value: RecordKind) => hasActiveActivity && isActivityKind(value);
 
     function openLogger(next: RecordKind | null) {
         // A running activity blocks starting another; show the picker and its hint instead.
         setKind(next && isBlocked(next) ? null : next);
-        setSavedMessage("");
         setOpen(true);
     }
 
-    function saved() {
+    function saved(message: SavedMessage) {
         setOpen(false);
-        setSavedMessage(translate(locale, "common.saved"));
+        // The sheet closes on success, so the confirmation has to live outside it.
+        showToast(translate(locale, message));
         router.refresh();
     }
 
     return (
         <OpenLogger.Provider value={openLogger}>
             {children}
-            <p aria-live="polite" className="sr-only">
-                {savedMessage}
-            </p>
             <Sheet
                 closeLabel={translate(locale, "common.close")}
                 onClose={() => setOpen(false)}
@@ -160,7 +159,8 @@ function RecordForm({
     timeFormat,
     timeZone,
     weightUnit,
-}: Context & Readonly<{ kind: RecordKind; onBack: () => void; onSaved: () => void }>) {
+}: Context &
+    Readonly<{ kind: RecordKind; onBack: () => void; onSaved: (message: SavedMessage) => void }>) {
     const [pending, setPending] = useState(false);
     const [failed, setFailed] = useState(false);
     const [hasEnd, setHasEnd] = useState(false);
@@ -197,7 +197,8 @@ function RecordForm({
                   });
         setPending(false);
         setFailed(!ok);
-        if (ok) onSaved();
+        if (ok)
+            onSaved(isActivity && !field("endAt") ? "toast.activityStarted" : "toast.recordAdded");
     }
 
     return (

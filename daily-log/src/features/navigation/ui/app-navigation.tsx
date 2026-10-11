@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { sendJson } from "@/core/http/client";
 import { translate } from "@/core/i18n/translate";
@@ -33,7 +34,10 @@ export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
     const pathname = usePathname();
     const router = useRouter();
 
+    const [isSigningOut, setIsSigningOut] = useState(false);
+
     async function signOut() {
+        setIsSigningOut(true);
         await sendJson("/api/auth/logout", "POST");
         router.replace("/login");
         router.refresh();
@@ -78,7 +82,13 @@ export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
                     <CircleUserRound aria-hidden="true" size={19} />
                     <span>{translate(locale, "nav.profile")}</span>
                 </Link>
-                <button className="account-link" onClick={signOut} type="button">
+                <button
+                    aria-busy={isSigningOut}
+                    className="account-link"
+                    disabled={isSigningOut}
+                    onClick={signOut}
+                    type="button"
+                >
                     <LogOut aria-hidden="true" size={19} />
                     <span>{translate(locale, "nav.signOut")}</span>
                 </button>
