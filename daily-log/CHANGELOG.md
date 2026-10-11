@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/thisispivi/DailyLog/compare/v1.22.0...v1.23.0) (2026-10-11)
+
+
+### Features
+
+* show spinners on busy controls and toasts for finished actions ([68b63d7](https://github.com/thisispivi/DailyLog/commit/68b63d795d1f5e55524706efdc31a037e93d6784))
+
 ## [1.22.0](https://github.com/thisispivi/DailyLog/compare/v1.21.1...v1.22.0) (2026-10-11)
 
 
