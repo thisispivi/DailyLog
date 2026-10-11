@@ -738,6 +738,11 @@ h2 {
     letter-spacing: -0.01em;
 }
 
+.logo-name {
+    /* Nunito's tall ascent puts the line box centre below the capitals; trim to them so they centre on the mark. */
+    text-box: trim-both cap alphabetic;
+}
+
 .logo-mark {
     display: grid;
     width: 34px;

@@ -7,7 +7,7 @@ export function Logo() {
             <span aria-hidden="true" className="logo-mark">
                 <Activity size={18} strokeWidth={2.5} />
             </span>
-            DailyLog
+            <span className="logo-name">DailyLog</span>
         </span>
     );
 }
