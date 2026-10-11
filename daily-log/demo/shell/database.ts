@@ -3,7 +3,9 @@ import type { Database as SqlJsDatabase, SqlJsStatic, SqlValue } from "sql.js";
 
 import { migrateDatabase } from "@/infrastructure/database/schema";
 
-const STORAGE_KEY = "dailylog-demo-database";
+// v2: v1 databases were seeded again on every page, so they are dropped.
+const STORAGE_KEY = "dailylog-demo-database-v2";
+const OLD_STORAGE_KEYS = ["dailylog-demo-database"];
 
 declare global {
     interface Window {
@@ -106,6 +108,7 @@ function loadScript(src: string): Promise<void> {
 
 function readSaved(): Uint8Array | null {
     try {
+        for (const key of OLD_STORAGE_KEYS) localStorage.removeItem(key);
         const saved = localStorage.getItem(STORAGE_KEY);
         return saved ? Uint8Array.from(atob(saved), (character) => character.charCodeAt(0)) : null;
     } catch {
