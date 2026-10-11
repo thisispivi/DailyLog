@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/thisispivi/DailyLog/compare/v1.21.1...v1.22.0) (2026-10-11)
+
+
+### Features
+
+* show the meal plan as a week table read across ([aeee8bb](https://github.com/thisispivi/DailyLog/commit/aeee8bbfab582cb76c8eac0096c35e1607489beb))
+
 ## [1.21.1](https://github.com/thisispivi/DailyLog/compare/v1.21.0...v1.21.1) (2026-10-11)
 
 
