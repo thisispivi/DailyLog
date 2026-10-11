@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.21.1](https://github.com/thisispivi/DailyLog/compare/v1.21.0...v1.21.1) (2026-10-11)
+
+
+### Bug Fixes
+
+* smooth demo navigation, realistic bilingual data, and readable chart dates ([443d864](https://github.com/thisispivi/DailyLog/commit/443d8643b116c73e3f62143c3a3f652de6b06d59))
+* smooth demo navigation, realistic bilingual data, and readable chart dates ([3ae806b](https://github.com/thisispivi/DailyLog/commit/3ae806b44bd2cd13e71abac48eec7b2133373b3c)), closes [#166](https://github.com/thisispivi/DailyLog/issues/166)
+
 ## [1.21.0](https://github.com/thisispivi/DailyLog/compare/v1.20.1...v1.21.0) (2026-10-10)
 
 
