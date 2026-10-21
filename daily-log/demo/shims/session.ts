@@ -1,7 +1,7 @@
 // The demo has one owner and no secrets: any password signs in, and signing
 // out is remembered in this browser so the sign-in page can be tried too.
 const SIGNED_OUT_KEY = "dailylog-demo-signed-out";
-const OWNER = { expiresAt: Number.MAX_SAFE_INTEGER, nonce: "demo", userId: 1 };
+const OWNER = { expiresAt: Number.MAX_SAFE_INTEGER, nonce: "demo", userId: 1, version: 0 };
 
 function setSignedOut(value: boolean): void {
     try {
@@ -47,3 +47,8 @@ export function sessionFromRequest(): typeof OWNER {
 
 /** Demo sessions never expire, so there is nothing to renew. */
 export function renewSession(): void {}
+
+export const SESSION_COOKIE = "dailylog_session";
+
+/** Demo sessions are never revoked by version; this only satisfies the proxy's import. */
+export function expireSession(): void {}

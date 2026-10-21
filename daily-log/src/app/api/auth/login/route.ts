@@ -19,13 +19,14 @@ export const POST = publicRoute(async (request, requestId) => {
     if (isLoginBlocked(clientKey)) {
         throw new ApiError(429, "RATE_LIMITED", "Too many sign-in attempts.");
     }
-    if (!verifyPassword(password, new LogbookRepository().getPasswordHash(ownerId))) {
+    const repository = new LogbookRepository();
+    if (!verifyPassword(password, repository.getPasswordHash(ownerId))) {
         recordLoginFailure(clientKey);
         log("warn", "auth.login_rejected", { requestId });
         throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials.");
     }
     clearLoginAttempts(clientKey);
-    await createSession(request);
+    await createSession(request, repository.getSessionVersion(ownerId));
     log("info", "auth.login_succeeded", { requestId });
     return ok({ authenticated: true });
 });

@@ -19,7 +19,7 @@ function token(payload: unknown, secret = SECRET): string {
     return `${encoded}.${signature}`;
 }
 
-const valid = { expiresAt: NOW + 60, nonce: "abc", userId: OWNER };
+const valid = { expiresAt: NOW + 60, nonce: "abc", userId: OWNER, version: 3 };
 
 describe("verifySessionToken", () => {
     it("accepts a signed, unexpired token for the configured owner", () => {
@@ -38,6 +38,11 @@ describe("verifySessionToken", () => {
     it("rejects signed payloads with the wrong shape", () => {
         const malformed = token({ expiresAt: "never", nonce: "abc", userId: OWNER });
         expect(verifySessionToken(malformed, SECRET, OWNER, NOW)).toBeNull();
+    });
+
+    it("rejects tokens issued before sessions carried a version", () => {
+        const unversioned = { expiresAt: NOW + 60, nonce: "abc", userId: OWNER };
+        expect(verifySessionToken(token(unversioned), SECRET, OWNER, NOW)).toBeNull();
     });
 
     it("rejects tokens with extra segments", () => {

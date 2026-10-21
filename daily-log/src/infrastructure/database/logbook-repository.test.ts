@@ -290,6 +290,14 @@ describe("LogbookRepository", () => {
         expect(logbook.getPasswordHash(OWNER)).toBe("scrypt:c:d");
         expect(logbook.getPasswordHash(STRANGER)).toBeNull();
     });
+
+    it("moves only the revoking owner to a new session version", () => {
+        expect(logbook.getSessionVersion(OWNER)).toBe(0);
+        expect(logbook.revokeSessions(OWNER)).toBe(1);
+        expect(logbook.revokeSessions(OWNER)).toBe(2);
+        expect(logbook.getSessionVersion(OWNER)).toBe(2);
+        expect(logbook.getSessionVersion(STRANGER)).toBe(0);
+    });
 });
 
 describe("legacy schema migration", () => {
@@ -313,7 +321,7 @@ describe("legacy schema migration", () => {
             time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(10);
+        expect(database.pragma("user_version", { simple: true })).toBe(11);
         database.close();
     });
 });

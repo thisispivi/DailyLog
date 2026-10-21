@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
 
-const COOKIE_NAME = "dailylog_session";
+export const SESSION_COOKIE = "dailylog_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
 /** A session in use is reissued at most once a day, so it only lapses after a week idle. */
 const RENEW_AFTER_SECONDS = 60 * 60 * 24;
@@ -15,6 +15,8 @@ const sessionPayloadSchema = z.strictObject({
     expiresAt: z.number().int(),
     nonce: z.string().min(1),
     userId: z.number().int(),
+    /** The owner's session version at sign-in; the proxy rejects older ones. */
+    version: z.number().int().nonnegative(),
 });
 
 type SessionPayload = z.infer<typeof sessionPayloadSchema>;
@@ -63,11 +65,12 @@ export function verifyPassword(candidate: string, storedHash: string | null): bo
     return timingSafeEqual(actualDigest, expectedDigest);
 }
 
-function issueSessionToken(userId: number, secret: string): string {
+function issueSessionToken(userId: number, version: number, secret: string): string {
     const payload: SessionPayload = {
         expiresAt: Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS,
         nonce: randomBytes(16).toString("base64url"),
         userId,
+        version,
     };
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
     return `${encodedPayload}.${sign(encodedPayload, secret)}`;
@@ -86,12 +89,13 @@ function sessionCookieOptions(request: NextRequest, maxAge: number) {
     } as const;
 }
 
-export async function createSession(request: NextRequest): Promise<void> {
+/** Signs the owner in under their current session version. */
+export async function createSession(request: NextRequest, version: number): Promise<void> {
     const environment = getEnvironment();
     if (!environment.sessionSecret) throw new Error("Authentication is not configured.");
     (await cookies()).set(
-        COOKIE_NAME,
-        issueSessionToken(environment.ownerId, environment.sessionSecret),
+        SESSION_COOKIE,
+        issueSessionToken(environment.ownerId, version, environment.sessionSecret),
         sessionCookieOptions(request, SESSION_DURATION_SECONDS),
     );
 }
@@ -103,7 +107,7 @@ export function needsRenewal(expiresAt: number, nowSeconds: number): boolean {
 /** The valid session in a request's cookie, for the proxy, which has no cookies() store. */
 export function sessionFromRequest(request: NextRequest): SessionPayload | null {
     const { ownerId, sessionSecret } = getEnvironment();
-    const token = request.cookies.get(COOKIE_NAME)?.value;
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
     return sessionSecret && token ? verifySessionToken(token, sessionSecret, ownerId) : null;
 }
 
@@ -116,21 +120,26 @@ export function renewSession(
     const { sessionSecret } = getEnvironment();
     if (!sessionSecret || !needsRenewal(session.expiresAt, Math.floor(Date.now() / 1000))) return;
     response.cookies.set(
-        COOKIE_NAME,
-        issueSessionToken(session.userId, sessionSecret),
+        SESSION_COOKIE,
+        issueSessionToken(session.userId, session.version, sessionSecret),
         sessionCookieOptions(request, SESSION_DURATION_SECONDS),
     );
 }
 
+/** Expires a revoked session cookie in the browser, from the proxy. */
+export function expireSession(request: NextRequest, response: NextResponse): void {
+    response.cookies.set(SESSION_COOKIE, "", sessionCookieOptions(request, 0));
+}
+
 export async function destroySession(request: NextRequest): Promise<void> {
-    (await cookies()).set(COOKIE_NAME, "", sessionCookieOptions(request, 0));
+    (await cookies()).set(SESSION_COOKIE, "", sessionCookieOptions(request, 0));
 }
 
 /** Validates signature, expiry, shape, and owner binding for the current session cookie. */
 export async function readSession(): Promise<SessionPayload | null> {
     const environment = getEnvironment();
     if (!environment.sessionSecret) return null;
-    const token = (await cookies()).get(COOKIE_NAME)?.value;
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
     return token ? verifySessionToken(token, environment.sessionSecret, environment.ownerId) : null;
 }
 
