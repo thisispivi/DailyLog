@@ -22,6 +22,15 @@ describe("parseEnvironment", () => {
         expect(env).toMatchObject({ ownerId: 123456789, sessionSecret: "correct horse battery" });
     });
 
+    it("requires a separate session secret in production", () => {
+        const production = { APP_PASSWORD: "correct horse battery", NODE_ENV: "production" };
+        expect(() => parseEnvironment(production)).toThrow("SESSION_SECRET");
+        expect(
+            parseEnvironment({ ...production, SESSION_SECRET: "s".repeat(32) }).sessionSecret,
+        ).toBe("s".repeat(32));
+        expect(parseEnvironment({ NODE_ENV: "production" }).sessionSecret).toBeNull();
+    });
+
     it("accepts the bot's uppercase log levels", () => {
         expect(parseEnvironment({ LOG_LEVEL: "WARNING" }).logLevel).toBe("warn");
     });

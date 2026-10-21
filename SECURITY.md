@@ -12,7 +12,7 @@ Do not open a public issue. Use GitHub’s private vulnerability reporting for t
 
 DailyLog is a private, single-owner application. A production operator must:
 
-- set a unique 12+ character `APP_PASSWORD` and distinct 32+ character `SESSION_SECRET` through a secret manager. Without `SESSION_SECRET`, sessions are signed with `APP_PASSWORD`, and that key stays the same after a password change in Settings;
+- set a unique 12+ character `APP_PASSWORD` and distinct 32+ character `SESSION_SECRET` through a secret manager. the server refuses to start in production when `APP_PASSWORD` is set without `SESSION_SECRET`;
 - preserve the existing owner ID with `APP_USER_ID` when migrating data;
 - terminate HTTPS before the application and forward `X-Forwarded-Proto`, so cookies are marked `Secure`, and preserve `Host` (or send `X-Forwarded-Host`), because the same-origin check compares against it;
 - expose the service only to intended networks/users;

@@ -71,6 +71,11 @@ export function parseEnvironment(source: Record<string, string | undefined>): En
         throw new Error(`Invalid environment configuration: ${fields}`);
     }
     const env = parsed.data;
+    // A session key equal to the password survives a password change in Settings, so
+    // production refuses it. Development and tests keep the fallback for convenience.
+    if (env.NODE_ENV === "production" && env.APP_PASSWORD && !env.SESSION_SECRET) {
+        throw new Error("Invalid environment configuration: SESSION_SECRET");
+    }
     return Object.freeze({
         appPassword: env.APP_PASSWORD ?? null,
         databasePath: env.DATABASE_PATH,

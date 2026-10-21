@@ -45,7 +45,7 @@ All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src
 | Variable          | Default                    | Notes                                                                     |
 | ----------------- | -------------------------- | ------------------------------------------------------------------------- |
 | `APP_PASSWORD`    | none                       | Required to sign in. 12 to 256 characters. Settings can change it later.  |
-| `SESSION_SECRET`  | `APP_PASSWORD`             | Signs session cookies. Use a separate value of 32+ characters.            |
+| `SESSION_SECRET`  | `APP_PASSWORD` (dev only)  | Signs session cookies. 32+ characters. Required in production.            |
 | `APP_USER_ID`     | `1`                        | Owner ID on every row. Set it to the old Telegram user ID when migrating. |
 | `ALLOWED_USER_ID` | none                       | The bot's name for `APP_USER_ID`. Still accepted.                         |
 | `TIMEZONE`        | `Europe/Berlin`            | IANA zone used for calendar days and form times.                          |
@@ -137,7 +137,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 ## Security model
 
 - One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use).
-- Set `SESSION_SECRET`. Without it, sessions are signed with `APP_PASSWORD`, and changing the password in Settings does not change that key. The server logs `config.session_secret_is_password` at startup when this is the case.
+- Set `SESSION_SECRET`. In production the server refuses to start without it when `APP_PASSWORD` is set. In development, sessions fall back to being signed with `APP_PASSWORD`, which a password change in Settings does not rotate, and the server logs `config.session_secret_is_password`.
 - Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). The global cap also blocks the owner's sign-in while it lasts; existing sessions keep working.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
