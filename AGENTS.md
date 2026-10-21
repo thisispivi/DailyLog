@@ -15,3 +15,5 @@ Key points:
 - Use the design system: tokens instead of literal colours, `data-kind` for record-type colours, and the shared `Select`, `DateTimeField`, and `Sheet` instead of native controls or custom modals.
 - Before finishing, run `npm run quality`. Do not bypass the git hooks.
 - Commits use Conventional Commits. Branches are named `<kind>/<short-description>`.
+
+Project skills in `.claude/skills/` hold the step-by-step workflows: `check` (definition of done and failure diagnosis), `add-api-endpoint`, and `change-database-schema`.
