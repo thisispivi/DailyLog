@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/thisispivi/DailyLog/compare/v2.0.0...v2.0.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **auth:** stop treating paths with a file extension as public ([8b3ae68](https://github.com/thisispivi/DailyLog/commit/8b3ae686ea618d0e651d6282c429527cddbf271b))
+* **auth:** stop treating paths with a file extension as public ([6d11f82](https://github.com/thisispivi/DailyLog/commit/6d11f82dd56eee15e668f350b3bc4cad69b0669a)), closes [#206](https://github.com/thisispivi/DailyLog/issues/206)
+
 ## [2.0.0](https://github.com/thisispivi/DailyLog/compare/v1.24.3...v2.0.0) (2026-10-21)
 
 
