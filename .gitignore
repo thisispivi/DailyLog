@@ -23,18 +23,8 @@ exports/
 *.db
 *.bak
 
-# Leftovers from the retired Python bot toolchain
+# Virtualenvs left over from the retired Python bot toolchain
 .venv*/
-__pycache__/
-*.py[cod]
-.coverage
-coverage.xml
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.import_linter_cache/
-dist/
-*.egg-info/
 
 # Editor and OS files
 *.swp
