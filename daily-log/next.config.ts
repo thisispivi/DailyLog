@@ -36,9 +36,6 @@ const nextConfig: NextConfig = {
     env: { DAILYLOG_VERSION: packageJson.version },
     output: "standalone",
     poweredByHeader: false,
-    experimental: {
-        optimizePackageImports: ["lucide-react"],
-    },
     async headers() {
         return [{ source: "/(.*)", headers: [...securityHeaders] }];
     },
