@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.2](https://github.com/thisispivi/DailyLog/compare/v2.0.1...v2.0.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **auth:** end every session on sign-out and password change ([c049a6d](https://github.com/thisispivi/DailyLog/commit/c049a6ddb54c47d670dca0b30d8d54e62a954ba1))
+* **auth:** end every session on sign-out and password change ([b26d6db](https://github.com/thisispivi/DailyLog/commit/b26d6db45001cf818e3375c64c8a2a1a7b559111)), closes [#204](https://github.com/thisispivi/DailyLog/issues/204)
+
 ## [2.0.1](https://github.com/thisispivi/DailyLog/compare/v2.0.0...v2.0.1) (2026-10-21)
 
 
