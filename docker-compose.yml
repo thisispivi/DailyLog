@@ -5,8 +5,9 @@ services:
       - ./daily-log/.env
     environment:
       DATABASE_PATH: /data/dailylog.sqlite3
+    # Loopback only: other devices go through the HTTPS reverse proxy on this host.
     ports:
-      - "14141:3000"
+      - "127.0.0.1:14141:3000"
     volumes:
       - dailylog_data:/data
     restart: unless-stopped
