@@ -16,8 +16,11 @@ It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 - See the day on **Today**: totals per record type, a timeline, the running activity, and your logging streak.
 - Run one training or sleep session at a time, then end or cancel it from **Today**.
 - Search, filter, edit, and delete records in **History**. Deleted records stay in the trash for 30 days.
-- See a 7-day summary, 14 nights of sleep, and 30-day weight and training trends in **Reports**, and export any range as XLSX or PDF.
-- Choose UI language, report language, theme (light, dark, or system), and weight unit (kg or lb) separately.
+- See a 7-day summary, 14 nights of sleep, 30 days of training, and your full weight history in **Reports**, and export any range as XLSX or PDF.
+- Browse past days in **Calendar** and keep a note for any day.
+- Track BMI and a weight goal on **Profile**, and generate a weekly **Meal plan** from your diet.
+- Back up the account to a JSON file and import it again from **Settings**.
+- Choose UI language, report language, theme (light, dark, or system), weight unit (kg or lb), and 12- or 24-hour time separately.
 
 ## Quick start
 
@@ -54,19 +57,19 @@ All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src
 
 The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run npm commands from `daily-log/`. See the [changelog](daily-log/CHANGELOG.md) for releases.
 
-One Next.js 16 app with a SQLite database. No ORM, no client state library, no CSS framework, no chart library.
+One Next.js 16 app with a SQLite database. No ORM, no client state library, no CSS framework. Charts use Recharts.
 
 ```text
 daily-log/src/
 ├── app/              Routes: pages, layouts, API route handlers
 ├── features/<name>/  Product features: domain logic, schemas, feature UI
-├── ui/               Shared presentational pieces: logo, record-type icons, sheet
-├── core/<concern>/   Cross-cutting policy: config, http, i18n, security, time, logging
+├── ui/               Shared presentational pieces: logo, record-type icons, Sheet, Select, DateTimeField, toast
+├── core/<concern>/   Cross-cutting policy: config, http, i18n, observability, preferences, security, time
 └── infrastructure/   Adapters. Today only the SQLite database
 ```
 
 - Pages are Server Components that read from the repository directly. Client components only handle interaction.
-- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](daily-log/src/core/http/api.ts). The wrapper checks the origin and session, parses JSON, and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`.
+- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](daily-log/src/core/http/api.ts). The wrapper checks the origin and session and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`. `readJson` and `readQuery` parse input with the route's Zod schema.
 - [`LogbookRepository`](daily-log/src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
 
 ESLint enforces the import direction. The full rules are in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md), and the design system (colours, components, layouts, copy, exports) is in [docs/DESIGN.md](docs/DESIGN.md).
@@ -83,7 +86,7 @@ Zod validates every input that crosses a trust boundary, once, before it reaches
 | Session cookie payload                | [`src/core/security/session.ts`](daily-log/src/core/security/session.ts)                                                                                                                                 |
 | Locale and theme cookies              | [`src/core/preferences/preference-cookies.ts`](daily-log/src/core/preferences/preference-cookies.ts)                                                                                                     |
 
-Request schemas reject unknown keys. Larger contracts are composed from smaller ones instead of repeating fields: a backup file is validated with the same entry, settings, and profile schemas the API uses. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Database rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape.
+Request schemas reject unknown keys. Larger contracts are composed from smaller ones instead of repeating fields: a backup file is validated with the same entry, settings, and profile schemas the API uses. TypeScript types for validated input come from `z.infer`, so there is no hand-written copy to drift. Relational rows are not re-parsed because the schema's `CHECK` constraints already guarantee their shape. JSON documents stored in the database (diet, meal plan) are parsed with their Zod schemas when read.
 
 ## Quality checks
 
@@ -104,7 +107,7 @@ Git hooks in `.githooks/` run automatically:
 - **pre-commit**: Prettier and ESLint on staged files.
 - **pre-push**: format check, lint, typecheck, and unit tests.
 
-CI runs the same checks plus the production build, Playwright, `npm audit`, a Trivy container scan, and a Gitleaks history scan.
+CI runs the same checks plus the demo build, Playwright, `npm audit`, a Trivy container scan with a health check, and a Gitleaks history scan.
 
 ## Database
 
@@ -133,10 +136,10 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 
 ## Security model
 
-- One owner, one password. Sessions are signed, HttpOnly, `SameSite=Strict`, and last seven days.
+- One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use).
 - Set `SESSION_SECRET`. Without it, sessions are signed with `APP_PASSWORD`, and changing the password in Settings does not change that key. The server logs `config.session_secret_is_password` at startup when this is the case.
 - Every mutating request must come from the same origin.
-- Failed sign-ins are throttled per client and globally.
+- Sign-in attempts are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes).
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
 - CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.

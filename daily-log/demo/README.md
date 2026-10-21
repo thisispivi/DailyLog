@@ -6,7 +6,7 @@ It is not a mock-up: the static export runs the app's real pages and API route h
 
 ## How it fits together
 
-- `next.config.ts` builds a static export and aliases the modules that need a server (cookies, the SQLite file, `next/server`) to the browser versions in `shims/`.
+- `next.config.ts` builds a static export and aliases the modules that need a server (environment, cookies, the session, the HTTP client, the SQLite file, `next/server`) to the browser versions in `shims/`.
 - `shell/demo-app.tsx` opens the database, calls the real page component for the current route, and renders it again after every change, as `router.refresh()` does in the app.
 - `shell/api.ts` answers `sendJson` calls, download links, and the export form with the real route handlers. PDF and XLSX exports need Node, so the demo says they are not available.
 - `shell/seed.ts` writes the sample data through `LogbookRepository`.

@@ -13,7 +13,7 @@ src/
 │   ├── <name>.ts             Pure logic, next to its <name>.test.ts
 │   └── ui/                   React components owned by the feature
 ├── ui/                       Presentational pieces shared by features (logo, icons, sheet)
-├── core/<concern>/           Cross-cutting policy: config, http, i18n, preferences, security, time, logging
+├── core/<concern>/           Cross-cutting policy: config, http, i18n, observability, preferences, security, time
 └── infrastructure/<adapter>/ SQLite and any future external adapter
 ```
 
@@ -56,8 +56,8 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 - **Use the route helpers.** `readJson(request, schema)` and `readQuery(request, schema)` turn malformed JSON and schema failures into a 400 response. Never call `request.json()` directly.
 - **Strict request schemas.** Use `z.strictObject` so unknown keys are rejected rather than silently dropped. Update schemas list exactly the fields a client may change.
 - **One contract per shape.** Define the schema and derive the type with `z.infer`. Do not write a matching interface by hand.
-- **Compose, don't copy.** A larger contract reuses the schemas it contains. The backup schema is built from `createEntrySchema`, `settingsSchema`, and `profileSchema`, and update schemas are `.partial()` of the full one.
-- **No casts on external data.** `as SomeType` on parsed JSON, cookies, or env is a bug. Casts are acceptable for database rows, whose shape the schema's `CHECK` constraints guarantee, and for widening a literal type.
+- **Compose, don't copy.** A larger contract reuses the schemas it contains. The backup schema is built from `createEntrySchema`, `settingsSchema`, and `profileSchema`, and update schemas are `.partial()` of the full one where the create schema allows it (`updateEntrySchema` re-declares its fields because `createEntrySchema` is refined).
+- **No casts on external data.** `as SomeType` on parsed JSON, cookies, or env is a bug. Casts are acceptable for relational database rows, whose shape the schema's `CHECK` constraints guarantee, and for widening a literal type. JSON documents stored in the database are parsed with their schema.
 - **Keep transforms simple.** Trimming and coercing query numbers is fine. Business rules belong in domain code.
 - **Validation is not authorization.** A valid payload still needs a session, and every query is scoped by `userId`.
 
@@ -71,7 +71,7 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 
 ## Database
 
-- Every repository method takes `userId` and every query filters by it, including updates, deletes, and restores.
+- Every repository method takes `userId` and every query filters by it, including updates, deletes, and restores. The one exception is `purgeExpiredTrash`, which hard-deletes expired trash for every owner.
 - Timestamps are stored as UTC ISO strings with a `+00:00` suffix. Calendar days are computed in the configured timezone.
 - Weight is stored as integer grams. Units are a display concern.
 - Schema changes are additive: bump `SCHEMA_VERSION` and keep the pre-migration backup.
@@ -81,7 +81,7 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 
 - `strict`, `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` stay on (enforced).
 - No `any`, no non-null assertions (enforced). Narrow `unknown` instead.
-- Type-only imports use `import { type X }` (enforced).
+- Type-only imports are marked as type imports (enforced). Prefer the inline `import { type X }` form.
 - Model finite states as literal unions derived from `as const` arrays, e.g. `entryKinds`.
 - Prefer `Readonly<...>` props and domain records.
 
