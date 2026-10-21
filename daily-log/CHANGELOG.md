@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.24.3](https://github.com/thisispivi/DailyLog/compare/v1.24.2...v1.24.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* **auth:** count only failed sign-ins toward the rate limit ([5433231](https://github.com/thisispivi/DailyLog/commit/5433231e910b7202a2a35d77eeaaf6124b7a7a17))
+* **auth:** redirect signed-out page requests in the proxy ([39f9b54](https://github.com/thisispivi/DailyLog/commit/39f9b54802667706db46f1d787414606520ecd1f))
+
 ## [1.24.2](https://github.com/thisispivi/DailyLog/compare/v1.24.1...v1.24.2) (2026-10-21)
 
 
