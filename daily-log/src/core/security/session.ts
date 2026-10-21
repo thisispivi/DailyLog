@@ -100,16 +100,24 @@ export function needsRenewal(expiresAt: number, nowSeconds: number): boolean {
     return expiresAt - nowSeconds < SESSION_DURATION_SECONDS - RENEW_AFTER_SECONDS;
 }
 
-/** Reissues a valid session cookie that is more than a day old, from the proxy. */
-export function renewSession(request: NextRequest, response: NextResponse): void {
-    const environment = getEnvironment();
+/** The valid session in a request's cookie, for the proxy, which has no cookies() store. */
+export function sessionFromRequest(request: NextRequest): SessionPayload | null {
+    const { ownerId, sessionSecret } = getEnvironment();
     const token = request.cookies.get(COOKIE_NAME)?.value;
-    if (!environment.sessionSecret || !token) return;
-    const session = verifySessionToken(token, environment.sessionSecret, environment.ownerId);
-    if (!session || !needsRenewal(session.expiresAt, Math.floor(Date.now() / 1000))) return;
+    return sessionSecret && token ? verifySessionToken(token, sessionSecret, ownerId) : null;
+}
+
+/** Reissues a valid session cookie that is more than a day old, from the proxy. */
+export function renewSession(
+    request: NextRequest,
+    response: NextResponse,
+    session: SessionPayload,
+): void {
+    const { sessionSecret } = getEnvironment();
+    if (!sessionSecret || !needsRenewal(session.expiresAt, Math.floor(Date.now() / 1000))) return;
     response.cookies.set(
         COOKIE_NAME,
-        issueSessionToken(session.userId, environment.sessionSecret),
+        issueSessionToken(session.userId, sessionSecret),
         sessionCookieOptions(request, SESSION_DURATION_SECONDS),
     );
 }

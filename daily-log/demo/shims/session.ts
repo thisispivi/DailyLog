@@ -40,5 +40,10 @@ export function isSecureRequest(): boolean {
     return false;
 }
 
+/** The static export has no proxy; this only satisfies its import. */
+export function sessionFromRequest(): typeof OWNER {
+    return OWNER;
+}
+
 /** Demo sessions never expire, so there is nothing to renew. */
 export function renewSession(): void {}
