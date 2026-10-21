@@ -23,9 +23,11 @@ RUN apk upgrade --no-cache \
         /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 dailylog
-COPY --from=builder --chown=dailylog:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=dailylog:nodejs /app/.next/static ./.next/static
-RUN mkdir -p /data && chown dailylog:nodejs /data
+# The app stays root-owned so the server can't rewrite its own code; only the
+# database and Next's cache are writable.
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+RUN mkdir -p /data /app/.next/cache && chown dailylog:nodejs /data /app/.next/cache
 USER dailylog
 EXPOSE 3000
 VOLUME ["/data"]
