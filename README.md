@@ -141,7 +141,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 - Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). The global cap also blocks the owner's sign-in while it lasts; existing sessions keep working. The per-client limit reads `X-Forwarded-For`, so it only holds when clients reach the app through a proxy that overwrites that header.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
-- CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
+- The proxy sets a per-request CSP that only runs scripts carrying its nonce. HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
 
 ## License

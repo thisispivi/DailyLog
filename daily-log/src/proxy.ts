@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { getEnvironment } from "@/core/config/env";
+import { contentSecurityPolicy } from "@/core/security/content-security-policy";
 import {
     expireSession,
     renewSession,
@@ -20,9 +22,10 @@ function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * Sends signed-out page requests to sign-in and keeps an active session alive. A
- * session issued before the owner last signed out or changed the password is
- * removed from the request, so routes and pages see a signed-out request.
+ * Sends signed-out page requests to sign-in, keeps an active session alive, and
+ * sets the per-request Content Security Policy. A session issued before the owner
+ * last signed out or changed the password is removed from the request, so routes
+ * and pages see a signed-out request.
  */
 export function proxy(request: NextRequest): NextResponse {
     const { pathname } = request.nextUrl;
@@ -32,10 +35,16 @@ export function proxy(request: NextRequest): NextResponse {
         signedSession.version !== new LogbookRepository().getSessionVersion(signedSession.userId);
     if (isRevoked) request.cookies.delete(SESSION_COOKIE);
     const session = isRevoked ? null : signedSession;
+    const policy = contentSecurityPolicy(
+        btoa(crypto.randomUUID()),
+        getEnvironment().nodeEnv !== "production",
+    );
+    request.headers.set("content-security-policy", policy);
     const response =
         !session && !isPublicPath(pathname)
             ? NextResponse.redirect(new URL("/login", request.url))
-            : NextResponse.next(isRevoked ? { request: { headers: request.headers } } : undefined);
+            : NextResponse.next({ request: { headers: request.headers } });
+    response.headers.set("content-security-policy", policy);
     if (isRevoked) {
         expireSession(request, response);
     } else if (session && !pathname.startsWith("/api/auth/")) {

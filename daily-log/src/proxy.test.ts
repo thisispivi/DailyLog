@@ -47,6 +47,15 @@ describe("proxy", () => {
         }
     });
 
+    it("gives each request its own script nonce, on the request and the response", () => {
+        const response = signedOut("/login");
+        const policy = response.headers.get("content-security-policy") ?? "";
+        expect(policy).toMatch(/script-src 'self' 'nonce-[\w+/=]+' 'strict-dynamic'/);
+        expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+        expect(response.headers.get("x-middleware-request-content-security-policy")).toBe(policy);
+        expect(signedOut("/login").headers.get("content-security-policy")).not.toBe(policy);
+    });
+
     it("keeps and renews a session issued under the current version", () => {
         const response = signedIn("/today", CURRENT_VERSION);
         expect(response.headers.get("location")).toBeNull();
