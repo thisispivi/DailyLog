@@ -5,15 +5,12 @@ import { renewSession, sessionFromRequest } from "@/core/security/session";
 /**
  * Pages need a session before anything renders. The (app) layout checks too, but a
  * client navigation can render a page segment without its layout. API routes are
- * left to their wrappers so failures keep the JSON error envelope.
+ * left to their wrappers so failures keep the JSON error envelope. The only public
+ * static files, the icons, are excluded by the matcher, so no path is public just
+ * because it ends in a file extension.
  */
 function isPublicPath(pathname: string): boolean {
-    return (
-        pathname === "/login" ||
-        pathname.startsWith("/api/") ||
-        pathname.startsWith("/_next/") ||
-        /\.\w+$/.test(pathname)
-    );
+    return pathname === "/login" || pathname.startsWith("/api/") || pathname.startsWith("/_next/");
 }
 
 /** Sends signed-out page requests to sign-in and keeps an active session alive. */
