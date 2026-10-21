@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.3](https://github.com/thisispivi/DailyLog/compare/v2.0.2...v2.0.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* **docker:** keep the app read-only inside the container ([e75d07e](https://github.com/thisispivi/DailyLog/commit/e75d07ef5b5e97b6ac1350c8069241007b85dad1))
+* **security:** allow only nonce-tagged scripts in the CSP ([17fce26](https://github.com/thisispivi/DailyLog/commit/17fce26d867054eb2d058e2e0bb28c79da073a32))
+* **security:** allow only nonce-tagged scripts in the CSP ([a4803f2](https://github.com/thisispivi/DailyLog/commit/a4803f299d2424b275a4fb2074efefef7b2cee9c)), closes [#207](https://github.com/thisispivi/DailyLog/issues/207)
+
 ## [2.0.2](https://github.com/thisispivi/DailyLog/compare/v2.0.1...v2.0.2) (2026-10-21)
 
 
