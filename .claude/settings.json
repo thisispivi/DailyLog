@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "trailofbits": {
+      "source": {
+        "source": "github",
+        "repo": "trailofbits/skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "differential-review@trailofbits": true
+  }
+}
