@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.0](https://github.com/thisispivi/DailyLog/compare/v1.24.3...v2.0.0) (2026-10-21)
+
+
+### Miscellaneous Chores
+
+* release 2.0.0 ([7836be1](https://github.com/thisispivi/DailyLog/commit/7836be1813f5d27770c78b9306df094f41bdb079))
+
 ## [1.24.3](https://github.com/thisispivi/DailyLog/compare/v1.24.2...v1.24.3) (2026-10-21)
 
 
