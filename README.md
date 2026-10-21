@@ -24,7 +24,7 @@ It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 
 ## Quick start
 
-Requires Node.js 20.9+ and npm 10+.
+Requires Node.js 22.12+ and npm 10+.
 
 ```bash
 cd daily-log
