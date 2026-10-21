@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.24.2](https://github.com/thisispivi/DailyLog/compare/v1.24.1...v1.24.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **config:** leave optional keys commented out in .env.example ([b776fa6](https://github.com/thisispivi/DailyLog/commit/b776fa6e5f14b81eec4df14e8f926d9de921d097))
+* **config:** leave optional keys commented out in .env.example ([9150ae6](https://github.com/thisispivi/DailyLog/commit/9150ae6e5cb64ba781ad42e0110d7d613750346d))
+* **deps:** consolidate updates and deploy demo without a branch ([56f569a](https://github.com/thisispivi/DailyLog/commit/56f569abc72d642da70bfa99cdeab79a96912d02))
+* **deps:** consolidate updates and deploy demo without a branch ([2345700](https://github.com/thisispivi/DailyLog/commit/2345700b8e0f688b1fc0f6a0ba1973d67dd56192))
+
 ## [1.24.1](https://github.com/thisispivi/DailyLog/compare/v1.24.0...v1.24.1) (2026-10-11)
 
 
