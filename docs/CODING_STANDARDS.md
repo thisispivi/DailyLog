@@ -41,7 +41,7 @@ app → features → ui → core
  └──→ infrastructure → core
 ```
 
-- Only `app/` may import `infrastructure/`. Pages and routes read data and pass it down.
+- Only `app/` and `proxy.ts` may import `infrastructure/`. Pages and routes read data and pass it down; the proxy reads the session version.
 - `core/` never imports from `app/`, `infrastructure/`, or any feature's `ui/`.
 - `ui/` never imports from `app/`, `infrastructure/`, or a feature's `ui/`.
 - `features/logbook` holds the shared domain (record types, schemas, domain errors). Everything may import it.

@@ -9,7 +9,7 @@ Application paths below are relative to `daily-log/`; run npm commands there.
 Key points:
 
 - API routes go through `authenticatedRoute` / `publicRoute` and parse input with `readJson` / `readQuery` and a strict Zod schema from the owning feature.
-- Only `src/app` may import `src/infrastructure`. ESLint enforces the import direction.
+- Only `src/app` and `src/proxy.ts` may import `src/infrastructure`. ESLint enforces the import direction.
 - Every repository query takes and filters by `userId`.
 - Add UI strings to `src/core/i18n/catalogs.ts` in English and Italian together.
 - Use the design system: tokens instead of literal colours, `data-kind` for record-type colours, and the shared `Select`, `DateTimeField`, and `Sheet` instead of native controls or custom modals.

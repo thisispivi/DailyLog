@@ -136,7 +136,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 
 ## Security model
 
-- One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use).
+- One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use). Signing out or changing the password ends every session on every device.
 - Set `SESSION_SECRET`. In production the server refuses to start without it when `APP_PASSWORD` is set. In development, sessions fall back to being signed with `APP_PASSWORD`, which a password change in Settings does not rotate, and the server logs `config.session_secret_is_password`.
 - Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). The global cap also blocks the owner's sign-in while it lasts; existing sessions keep working. The per-client limit reads `X-Forwarded-For`, so it only holds when clients reach the app through a proxy that overwrites that header.

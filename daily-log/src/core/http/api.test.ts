@@ -102,13 +102,13 @@ describe("authenticatedRoute", () => {
     });
 
     it("passes the signed-in owner to the handler", async () => {
-        await createSession(post("{}"));
+        await createSession(post("{}"), 0);
         const response = await whoAmI(post("{}"), undefined);
         expect(await response.json()).toEqual({ data: { userId: 1 } });
     });
 
     it("checks the origin before the session", async () => {
-        await createSession(post("{}"));
+        await createSession(post("{}"), 0);
         const response = await whoAmI(post("{}", { origin: "https://evil.example" }), undefined);
         expect(response.status).toBe(403);
     });

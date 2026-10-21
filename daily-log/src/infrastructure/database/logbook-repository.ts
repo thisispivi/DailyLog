@@ -113,6 +113,25 @@ export class LogbookRepository {
             .run(userId, passwordHash, toStorageTimestamp(new Date().toISOString()));
     }
 
+    /** Sessions carry the version they were issued under; a newer one signs them out. */
+    getSessionVersion(userId: number): number {
+        const row = this.database
+            .prepare("SELECT version FROM session_versions WHERE user_id = ?")
+            .get(userId) as { version: number } | undefined;
+        return row?.version ?? 0;
+    }
+
+    /** Signs out every device by moving the owner to a new session version. */
+    revokeSessions(userId: number): number {
+        this.database
+            .prepare(
+                `INSERT INTO session_versions (user_id, version) VALUES (?, 1)
+         ON CONFLICT (user_id) DO UPDATE SET version = version + 1`,
+            )
+            .run(userId);
+        return this.getSessionVersion(userId);
+    }
+
     updateSettings(userId: number, changes: SettingsChanges): UserSettings {
         const current = this.getSettings(userId);
         this.database

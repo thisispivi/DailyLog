@@ -1,6 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { renewSession, sessionFromRequest } from "@/core/security/session";
+import {
+    expireSession,
+    renewSession,
+    SESSION_COOKIE,
+    sessionFromRequest,
+} from "@/core/security/session";
+import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 /**
  * Pages need a session before anything renders. The (app) layout checks too, but a
@@ -13,16 +19,30 @@ function isPublicPath(pathname: string): boolean {
     return pathname === "/login" || pathname.startsWith("/api/") || pathname.startsWith("/_next/");
 }
 
-/** Sends signed-out page requests to sign-in and keeps an active session alive. */
+/**
+ * Sends signed-out page requests to sign-in and keeps an active session alive. A
+ * session issued before the owner last signed out or changed the password is
+ * removed from the request, so routes and pages see a signed-out request.
+ */
 export function proxy(request: NextRequest): NextResponse {
     const { pathname } = request.nextUrl;
-    const session = sessionFromRequest(request);
-    if (!session && !isPublicPath(pathname)) {
-        return NextResponse.redirect(new URL("/login", request.url));
+    const signedSession = sessionFromRequest(request);
+    const isRevoked =
+        signedSession !== null &&
+        signedSession.version !== new LogbookRepository().getSessionVersion(signedSession.userId);
+    if (isRevoked) request.cookies.delete(SESSION_COOKIE);
+    const session = isRevoked ? null : signedSession;
+    const response =
+        !session && !isPublicPath(pathname)
+            ? NextResponse.redirect(new URL("/login", request.url))
+            : NextResponse.next(isRevoked ? { request: { headers: request.headers } } : undefined);
+    if (isRevoked) {
+        expireSession(request, response);
+    } else if (session && !pathname.startsWith("/api/auth/")) {
+        // Sign-in, sign-out, and password changes set the cookie themselves; a
+        // renewal on the same response would race them.
+        renewSession(request, response, session);
     }
-    const response = NextResponse.next();
-    // Logout clears the cookie itself; a renewal on the same response would race it.
-    if (session && pathname !== "/api/auth/logout") renewSession(request, response, session);
     return response;
 }
 

@@ -1,7 +1,7 @@
 import { ApiError, authenticatedRoute, ok, readJson } from "@/core/http/api";
 import { log } from "@/core/observability/logger";
 import { clearLoginAttempts, isLoginBlocked, recordLoginFailure } from "@/core/security/rate-limit";
-import { hashPassword, verifyPassword } from "@/core/security/session";
+import { createSession, hashPassword, verifyPassword } from "@/core/security/session";
 import { changePasswordSchema } from "@/features/auth/schemas";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
@@ -21,6 +21,8 @@ export const PUT = authenticatedRoute(async (request, { requestId, userId }) => 
     }
     clearLoginAttempts(attemptKey);
     repository.setPasswordHash(userId, hashPassword(newPassword));
+    // Sign out every other device, then keep this one signed in under the new version.
+    await createSession(request, repository.revokeSessions(userId));
     log("info", "auth.password_changed", { requestId });
     return ok({ changed: true });
 });
