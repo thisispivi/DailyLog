@@ -124,11 +124,11 @@ cp daily-log/.env.example daily-log/.env    # set APP_PASSWORD and SESSION_SECRE
 docker compose up --build --detach
 ```
 
-Compose publishes the app on http://localhost:14141 and keeps the database in the `dailylog_data` volume at `/data/dailylog.sqlite3`.
+Compose publishes the app on http://localhost:14141, reachable from this machine only, and keeps the database in the `dailylog_data` volume at `/data/dailylog.sqlite3`.
 
 For production:
 
-- Put an HTTPS reverse proxy in front. Over plain HTTP, Chrome flags every PDF and Excel export as an insecure download; the only fix is serving the app over HTTPS. On a home network, `tailscale serve 14141` or a Caddy proxy with a real domain both work.
+- Put an HTTPS reverse proxy in front. Over plain HTTP, Chrome flags every PDF and Excel export as an insecure download; the only fix is serving the app over HTTPS. On a home network, `tailscale serve 14141` or a Caddy proxy with a real domain both work. The proxy must overwrite `X-Forwarded-For` with the real client address rather than append to it.
 - Run a single instance. SQLite and the in-memory login limiter assume one process.
 - Back up the volume and test restores.
 
@@ -139,7 +139,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 - One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use).
 - Set `SESSION_SECRET`. In production the server refuses to start without it when `APP_PASSWORD` is set. In development, sessions fall back to being signed with `APP_PASSWORD`, which a password change in Settings does not rotate, and the server logs `config.session_secret_is_password`.
 - Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
-- Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). The global cap also blocks the owner's sign-in while it lasts; existing sessions keep working.
+- Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). The global cap also blocks the owner's sign-in while it lasts; existing sessions keep working. The per-client limit reads `X-Forwarded-For`, so it only holds when clients reach the app through a proxy that overwrites that header.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
 - CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
