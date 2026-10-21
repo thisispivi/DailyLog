@@ -88,7 +88,7 @@ export function readQuery<Schema extends z.ZodType>(
 }
 
 /** Converts known failures to stable client contracts and hides everything else. */
-export function apiFailure(error: unknown, requestId: string): NextResponse {
+function apiFailure(error: unknown, requestId: string): NextResponse {
     const known = toApiError(error);
     if (known) {
         return NextResponse.json(
@@ -164,7 +164,7 @@ function resolveRequestOrigin(request: NextRequest): string {
     return `${protocol}://${host}`;
 }
 
-export function verifyRequestOrigin(request: NextRequest): void {
+function verifyRequestOrigin(request: NextRequest): void {
     if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
     const origin = request.headers.get("origin");
     if (!origin || !URL.canParse(origin)) {

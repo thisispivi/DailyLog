@@ -7,7 +7,7 @@ import {
     RecordNotFoundError,
 } from "@/features/logbook/domain";
 import type { Diet, MealPlan } from "@/features/meal-plan/schemas";
-import { migrateDatabase } from "@/infrastructure/database/client";
+import { migrateDatabase } from "@/infrastructure/database/schema";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 const OWNER = 42;

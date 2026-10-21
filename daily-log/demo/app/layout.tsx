@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import "@fontsource-variable/nunito";
-import "../../src/app/globals.css";
+import "@/app/globals.css";
 import "./demo.css";
 
 export const metadata: Metadata = {

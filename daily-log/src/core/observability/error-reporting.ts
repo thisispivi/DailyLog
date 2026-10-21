@@ -16,7 +16,7 @@ type Frame = {
 // Switch to the SDK if browser errors, breadcrumbs, or tracing are needed.
 
 /** Parses V8 stack lines into Sentry frames, oldest call first as the protocol expects. */
-export function stackFrames(stack: string | undefined): Frame[] {
+function stackFrames(stack: string | undefined): Frame[] {
     const frames: Frame[] = [];
     for (const line of stack?.split("\n") ?? []) {
         const match = /^\s*at (?:(.+?) \()?(.+?):(\d+):(\d+)\)?$/.exec(line);

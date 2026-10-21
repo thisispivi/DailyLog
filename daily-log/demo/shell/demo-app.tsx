@@ -29,7 +29,7 @@ type Page = (props: {
     searchParams: Promise<Record<string, string>>;
 }) => ReactNode | Promise<ReactNode>;
 
-export const demoViews = {
+const demoViews = {
     calendar: CalendarPage,
     history: HistoryPage,
     login: LoginPage,
@@ -39,8 +39,6 @@ export const demoViews = {
     settings: SettingsPage,
     today: TodayPage,
 } as unknown as Readonly<Record<string, Page>>;
-
-export type DemoView = keyof typeof demoViews;
 
 type Rendered = { content: ReactNode; locale: Locale };
 
