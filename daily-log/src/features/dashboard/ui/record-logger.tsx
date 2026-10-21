@@ -105,7 +105,7 @@ export function RecordLoggerProvider({ children, ...context }: Context & { child
     );
 }
 
-export function useOpenLogger() {
+function useOpenLogger() {
     return useContext(OpenLogger);
 }
 

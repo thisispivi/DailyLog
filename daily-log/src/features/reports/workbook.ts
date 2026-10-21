@@ -234,7 +234,7 @@ function dayDate(day: string): Date {
 }
 
 /** "7 ottobre 2026 – 9 ottobre 2026", in the export language. */
-export function periodLabel({ endDate, locale, startDate }: ReportInput): string {
+function periodLabel({ endDate, locale, startDate }: ReportInput): string {
     const format = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" });
     return `${format.format(dayDate(startDate))} – ${format.format(dayDate(endDate))}`;
 }

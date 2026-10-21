@@ -13,7 +13,7 @@ export type TimeFormat = (typeof timeFormats)[number];
 export const weightUnits = ["kg", "lb"] as const;
 export type WeightUnit = (typeof weightUnits)[number];
 
-export const GRAMS_PER_POUND = 453.59237;
+const GRAMS_PER_POUND = 453.59237;
 
 /** Deleted records stay restorable for this long before they are purged. */
 export const TRASH_RETENTION_DAYS = 30;

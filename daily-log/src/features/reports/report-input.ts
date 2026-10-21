@@ -41,7 +41,7 @@ export type ReportDay = Readonly<{ date: string; note: string | undefined; rows:
 export type SummaryTile = Readonly<{ kind: RecordKind; label: string; value: string }>;
 
 /** Every calendar date from start to end, inclusive. */
-export function datesInRange(startDate: string, endDate: string): string[] {
+function datesInRange(startDate: string, endDate: string): string[] {
     const days = Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1;
     return Array.from({ length: Math.max(days, 0) }, (_, index) => shiftDate(startDate, index));
 }

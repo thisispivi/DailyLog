@@ -7,9 +7,6 @@ import { getEnvironment } from "@/core/config/env";
 import { log } from "@/core/observability/logger";
 import { migrateDatabase, SCHEMA_VERSION } from "@/infrastructure/database/schema";
 
-// Re-exported for tests and scripts that migrate a database they opened themselves.
-export { migrateDatabase };
-
 let database: Database.Database | undefined;
 
 /** Opens the shared SQLite connection and applies additive, legacy-compatible migrations. */

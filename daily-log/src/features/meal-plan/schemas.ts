@@ -4,7 +4,7 @@ import { z } from "zod";
 export const mealKeys = ["breakfast", "snack1", "lunch", "snack2", "dinner"] as const;
 export type MealKey = (typeof mealKeys)[number];
 
-export const foodUnits = ["g", "ml", "pcs"] as const;
+const foodUnits = ["g", "ml", "pcs"] as const;
 export type FoodUnit = (typeof foodUnits)[number];
 
 const id = z
@@ -118,7 +118,6 @@ export const dietSchema = z
 
 export type Diet = z.infer<typeof dietSchema>;
 export type DietOption = Diet["options"][number];
-export type DietVariant = Diet["meals"][number]["variants"][number];
 
 const plannedMealSchema = z.strictObject({
     key: z.enum(mealKeys),
