@@ -138,7 +138,7 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 
 - One owner, one password. Sessions are signed, HttpOnly, and `SameSite=Lax`, and expire after seven idle days (renewed at most once a day while in use).
 - Set `SESSION_SECRET`. Without it, sessions are signed with `APP_PASSWORD`, and changing the password in Settings does not change that key. The server logs `config.session_secret_is_password` at startup when this is the case.
-- Every mutating request must come from the same origin.
+- Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
 - Sign-in attempts are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes).
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
 - CSP, HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
