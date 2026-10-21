@@ -63,7 +63,6 @@ export default defineConfig([
     },
     globalIgnores([
         ".next/**",
-        ".venv*/**",
         "dist/**",
         "coverage/**",
         "next-env.d.ts",
