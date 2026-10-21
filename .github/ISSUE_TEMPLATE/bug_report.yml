@@ -27,7 +27,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Include the DailyLog version, Python version, OS, and relevant configuration without secrets.
+      description: Include the DailyLog version, Node.js version, browser, OS, deployment method (npm or Docker), and relevant configuration without secrets.
   - type: textarea
     id: logs
     attributes:

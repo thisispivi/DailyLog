@@ -87,9 +87,9 @@ Reuse these before writing new CSS. They live in `src/app/globals.css` unless no
 | `Select` (`src/ui/select.tsx`)                                               | The only dropdown. Radix Select styled with `.select-trigger` / `.select-content`. Never use a native `<select>`.                                                                                     |
 | `DateTimeField` (`src/ui/date-time-field.tsx`)                               | The only date or date-time input: a trigger showing the formatted value, a calendar popover (react-day-picker) with a time field, "Now", and "Done". Never use native `type="date"`/`datetime-local`. |
 | `Sheet` (`src/ui/sheet.tsx`)                                                 | The only modal: native `<dialog>`, bottom sheet on phones, centred 520px dialog on desktop. Dropdowns and popovers inside it portal into the dialog automatically.                                    |
-| `.status-message` + `data-tone="error                                        | success"`                                                                                                                                                                                             | Inline feedback next to the control that caused it. Wrap in `aria-live="polite"`. |
+| `.status-message` + `data-tone="error"` or `"success"`                       | Inline feedback next to the control that caused it. Wrap in `aria-live="polite"`.                                                                                                                     |
 | `.empty-state` + `.state-icon`                                               | Centred lucide icon in a soft violet square plus one helpful sentence.                                                                                                                                |
-| `.switch`                                                                    | Toggle for a boolean checkbox (used in export).                                                                                                                                                       |
+| `.switch` (`src/ui/controls.css`)                                            | Toggle for a boolean checkbox (used in export).                                                                                                                                                       |
 | `LanguageFlag` (`src/ui/language-flag.tsx`)                                  | Round flag next to a language name.                                                                                                                                                                   |
 | `Logo` (`src/ui/logo.tsx`)                                                   | Pulse-line mark in a violet rounded square + "DailyLog".                                                                                                                                              |
 
@@ -97,8 +97,8 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 ## Layout
 
-- **Desktop (> 860px):** a fixed white sidebar (logo, nav, version and links, sign out) and the content area. The sidebar never scrolls with the page.
-- **Phone (≤ 860px):** a sticky top bar (logo, profile and sign-out icons), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
+- **Desktop (> 860px):** a fixed white sidebar (logo, nav, Meal plan and Profile links, sign out) and the content area. The sidebar never scrolls with the page.
+- **Phone (≤ 860px):** a sticky top bar (logo, meal plan, profile, and sign-out icons), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
 - Page header: `.page-header` with an `.eyebrow` and the `h1`; actions go on the right and wrap under on phones.
 - Breakpoints in use: 1100px (two-column pages stack), 960px (Today columns stack), 860px (phone shell), 720px (compact cards, 2-column tiles, calendar dots). Reuse these; don't invent new ones.
 - No horizontal scrolling at 375px. Chip rows that can't wrap scroll sideways with the scrollbar hidden.
@@ -117,7 +117,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 **Reports:** a "Last 7 days" summary of tiles, charts, and an export card with one download button per format.
 
-**Settings:** one card per preference with an icon square, title, and hint. Options are chips, and **every change saves immediately** with a floating "Saved" pill. There are no save buttons. The Backup card has two chips: "Download JSON" (the whole account) and "Import JSON" (confirms first, adds missing records, never deletes, and reports the result inline).
+**Settings:** one card per preference with an icon square, title, and hint. Options are chips, and **every change saves immediately** with a floating "Saved" pill. There are no save buttons. The Backup card has two chips: "Download JSON" (entries, weigh-ins, notes, profile, and settings; not the diet or meal plan) and "Import JSON" (confirms first, adds missing records, never deletes, and reports the result inline).
 
 **Profile:** reached from the account links next to sign-out (bottom of the sidebar, top bar on phones), so the tab bar keeps five destinations. A "Body" card of stats (age, height, latest weight, BMI with its WHO category on a weight tile), a "Weight goal" card (progress bar; start, now, goal, and to-go tiles; recent weekly pace from the last four weeks, the date it reaches the goal, and the weekly change needed by the goal date), a BMI chart with dashed guides at 18.5, 25, and 30, the weight chart with the goal as a dashed line, and an "About you" form that also holds the goal weight and optional goal date. Changing the goal weight restarts the goal from the latest weigh-in. Text fields save on blur and the birth date on pick; tapping the birth date calendar caption opens a year grid, then a month grid (Android style).
 
@@ -141,7 +141,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 - **Feedback:** every mutation shows pending (busy button), success ("Saved"), and failure ("Something went wrong…") inline. Destructive actions confirm first and say the item can be restored from trash.
 - **Spinners:** a `.button`, `.chip`, `.icon-button`, or `.account-link` with `aria-busy="true"` swaps its icon for a spinner automatically; never draw one by hand. Page loads use the three-dot `.page-loading` (the route `loading.tsx` and the demo's first load).
 - **Toasts:** `showToast` from `src/ui/toast.tsx` (rendered by the `Toaster` in the app shell) confirms a success whose control is gone afterwards: the logger sheet closing, the running activity finishing, an edited, trashed, or restored record. A floating pill at the bottom, above the phone tab bar, gone after 4 seconds. Errors stay inline next to their control.
-- **Motion:** short and functional only: 120ms hover and press, a 180ms sheet slide, a slow pulse on the running activity. Everything is disabled under `prefers-reduced-motion`.
+- **Motion:** short and functional only: 120ms hover and press (150ms on `.switch`), a 180ms sheet slide, a slow pulse on the running activity. Everything is disabled under `prefers-reduced-motion`.
 - **Focus:** a visible 3px `--focus` ring (35% transparent) on every interactive element. Never remove outlines without a replacement.
 - **Touch targets:** at least 44px.
 
@@ -167,7 +167,7 @@ Both exports use the light palette from `report-palette.ts` and the same structu
 
 - Both headers carry the profile line from `profileLine` (name · age · height · BMI from the period's last weigh-in), leaving out what is not set.
 - **PDF** (`features/reports/pdf-report.ts`): lavender header band with the logo drawn as vectors, the period and export date; four summary tiles; one section per day (activities clipped per day as in the timeline) with a time column, a coloured type pill, a bold title, and a muted detail line; the note in a violet box with a left accent bar; a footer with the period and page count. Nunito WOFF files (not WOFF2) are embedded from `features/reports/fonts/`.
-- **XLSX** (`features/reports/workbook.ts`): sheets Summary, Journal, Weight, Notes. Violet title, lavender header rows, zebra rows with hairline separators, a colour-coded type column, real Excel dates in local time, and durations as numbers of minutes.
+- **XLSX** (`features/reports/workbook.ts`): two sheets. Journal holds the title, period, profile line, and summary figures, then one table per day (time, colour-coded type, title, detail) and the day's note. Weight has real Excel dates in local time and numeric weights with the change. Violet title, lavender header rows, zebra rows with hairline separators.
 
 ## Don't
 
