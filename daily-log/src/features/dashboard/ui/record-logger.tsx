@@ -165,6 +165,7 @@ function RecordForm({
     const [failed, setFailed] = useState(false);
     const [hasEnd, setHasEnd] = useState(false);
     const [now] = useState(() => new Date());
+    const [start, setStart] = useState(() => localInputValue(now, timeZone));
     const isActivity = isActivityKind(kind);
 
     const activityOptions = [
@@ -295,17 +296,19 @@ function RecordForm({
             )}
             <div className="form-grid">
                 <DateTimeField
-                    defaultValue={localInputValue(now, timeZone)}
                     id="record-start"
                     label={translate(locale, isActivity ? "entry.startTime" : "entry.time")}
                     locale={locale}
                     name="startAt"
+                    onChange={setStart}
                     timeFormat={timeFormat}
                     timeZone={timeZone}
+                    value={start}
                 />
                 {isActivity && (
                     <DateTimeField
                         clearable
+                        fallbackDate={start.slice(0, 10)}
                         id="record-end"
                         label={`${translate(locale, "entry.endTime")} · ${translate(locale, "common.optional")}`}
                         locale={locale}

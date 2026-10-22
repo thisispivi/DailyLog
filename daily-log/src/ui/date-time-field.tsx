@@ -27,6 +27,7 @@ export function DateTimeField({
     clearable = false,
     defaultValue = "",
     disabled = false,
+    fallbackDate = "",
     id,
     label,
     labelHidden = false,
@@ -42,6 +43,12 @@ export function DateTimeField({
     clearable?: boolean;
     defaultValue?: string;
     disabled?: boolean;
+    /**
+     * The day (`YYYY-MM-DD`) the calendar opens on while the field is empty, and
+     * the day a time typed on its own lands on. For a range end, pass the start
+     * day, so logging yesterday doesn't jump the end back to today.
+     */
+    fallbackDate?: string;
     id: string;
     label: string;
     /** Keep the label for screen readers only, e.g. in a filter bar. */
@@ -76,7 +83,7 @@ export function DateTimeField({
 
     function setTime(nextTime: string) {
         if (!nextTime) return;
-        const day = date || localInputValue(new Date(), timeZone).slice(0, 10);
+        const day = date || fallbackDate || localInputValue(new Date(), timeZone).slice(0, 10);
         update(`${day}T${nextTime}`);
     }
 
@@ -103,7 +110,7 @@ export function DateTimeField({
                                 hasYearPicker={yearPicker}
                                 locale={locale}
                                 onSelect={setDate}
-                                selected={toCalendarDate(date)}
+                                selected={toCalendarDate(date || fallbackDate)}
                             />
                             {mode === "datetime" && (
                                 <div className="time-row">

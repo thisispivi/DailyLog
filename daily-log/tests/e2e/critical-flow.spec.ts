@@ -124,4 +124,29 @@ test.describe("sheet", () => {
         await expect(popover).toHaveCount(0);
         await expect(trigger).toBeFocused();
     });
+
+    test("a range end opens on the start day", async ({ page }) => {
+        await page.getByRole("button", { name: /^Active:/ }).click();
+        const sheet = page.getByRole("dialog");
+        // A closing popover stays mounted while it fades out.
+        const popover = page.locator('.date-popover[data-state="open"]');
+
+        // Log something from another day: today's neighbour in the same month.
+        await sheet.locator("#record-start").click();
+        const today = Number(await popover.locator(".rdp-today").innerText());
+        const day = String(today === 1 ? 2 : today - 1);
+        await popover
+            .locator(".rdp-day:not(.rdp-outside) button")
+            .filter({ hasText: new RegExp(`^${day}$`) })
+            .click();
+        await popover.getByRole("button", { name: "Done" }).click();
+        const startDay = (await sheet.locator('input[name="startAt"]').inputValue()).slice(0, 10);
+
+        await sheet.locator("#record-end").click();
+        await expect(popover.locator(".rdp-selected")).toHaveText(day);
+        await popover.getByLabel("Hours").fill("23");
+        await popover.getByLabel("Minutes").fill("30");
+        await popover.getByRole("button", { name: "Done" }).click();
+        await expect(sheet.locator('input[name="endAt"]')).toHaveValue(`${startDay}T23:30`);
+    });
 });

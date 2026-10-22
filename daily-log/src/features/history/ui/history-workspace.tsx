@@ -302,6 +302,12 @@ function RecordEditor({
 }: Shared & Readonly<{ onDone: (message: EditorMessage) => void; record: HistoryRecord }>) {
     const [pending, setPending] = useState(false);
     const [failed, setFailed] = useState(false);
+    // Only entries have a range; the end picker opens on the start day.
+    const [start, setStart] = useState(() =>
+        record.recordType === "entry"
+            ? localInputValue(new Date(record.item.startAt), timeZone)
+            : "",
+    );
     const id = record.item.id;
     // Stored bot labels are shown translated; keep the stored value unless it was edited.
     const shownLabel = record.recordType === "entry" ? entryDisplayLabel(record.item, locale) : "";
@@ -379,16 +385,18 @@ function RecordEditor({
                         />
                     </div>
                     <DateTimeField
-                        defaultValue={localInputValue(new Date(record.item.startAt), timeZone)}
                         id="edit-start"
                         label={translate(locale, "entry.startTime")}
                         locale={locale}
                         name="startAt"
+                        onChange={setStart}
                         timeFormat={timeFormat}
                         timeZone={timeZone}
+                        value={start}
                     />
                     <DateTimeField
                         clearable
+                        fallbackDate={start.slice(0, 10)}
                         defaultValue={
                             record.item.endAt
                                 ? localInputValue(new Date(record.item.endAt), timeZone)
