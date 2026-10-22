@@ -725,6 +725,14 @@ h2 {
         animation: none !important;
         transition-duration: 0.01ms !important;
     }
+
+    /* A turning spinner says "working"; without it a busy control looks idle. */
+    .button[aria-busy="true"]::before,
+    .chip[aria-busy="true"]::before,
+    .icon-button[aria-busy="true"]::before,
+    .account-link[aria-busy="true"]::before {
+        animation: spin 1.4s linear infinite !important;
+    }
 }
 
 /* Brand */

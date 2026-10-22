@@ -40,3 +40,14 @@ test("signing in restores the saved language and theme", async ({ page }) => {
     expect(cookies).toContainEqual(expect.stringMatching(`^dailylog_theme=${data.theme};`));
     await expect(page.locator("html")).toHaveAttribute("lang", data.locale);
 });
+
+test("busy controls keep their spinner under reduced motion", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/login");
+    const button = page.getByRole("button", { name: "Open DailyLog" });
+    await button.evaluate((node) => node.setAttribute("aria-busy", "true"));
+    const spinner = await button.evaluate(
+        (node) => getComputedStyle(node, "::before").animationName,
+    );
+    expect(spinner).toBe("spin");
+});
