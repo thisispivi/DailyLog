@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/thisispivi/DailyLog/compare/v2.3.0...v2.4.0) (2026-10-22)
+
+
+### Features
+
+* paginate history with date range, type, and search filters ([fe9157d](https://github.com/thisispivi/DailyLog/commit/fe9157dcd3e0373357398666207f841caad95266)), closes [#235](https://github.com/thisispivi/DailyLog/issues/235)
+
 ## [2.3.0](https://github.com/thisispivi/DailyLog/compare/v2.2.0...v2.3.0) (2026-10-22)
 
 
