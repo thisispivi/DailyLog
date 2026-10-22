@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/thisispivi/DailyLog/compare/v2.1.0...v2.2.0) (2026-10-22)
+
+
+### Features
+
+* add direction-aware popover entry and exit motion for popovers and toasts ([1bd716d](https://github.com/thisispivi/DailyLog/commit/1bd716de48d679c8ab4c7980975e2e827106f51d)), closes [#226](https://github.com/thisispivi/DailyLog/issues/226)
+
 ## [2.1.0](https://github.com/thisispivi/DailyLog/compare/v2.0.5...v2.1.0) (2026-10-22)
 
 
