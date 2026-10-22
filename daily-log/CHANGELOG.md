@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.5](https://github.com/thisispivi/DailyLog/compare/v2.0.4...v2.0.5) (2026-10-22)
+
+
+### Bug Fixes
+
+* keep the busy spinner turning under reduced motion ([c865f89](https://github.com/thisispivi/DailyLog/commit/c865f897551b69fe005fa57d16ad0b454a87fabd)), closes [#224](https://github.com/thisispivi/DailyLog/issues/224)
+
 ## [2.0.4](https://github.com/thisispivi/DailyLog/compare/v2.0.3...v2.0.4) (2026-10-22)
 
 
