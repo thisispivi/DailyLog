@@ -55,7 +55,7 @@
         0 0 0 1px var(--line),
         var(--shadow-float);
     color: var(--text);
-    animation: pop-in 120ms ease-out;
+    animation: pop-in var(--motion-fast) var(--ease-out);
 }
 
 .select-content {

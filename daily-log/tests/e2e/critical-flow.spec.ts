@@ -51,3 +51,54 @@ test("busy controls keep their spinner under reduced motion", async ({ page }) =
     );
     expect(spinner).toBe("spin");
 });
+
+test.describe("sheet", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/login");
+        await page.getByLabel("Password").fill("dailylog-e2e-password");
+        await page.getByRole("button", { name: "Open DailyLog" }).click();
+        await expect(page).toHaveURL(/\/today$/);
+    });
+
+    test("animates out before closing and returns focus", async ({ page }) => {
+        const tile = page.getByRole("button", { name: /^Meals:/ });
+        await tile.click();
+        const sheet = page.getByRole("dialog");
+        await expect(sheet).toBeVisible();
+
+        const exit = await sheet.evaluate(async (dialog) => {
+            dialog.querySelector<HTMLButtonElement>(".sheet-header button")?.click();
+            await new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+            return dialog
+                .getAnimations()
+                .map((animation) => (animation as CSSAnimation).animationName);
+        });
+        expect(exit).toContain("sheet-out");
+        await expect(sheet).toBeHidden();
+        await expect(tile).toBeFocused();
+
+        // Escape takes the same animated path, and the sheet opens again afterwards.
+        await tile.click();
+        await expect(sheet).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(sheet).toBeHidden();
+        await expect(tile).toBeFocused();
+    });
+
+    test("closes at once under reduced motion", async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.getByRole("button", { name: /^Meals:/ }).click();
+        const sheet = page.getByRole("dialog");
+        await expect(sheet).toBeVisible();
+        const isOpen = await sheet.evaluate(async (dialog) => {
+            dialog.querySelector<HTMLButtonElement>(".sheet-header button")?.click();
+            await new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+            return (dialog as HTMLDialogElement).open;
+        });
+        expect(isOpen).toBe(false);
+    });
+});

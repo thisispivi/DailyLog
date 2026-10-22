@@ -53,6 +53,13 @@
     --space-6: 24px;
     --space-8: 32px;
     --space-10: 40px;
+
+    /* Motion: feedback is fast, panels a little slower, exits shorter than entries. */
+    --motion-fast: 120ms;
+    --motion-standard: 180ms;
+    --motion-exit: 140ms;
+    --ease-out: cubic-bezier(0.2, 0, 0, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
 }
 
 :root[data-theme="light"] {
@@ -332,8 +339,8 @@ h2 {
     font-weight: 800;
     white-space: nowrap;
     transition:
-        background 120ms ease,
-        transform 120ms ease;
+        background var(--motion-fast) ease,
+        transform var(--motion-fast) ease;
 }
 
 .button:hover {
@@ -446,7 +453,7 @@ h2 {
     border-radius: var(--radius-field);
     background: var(--surface-muted);
     padding: 12px 14px;
-    transition: box-shadow 120ms ease;
+    transition: box-shadow var(--motion-fast) ease;
 }
 
 /* Browsers default placeholders to a fixed grey that is too dark on the dark
@@ -524,7 +531,19 @@ h2 {
 }
 
 .sheet[open] {
-    animation: sheet-in 180ms ease-out;
+    animation: sheet-in var(--motion-standard) var(--ease-out);
+}
+
+.sheet[open]::backdrop {
+    animation: fade-in var(--motion-standard) var(--ease-out);
+}
+
+.sheet[data-closing] {
+    animation: sheet-out var(--motion-exit) var(--ease-in) forwards;
+}
+
+.sheet[data-closing]::backdrop {
+    animation: fade-out var(--motion-exit) var(--ease-in) forwards;
 }
 
 .sheet-header {
@@ -551,6 +570,25 @@ h2 {
     from {
         opacity: 0;
         transform: translateY(24px);
+    }
+}
+
+@keyframes sheet-out {
+    to {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes fade-out {
+    to {
+        opacity: 0;
     }
 }
 
@@ -675,7 +713,7 @@ h2 {
     color: var(--success);
     font-size: 14px;
     font-weight: 700;
-    animation: toast-in 180ms ease-out;
+    animation: toast-in var(--motion-standard) var(--ease-out);
 }
 
 .toast[data-tone="error"] {

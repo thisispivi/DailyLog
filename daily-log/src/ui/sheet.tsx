@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useContext, useEffect, useId, useState } from "react";
 
 const PortalContainer = createContext<HTMLElement | null>(null);
 
@@ -16,6 +16,8 @@ export function usePortalContainer(): HTMLElement | null {
 /**
  * A modal sheet on the native <dialog>, which gives focus trapping, Escape to
  * close, and focus return for free. It slides up from the bottom on phones.
+ * Closing plays the exit animation before the dialog closes, keeping the content
+ * on screen until then.
  */
 export function Sheet({
     children,
@@ -33,26 +35,56 @@ export function Sheet({
     title: string;
 }>) {
     const [dialog, setDialog] = useState<HTMLDialogElement | null>(null);
+    const [isRendered, setIsRendered] = useState(open);
+    const titleId = useId();
+    // Adjusting state while rendering: the content mounts with the opening render.
+    if (open && !isRendered) setIsRendered(true);
 
     useEffect(() => {
         if (!dialog) return;
-        if (open && !dialog.open) dialog.showModal();
-        if (!open && dialog.open) dialog.close();
+        if (open) {
+            if (!dialog.open) dialog.showModal();
+            return;
+        }
+        if (!dialog.open) return;
+        let isCancelled = false;
+        dialog.toggleAttribute("data-closing", true);
+        // Under reduced motion there are no animations, so this closes at once.
+        void Promise.allSettled(dialog.getAnimations().map((animation) => animation.finished)).then(
+            () => {
+                if (isCancelled) return;
+                dialog.toggleAttribute("data-closing", false);
+                dialog.close();
+            },
+        );
+        return () => {
+            // Reopened before the exit finished: drop the exit and stay open.
+            isCancelled = true;
+            dialog.toggleAttribute("data-closing", false);
+        };
     }, [dialog, open]);
 
     return (
         <dialog
-            aria-labelledby="sheet-title"
+            aria-labelledby={titleId}
             className={className ? `sheet ${className}` : "sheet"}
-            onClose={onClose}
+            onCancel={(event) => {
+                // Escape asks the owner to close, so it animates like the other ways out.
+                event.preventDefault();
+                onClose();
+            }}
             onClick={(event) => {
                 // A click on the dialog element itself is a click on the backdrop.
                 if (event.target === event.currentTarget) onClose();
             }}
+            onClose={() => {
+                setIsRendered(false);
+                onClose();
+            }}
             ref={setDialog}
         >
             <div className="sheet-header">
-                <h2 id="sheet-title">{title}</h2>
+                <h2 id={titleId}>{title}</h2>
                 <button
                     aria-label={closeLabel}
                     className="icon-button"
@@ -64,7 +96,7 @@ export function Sheet({
             </div>
             <div className="sheet-body">
                 <PortalContainer.Provider value={dialog}>
-                    {open && children}
+                    {isRendered && children}
                 </PortalContainer.Provider>
             </div>
         </dialog>

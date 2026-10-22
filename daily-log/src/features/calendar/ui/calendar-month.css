@@ -52,8 +52,8 @@
     background: var(--surface-muted);
     padding: 8px;
     transition:
-        background 120ms ease,
-        box-shadow 120ms ease;
+        background var(--motion-fast) ease,
+        box-shadow var(--motion-fast) ease;
 }
 
 .calendar-day:hover {

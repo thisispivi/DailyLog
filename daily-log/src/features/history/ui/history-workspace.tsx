@@ -68,7 +68,9 @@ export function HistoryWorkspace({
     const [filter, setFilter] = useState<Filter>("all");
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
+    // The record stays set while the sheet closes, so its exit shows the editor, not an empty sheet.
     const [editing, setEditing] = useState<HistoryRecord | null>(null);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [failed, setFailed] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const shared = { locale, timeFormat, timeZone, weightUnit };
@@ -224,7 +226,10 @@ export function HistoryWorkspace({
                                 <li key={`${record.recordType}-${record.item.id}`}>
                                     <button
                                         className="record-row"
-                                        onClick={() => setEditing(record)}
+                                        onClick={() => {
+                                            setEditing(record);
+                                            setIsEditorOpen(true);
+                                        }}
                                         type="button"
                                     >
                                         <KindIcon
@@ -267,14 +272,14 @@ export function HistoryWorkspace({
             )}
             <Sheet
                 closeLabel={translate(locale, "common.close")}
-                onClose={() => setEditing(null)}
-                open={editing !== null}
+                onClose={() => setIsEditorOpen(false)}
+                open={isEditorOpen}
                 title={translate(locale, "common.edit")}
             >
                 {editing && (
                     <RecordEditor
                         onDone={(message) => {
-                            setEditing(null);
+                            setIsEditorOpen(false);
                             showToast(translate(locale, message));
                             router.refresh();
                         }}
