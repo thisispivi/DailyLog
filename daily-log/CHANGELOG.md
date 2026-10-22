@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/thisispivi/DailyLog/compare/v2.0.5...v2.1.0) (2026-10-22)
+
+
+### Features
+
+* animate the sheet and its backdrop out before closing ([b3a8eb6](https://github.com/thisispivi/DailyLog/commit/b3a8eb697677705fd4f17ddde043817a11789c3d)), closes [#225](https://github.com/thisispivi/DailyLog/issues/225)
+
 ## [2.0.5](https://github.com/thisispivi/DailyLog/compare/v2.0.4...v2.0.5) (2026-10-22)
 
 
