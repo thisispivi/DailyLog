@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/thisispivi/DailyLog/compare/v2.2.0...v2.3.0) (2026-10-22)
+
+
+### Features
+
+* open the range end picker on the start day ([cbb1290](https://github.com/thisispivi/DailyLog/commit/cbb1290a6809edc3be29aa3f6855f3f3eefbfaf7)), closes [#236](https://github.com/thisispivi/DailyLog/issues/236)
+
 ## [2.2.0](https://github.com/thisispivi/DailyLog/compare/v2.1.0...v2.2.0) (2026-10-22)
 
 
