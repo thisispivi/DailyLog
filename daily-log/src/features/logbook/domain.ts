@@ -69,6 +69,25 @@ export type EntryFilters = Readonly<{
     to?: string;
 }>;
 
+/** What the History list can be narrowed to: an entry kind or weigh-ins. */
+export const historyTypes = [...entryKinds, "weighIn"] as const;
+export type HistoryType = (typeof historyTypes)[number];
+
+/** `from` and `to` are UTC storage bounds on the record's start; `labels` are extra exact label matches for the search. */
+export type HistoryFilters = Readonly<{
+    from?: string;
+    labels?: readonly string[];
+    limit: number;
+    offset: number;
+    query?: string;
+    to?: string;
+    type?: HistoryType;
+}>;
+
+export type HistoryRecord =
+    | Readonly<{ item: Entry; recordType: "entry" }>
+    | Readonly<{ item: WeighIn; recordType: "weighIn" }>;
+
 export class RecordNotFoundError extends Error {}
 
 /** Only one training or sleep session may be open at a time. */

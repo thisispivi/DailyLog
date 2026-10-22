@@ -52,3 +52,16 @@ export function entryDisplayLabel(
     }
     return entry.label;
 }
+
+/**
+ * Stored labels whose translated name contains the search, so searching
+ * "pranzo" in Italian still finds meals stored as "Lunch".
+ */
+export function storedLabelsMatching(query: string, locale: Locale): string[] {
+    const needle = query.trim().toLocaleLowerCase(locale);
+    if (!needle) return [];
+    const translated = [...Object.entries(mealLabelKeys), ["Sleep", "dashboard.sleep"] as const];
+    return translated
+        .filter(([, key]) => translate(locale, key).toLocaleLowerCase(locale).includes(needle))
+        .map(([label]) => label);
+}

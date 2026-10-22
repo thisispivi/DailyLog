@@ -150,3 +150,61 @@ test.describe("sheet", () => {
         await expect(sheet.locator('input[name="endAt"]')).toHaveValue(`${startDay}T23:30`);
     });
 });
+
+test.describe("history", () => {
+    test.beforeEach(async ({ page }) => {
+        await page.goto("/login");
+        await page.getByLabel("Password").fill("dailylog-e2e-password");
+        await page.getByRole("button", { name: "Open DailyLog" }).click();
+        await expect(page).toHaveURL(/\/today$/);
+    });
+
+    test("pages through results and keeps the filters in the URL", async ({ page }, testInfo) => {
+        const tag = `paging-${testInfo.project.name}-${Date.now()}`;
+        const origin = new URL(page.url()).origin;
+        for (let index = 0; index < 21; index += 1) {
+            const response = await page.request.post("/api/entries", {
+                data: {
+                    kind: "meal",
+                    label: tag,
+                    startAt: new Date(Date.UTC(2026, 0, 1, 8, index)).toISOString(),
+                    text: "",
+                },
+                headers: { origin },
+            });
+            expect(response.ok()).toBe(true);
+        }
+
+        await page.goto(`/history?q=${tag}`);
+        const results = page.locator(".history-results");
+        await expect(results.locator(".pill")).toHaveText("21 records");
+        await expect(results.locator(".record-row")).toHaveCount(20);
+        await expect(page.getByText("Page 1 of 2")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+
+        await page.getByRole("button", { name: "Next", exact: true }).click();
+        await expect(page).toHaveURL(
+            (url) => url.searchParams.get("q") === tag && url.searchParams.get("page") === "2",
+        );
+        await expect(results.locator(".record-row")).toHaveCount(1);
+        await expect(results.getByRole("heading", { level: 2 })).toBeFocused();
+        await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+
+        await page.goBack();
+        await expect(results.locator(".record-row")).toHaveCount(20);
+    });
+
+    test("says when filters match nothing and clears them", async ({ page }) => {
+        await page.goto("/history?type=sleep&q=nothing-matches-this");
+        await expect(
+            page.getByText("Nothing matches these filters.", { exact: false }),
+        ).toBeVisible();
+        await page.getByRole("button", { name: "Clear filters" }).click();
+        await expect(page).toHaveURL(/\/history$/);
+        await expect(page.getByLabel("Search")).toHaveValue("");
+        await expect(page.getByRole("button", { name: "All types" })).toHaveAttribute(
+            "aria-pressed",
+            "true",
+        );
+    });
+});

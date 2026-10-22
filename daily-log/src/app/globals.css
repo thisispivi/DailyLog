@@ -664,7 +664,8 @@ h2 {
 .button[aria-busy="true"]::before,
 .chip[aria-busy="true"]::before,
 .icon-button[aria-busy="true"]::before,
-.account-link[aria-busy="true"]::before {
+.account-link[aria-busy="true"]::before,
+.pill[aria-busy="true"]::before {
     content: "";
     width: 16px;
     height: 16px;
@@ -780,7 +781,8 @@ h2 {
     .button[aria-busy="true"]::before,
     .chip[aria-busy="true"]::before,
     .icon-button[aria-busy="true"]::before,
-    .account-link[aria-busy="true"]::before {
+    .account-link[aria-busy="true"]::before,
+    .pill[aria-busy="true"]::before {
         animation: spin 1.4s linear infinite !important;
     }
 }

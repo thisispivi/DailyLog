@@ -35,6 +35,7 @@ export function DateTimeField({
     mode = "datetime",
     name,
     onChange,
+    placeholder,
     timeFormat = "24h",
     timeZone,
     value: controlledValue,
@@ -57,6 +58,8 @@ export function DateTimeField({
     mode?: Mode;
     name?: string;
     onChange?: (value: string) => void;
+    /** Shown while empty instead of "Not set", e.g. to tell a From field from a To field. */
+    placeholder?: string;
     /** Only used in datetime mode. */
     timeFormat?: TimeFormat;
     timeZone: string;
@@ -100,7 +103,7 @@ export function DateTimeField({
                             <span className={value ? undefined : "muted"}>
                                 {value
                                     ? formatValue(value, mode, locale, timeFormat)
-                                    : translate(locale, "common.notSet")}
+                                    : (placeholder ?? translate(locale, "common.notSet"))}
                             </span>
                         </button>
                     </Popover.Trigger>

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
+import {
+    entryDisplayLabel,
+    loneSnackIds,
+    storedLabelsMatching,
+} from "@/features/logbook/entry-label";
 
 describe("entryDisplayLabel", () => {
     it("translates the labels stored by the bot", () => {
@@ -24,5 +28,14 @@ describe("entryDisplayLabel", () => {
         const lone = loneSnackIds(entries, "Europe/Rome");
         const labels = entries.map((entry) => entryDisplayLabel(entry, "en", lone));
         expect(labels).toEqual(["Snack", "Snack 1", "Snack 2"]);
+    });
+});
+
+describe("storedLabelsMatching", () => {
+    it("finds stored labels by their translated name", () => {
+        expect(storedLabelsMatching("pranzo", "it")).toEqual(["Lunch"]);
+        expect(storedLabelsMatching(" SONNO ", "it")).toEqual(["Sleep"]);
+        expect(storedLabelsMatching("snack", "en")).toEqual(["Snack 1", "Snack 2"]);
+        expect(storedLabelsMatching("", "en")).toEqual([]);
     });
 });

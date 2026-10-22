@@ -1,8 +1,16 @@
 "use client";
 
-import { ChevronRight, Inbox, RotateCcw, Search, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Inbox, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+    type FormEvent,
+    type ReactNode,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useTransition,
+} from "react";
 
 import { sendJson } from "@/core/http/client";
 import {
@@ -13,15 +21,15 @@ import {
     translate,
 } from "@/core/i18n/translate";
 import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
-import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
+import { entryDisplayLabel } from "@/features/logbook/entry-label";
 import {
     entryKinds,
     gramsToUnit,
-    type Entry,
+    type HistoryRecord,
+    type HistoryType,
     type Locale,
     type TimeFormat,
     type TrashItem,
-    type WeighIn,
     type WeightUnit,
 } from "@/features/logbook/domain";
 import { DateTimeField } from "@/ui/date-time-field";
@@ -29,9 +37,6 @@ import { KindIcon } from "@/ui/kind-icon";
 import { Select } from "@/ui/select";
 import { Sheet } from "@/ui/sheet";
 import { showToast } from "@/ui/toast";
-
-type HistoryRecord =
-    { item: Entry; recordType: "entry" } | { item: WeighIn; recordType: "weighIn" };
 
 const filters = [
     { key: "history.all", kind: undefined, value: "all" },
@@ -42,7 +47,19 @@ const filters = [
     { key: "history.trash", kind: undefined, value: "trash" },
 ] as const;
 
-type Filter = (typeof filters)[number]["value"];
+/** What History shows, as read from and written to the URL. */
+export type HistoryView = Readonly<{
+    from?: string;
+    page: number;
+    q?: string;
+    to?: string;
+    type?: HistoryType | "trash";
+}>;
+
+type ViewChanges = { [Key in keyof HistoryView]?: HistoryView[Key] | undefined };
+
+const viewKeys = ["type", "q", "from", "to", "page"] as const;
+const SEARCH_DELAY_MS = 300;
 
 type EditorMessage = "toast.changesSaved" | "toast.movedToTrash";
 
@@ -56,53 +73,89 @@ type Shared = Readonly<{
 }>;
 
 export function HistoryWorkspace({
-    entries,
     locale,
+    loneSnacks,
+    pageCount,
+    records,
     timeFormat,
     timeZone,
+    total,
     trash,
-    weighIns,
+    view,
     weightUnit,
-}: Shared & Readonly<{ entries: Entry[]; trash: TrashItem[]; weighIns: WeighIn[] }>) {
+}: Shared &
+    Readonly<{
+        loneSnacks: readonly number[];
+        pageCount: number;
+        records: readonly HistoryRecord[];
+        total: number;
+        trash: readonly TrashItem[];
+        view: HistoryView;
+    }>) {
     const router = useRouter();
-    const [filter, setFilter] = useState<Filter>("all");
-    const [query, setQuery] = useState("");
-    const [date, setDate] = useState("");
+    const pathname = usePathname();
+    const [isLoading, startLoading] = useTransition();
+    const [loadingPage, setLoadingPage] = useState<number | null>(null);
+    // ponytail: the box keeps what was typed; going Back to an older search doesn't rewrite it.
+    const [query, setQuery] = useState(view.q ?? "");
+    const searchTimer = useRef<number | undefined>(undefined);
+    const resultsHeading = useRef<HTMLHeadingElement>(null);
+    const focusResultsOnPage = useRef<number | null>(null);
     // The record stays set while the sheet closes, so its exit shows the editor, not an empty sheet.
     const [editing, setEditing] = useState<HistoryRecord | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [failed, setFailed] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
     const shared = { locale, timeFormat, timeZone, weightUnit };
+    const lone = useMemo(() => new Set(loneSnacks), [loneSnacks]);
+    const filter = view.type ?? "all";
+    const hasFilters = filter !== "all" || Boolean(view.q || view.from || view.to);
+    const singleDay = view.from && view.from === view.to ? view.from : undefined;
 
-    const loneSnacks = useMemo(() => loneSnackIds(entries, timeZone), [entries, timeZone]);
-    const records = useMemo(() => {
-        if (filter === "trash") return [];
-        const needle = query.trim().toLocaleLowerCase(locale);
-        const onDate = (timestamp: string) =>
-            !date || localInputValue(new Date(timestamp), timeZone).startsWith(date);
-        const entryRecords: HistoryRecord[] = entries
-            .filter((entry) => filter === "all" || filter === entry.kind)
-            .filter(
-                (entry) =>
-                    !needle ||
-                    `${entryDisplayLabel(entry, locale)} ${entry.label} ${entry.text}`
-                        .toLocaleLowerCase(locale)
-                        .includes(needle),
-            )
-            .filter((entry) => onDate(entry.startAt))
-            .map((item) => ({ item, recordType: "entry" }));
-        // Weigh-ins have no text, so a search never matches them.
-        const weightRecords: HistoryRecord[] =
-            (filter === "all" || filter === "weighIn") && !needle
-                ? weighIns
-                      .filter((item) => onDate(item.recordedAt))
-                      .map((item) => ({ item, recordType: "weighIn" }))
-                : [];
-        return [...entryRecords, ...weightRecords].sort(
-            (left, right) => Date.parse(recordDate(right)) - Date.parse(recordDate(left)),
+    // After paging, focus the new results so keyboard users don't stay on a disabled button.
+    useEffect(() => {
+        if (focusResultsOnPage.current !== view.page) return;
+        focusResultsOnPage.current = null;
+        resultsHeading.current?.focus();
+    }, [view.page]);
+
+    /** Loads another view from the server; any filter change starts again from page 1. */
+    function show(changes: ViewChanges, { replace = false, scroll = false } = {}) {
+        const next: ViewChanges = { ...view, page: 1, ...changes };
+        const params = new URLSearchParams();
+        for (const key of viewKeys) {
+            const value = next[key];
+            if (value === undefined || value === "" || (key === "page" && value === 1)) continue;
+            params.set(key, String(value));
+        }
+        const href = params.size > 0 ? `${pathname}?${params.toString()}` : pathname;
+        startLoading(() => {
+            if (replace) router.replace(href, { scroll });
+            else router.push(href, { scroll });
+        });
+    }
+
+    function goToPage(page: number) {
+        setLoadingPage(page);
+        focusResultsOnPage.current = page;
+        show({ page }, { scroll: true });
+    }
+
+    function search(value: string) {
+        setQuery(value);
+        window.clearTimeout(searchTimer.current);
+        // Wait for a pause in typing, and replace the URL so each keystroke isn't a Back step.
+        searchTimer.current = window.setTimeout(
+            () => show({ q: value.trim() || undefined }, { replace: true }),
+            SEARCH_DELAY_MS,
         );
-    }, [date, entries, filter, locale, query, timeZone, weighIns]);
+    }
+
+    function clearFilters() {
+        window.clearTimeout(searchTimer.current);
+        setQuery("");
+        show({ from: undefined, q: undefined, to: undefined, type: undefined });
+    }
 
     async function mutate(
         key: string,
@@ -118,12 +171,12 @@ export function HistoryWorkspace({
         router.refresh();
     }
 
-    function deleteDay() {
-        const day = formatDate(`${date}T12:00:00Z`, locale, "UTC");
-        if (!window.confirm(translate(locale, "history.confirmBulk", { date: day }))) return;
+    function deleteDay(day: string) {
+        const label = formatDate(`${day}T12:00:00Z`, locale, "UTC");
+        if (!window.confirm(translate(locale, "history.confirmBulk", { date: label }))) return;
         void mutate(
             "day",
-            sendJson("/api/entries/day", "DELETE", { date }),
+            sendJson("/api/entries/day", "DELETE", { date: day }),
             "toast.dayMovedToTrash",
         );
     }
@@ -150,23 +203,40 @@ export function HistoryWorkspace({
                     <input
                         className="input"
                         id="history-search"
-                        onChange={(event) => setQuery(event.currentTarget.value)}
+                        maxLength={120}
+                        onChange={(event) => search(event.currentTarget.value)}
                         placeholder={translate(locale, "history.searchPlaceholder")}
                         type="search"
                         value={query}
                     />
                 </div>
-                <DateTimeField
-                    clearable
-                    id="history-date"
-                    label={translate(locale, "history.date")}
-                    labelHidden
-                    locale={locale}
-                    mode="date"
-                    onChange={setDate}
-                    timeZone={timeZone}
-                    value={date}
-                />
+                <div className="history-dates">
+                    <DateTimeField
+                        clearable
+                        id="history-from"
+                        label={translate(locale, "history.from")}
+                        labelHidden
+                        locale={locale}
+                        mode="date"
+                        onChange={(from) => show({ from: from || undefined })}
+                        placeholder={translate(locale, "history.from")}
+                        timeZone={timeZone}
+                        value={view.from ?? ""}
+                    />
+                    <DateTimeField
+                        clearable
+                        fallbackDate={view.from ?? ""}
+                        id="history-to"
+                        label={translate(locale, "history.to")}
+                        labelHidden
+                        locale={locale}
+                        mode="date"
+                        onChange={(to) => show({ to: to || undefined })}
+                        placeholder={translate(locale, "history.to")}
+                        timeZone={timeZone}
+                        value={view.to ?? ""}
+                    />
+                </div>
                 <div
                     aria-label={translate(locale, "history.filter")}
                     className="history-chips"
@@ -178,7 +248,7 @@ export function HistoryWorkspace({
                             className="chip"
                             data-kind={kind}
                             key={value}
-                            onClick={() => setFilter(value)}
+                            onClick={() => show({ type: value === "all" ? undefined : value })}
                             type="button"
                         >
                             {translate(locale, key)}
@@ -186,12 +256,12 @@ export function HistoryWorkspace({
                     ))}
                 </div>
             </section>
-            {date && filter !== "trash" && (
+            {singleDay && filter !== "trash" && (
                 <button
                     aria-busy={busy === "day"}
                     className="button button-danger history-bulk"
                     disabled={busy !== null}
-                    onClick={deleteDay}
+                    onClick={() => deleteDay(singleDay)}
                     type="button"
                 >
                     <Trash2 aria-hidden="true" size={16} />
@@ -204,22 +274,38 @@ export function HistoryWorkspace({
             {filter === "trash" ? (
                 <TrashList busy={busy} items={trash} onRestore={restore} {...shared} />
             ) : (
-                <section className="card">
+                <section aria-busy={isLoading} className="card history-results">
                     <div className="card-heading">
-                        <h2>{translate(locale, "history.title")}</h2>
-                        <span className="pill numeric">
-                            {translate(locale, "history.results", { count: records.length })}
+                        <h2 ref={resultsHeading} tabIndex={-1}>
+                            {translate(locale, "history.title")}
+                        </h2>
+                        <span aria-busy={isLoading} aria-live="polite" className="pill numeric">
+                            {isLoading && (
+                                <span className="sr-only">
+                                    {translate(locale, "common.loading")}
+                                </span>
+                            )}
+                            {translate(locale, "history.results", { count: total })}
                         </span>
                     </div>
                     {records.length === 0 ? (
                         <EmptyState
                             message={translate(
                                 locale,
-                                entries.length || weighIns.length
-                                    ? "common.noResults"
-                                    : "history.empty",
+                                hasFilters ? "history.noMatches" : "history.empty",
                             )}
-                        />
+                        >
+                            {hasFilters && (
+                                <button
+                                    className="button button-ghost"
+                                    onClick={clearFilters}
+                                    type="button"
+                                >
+                                    <X aria-hidden="true" size={16} />
+                                    {translate(locale, "history.clearFilters")}
+                                </button>
+                            )}
+                        </EmptyState>
                     ) : (
                         <ul className="record-list">
                             {records.map((record) => (
@@ -241,12 +327,7 @@ export function HistoryWorkspace({
                                         />
                                         <span className="record-text">
                                             <strong>
-                                                {recordTitle(
-                                                    record,
-                                                    locale,
-                                                    weightUnit,
-                                                    loneSnacks,
-                                                )}
+                                                {recordTitle(record, locale, weightUnit, lone)}
                                             </strong>
                                             <span>{recordDetail(record, locale)}</span>
                                         </span>
@@ -267,6 +348,39 @@ export function HistoryWorkspace({
                                 </li>
                             ))}
                         </ul>
+                    )}
+                    {pageCount > 1 && (
+                        <nav
+                            aria-label={translate(locale, "history.pages")}
+                            className="history-pagination"
+                        >
+                            <button
+                                aria-busy={isLoading && loadingPage === view.page - 1}
+                                className="button button-ghost"
+                                disabled={view.page <= 1 || isLoading}
+                                onClick={() => goToPage(view.page - 1)}
+                                type="button"
+                            >
+                                <ChevronLeft aria-hidden="true" size={18} />
+                                {translate(locale, "history.previousPage")}
+                            </button>
+                            <span className="muted numeric">
+                                {translate(locale, "history.pageOf", {
+                                    page: view.page,
+                                    pages: pageCount,
+                                })}
+                            </span>
+                            <button
+                                aria-busy={isLoading && loadingPage === view.page + 1}
+                                className="button button-ghost"
+                                disabled={view.page >= pageCount || isLoading}
+                                onClick={() => goToPage(view.page + 1)}
+                                type="button"
+                            >
+                                {translate(locale, "history.nextPage")}
+                                <ChevronRight aria-hidden="true" size={18} />
+                            </button>
+                        </nav>
                     )}
                 </section>
             )}
@@ -489,7 +603,11 @@ function TrashList({
     timeZone,
     weightUnit,
 }: Shared &
-    Readonly<{ busy: string | null; items: TrashItem[]; onRestore: (item: TrashItem) => void }>) {
+    Readonly<{
+        busy: string | null;
+        items: readonly TrashItem[];
+        onRestore: (item: TrashItem) => void;
+    }>) {
     return (
         <section className="card">
             <div className="card-heading">
@@ -532,13 +650,14 @@ function TrashList({
     );
 }
 
-function EmptyState({ message }: Readonly<{ message: string }>) {
+function EmptyState({ children, message }: Readonly<{ children?: ReactNode; message: string }>) {
     return (
         <div className="empty-state">
             <span className="state-icon">
                 <Inbox aria-hidden="true" size={28} />
             </span>
             <p>{message}</p>
+            {children}
         </div>
     );
 }

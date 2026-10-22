@@ -207,6 +207,50 @@ describe("LogbookRepository", () => {
         expect(logbook.getEntry(OWNER, entry.id).text).toBe("Pasta 120 g");
     });
 
+    it("pages entries and weigh-ins together, newest first, with the filtered total", () => {
+        const meal = (startAt: string, label = "Lunch", text = "") =>
+            logbook.createEntry(OWNER, { kind: "meal", label, startAt, text });
+        meal("2026-08-29T12:00:00+00:00");
+        const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-30T07:00:00+00:00");
+        const dinner = meal("2026-08-30T19:00:00+00:00", "Dinner", "Soup");
+        meal("2026-08-31T12:00:00+00:00");
+        logbook.createEntry(STRANGER, {
+            kind: "meal",
+            label: "Lunch",
+            startAt: "2026-08-31T13:00:00+00:00",
+            text: "",
+        });
+
+        const first = logbook.listHistory(OWNER, { limit: 2, offset: 0 });
+        expect(first.total).toBe(4);
+        expect(first.items.map((record) => record.recordType)).toEqual(["entry", "entry"]);
+        const second = logbook.listHistory(OWNER, { limit: 2, offset: 2 });
+        expect(second.items).toEqual([
+            { item: weighIn, recordType: "weighIn" },
+            expect.objectContaining({ recordType: "entry" }),
+        ]);
+
+        const onThe30th = {
+            from: "2026-08-30T00:00:00+00:00",
+            limit: 10,
+            offset: 0,
+            to: "2026-08-31T00:00:00+00:00",
+        };
+        expect(logbook.listHistory(OWNER, onThe30th).total).toBe(2);
+        expect(logbook.listHistory(OWNER, { ...onThe30th, type: "weighIn" }).items).toEqual([
+            { item: weighIn, recordType: "weighIn" },
+        ]);
+        // A search skips weigh-ins and also matches the extra exact labels.
+        expect(logbook.listHistory(OWNER, { limit: 10, offset: 0, query: "soup" }).items).toEqual([
+            { item: dinner, recordType: "entry" },
+        ]);
+        expect(
+            logbook.listHistory(OWNER, { labels: ["Dinner"], limit: 10, offset: 0, query: "cena" })
+                .items,
+        ).toEqual([{ item: dinner, recordType: "entry" }]);
+        expect(logbook.listHistory(OWNER, { limit: 10, offset: 0, query: "100%" }).total).toBe(0);
+    });
+
     it("lists trashed weigh-ins with their weight so the UI can format the unit", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         logbook.softDeleteWeighIn(OWNER, weighIn.id);

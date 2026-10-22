@@ -9,6 +9,8 @@ import {
     type Entry,
     type DayNote,
     type EntryFilters,
+    type HistoryFilters,
+    type HistoryRecord,
     type EntryKind,
     type Locale,
     type Theme,
@@ -346,6 +348,113 @@ export class LogbookRepository {
             )
             .all(...where.parameters, filters.limit, filters.offset) as EntryRow[];
         return { items: rows.map(mapEntry), total: total.count };
+    }
+
+    /**
+     * One page of live entries and weigh-ins together, newest first, for History.
+     * Weigh-ins have no text, so a search never matches them.
+     */
+    listHistory(
+        userId: number,
+        filters: HistoryFilters,
+    ): { items: HistoryRecord[]; total: number } {
+        const { from, labels = [], query, to, type } = filters;
+        const parts: string[] = [];
+        const parameters: Array<number | string> = [];
+        const addPart = (sql: string, clauses: string[], values: Array<number | string>) => {
+            parts.push(`${sql} WHERE ${clauses.join(" AND ")}`);
+            parameters.push(...values);
+        };
+        if (type !== "weighIn") {
+            const clauses = ["user_id = ?", "deleted_at IS NULL"];
+            const values: Array<number | string> = [userId];
+            if (type) {
+                clauses.push("kind = ?");
+                values.push(type);
+            }
+            if (query) {
+                const like = `%${escapeLike(query)}%`;
+                const exact = labels.map(() => " OR label = ?").join("");
+                clauses.push(`(label LIKE ? ESCAPE '\\' OR text LIKE ? ESCAPE '\\'${exact})`);
+                values.push(like, like, ...labels);
+            }
+            if (from) {
+                clauses.push("start_at >= ?");
+                values.push(from);
+            }
+            if (to) {
+                clauses.push("start_at < ?");
+                values.push(to);
+            }
+            addPart(
+                "SELECT 'entry' AS record_type, id, start_at AS at FROM entries",
+                clauses,
+                values,
+            );
+        }
+        if ((!type || type === "weighIn") && !query) {
+            const clauses = ["user_id = ?", "deleted_at IS NULL"];
+            const values: Array<number | string> = [userId];
+            if (from) {
+                clauses.push("recorded_at >= ?");
+                values.push(from);
+            }
+            if (to) {
+                clauses.push("recorded_at < ?");
+                values.push(to);
+            }
+            addPart(
+                "SELECT 'weighIn' AS record_type, id, recorded_at AS at FROM weigh_ins",
+                clauses,
+                values,
+            );
+        }
+        if (parts.length === 0) return { items: [], total: 0 };
+
+        const records = parts.join(" UNION ALL ");
+        const { count } = this.database
+            .prepare(`SELECT COUNT(*) AS count FROM (${records})`)
+            .get(...parameters) as { count: number };
+        const page = this.database
+            .prepare(
+                `SELECT record_type, id FROM (${records})
+         ORDER BY at DESC, id DESC LIMIT ? OFFSET ?`,
+            )
+            .all(...parameters, filters.limit, filters.offset) as Array<{
+            id: number;
+            record_type: HistoryRecord["recordType"];
+        }>;
+
+        const idsOf = (recordType: HistoryRecord["recordType"]) =>
+            page.filter((row) => row.record_type === recordType).map((row) => row.id);
+        const entries = new Map(
+            this.rowsById<EntryRow>("entries", userId, idsOf("entry")).map((row) => [
+                row.id,
+                mapEntry(row),
+            ]),
+        );
+        const weighIns = new Map(
+            this.rowsById<WeighInRow>("weigh_ins", userId, idsOf("weighIn")).map((row) => [
+                row.id,
+                mapWeighIn(row),
+            ]),
+        );
+        const items = page.flatMap((row): HistoryRecord[] => {
+            const entry = row.record_type === "entry" ? entries.get(row.id) : undefined;
+            if (entry) return [{ item: entry, recordType: "entry" }];
+            const weighIn = row.record_type === "weighIn" ? weighIns.get(row.id) : undefined;
+            return weighIn ? [{ item: weighIn, recordType: "weighIn" }] : [];
+        });
+        return { items, total: count };
+    }
+
+    private rowsById<Row>(table: "entries" | "weigh_ins", userId: number, ids: number[]): Row[] {
+        if (ids.length === 0) return [];
+        return this.database
+            .prepare(
+                `SELECT * FROM ${table} WHERE user_id = ? AND id IN (${ids.map(() => "?").join(", ")})`,
+            )
+            .all(userId, ...ids) as Row[];
     }
 
     /** Every entry overlapping the range, oldest first, for reports and day views. */
