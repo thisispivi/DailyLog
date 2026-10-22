@@ -24,3 +24,19 @@ test("sign in and log a meal straight from its Today tile", async ({ page }, tes
     await expect(sheet).toBeHidden();
     await expect(page.getByText(details)).toBeVisible();
 });
+
+test("signing in restores the saved language and theme", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Password").fill("dailylog-e2e-password");
+    const [login] = await Promise.all([
+        page.waitForResponse("**/api/auth/login"),
+        page.getByRole("button", { name: "Open DailyLog" }).click(),
+    ]);
+    await expect(page).toHaveURL(/\/today$/);
+
+    const { data } = await (await page.request.get("/api/settings")).json();
+    const cookies = await login.headerValues("set-cookie");
+    expect(cookies).toContainEqual(expect.stringMatching(`^dailylog_locale=${data.locale};`));
+    expect(cookies).toContainEqual(expect.stringMatching(`^dailylog_theme=${data.theme};`));
+    await expect(page.locator("html")).toHaveAttribute("lang", data.locale);
+});

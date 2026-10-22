@@ -1,6 +1,7 @@
 import { getEnvironment } from "@/core/config/env";
 import { ApiError, ok, publicRoute, readJson } from "@/core/http/api";
 import { log } from "@/core/observability/logger";
+import { writePreferenceCookies } from "@/core/preferences/preference-cookies";
 import { clearLoginAttempts, isLoginBlocked, recordLoginFailure } from "@/core/security/rate-limit";
 import { createSession, verifyPassword } from "@/core/security/session";
 import { loginSchema } from "@/features/auth/schemas";
@@ -28,5 +29,9 @@ export const POST = publicRoute(async (request, requestId) => {
     clearLoginAttempts(clientKey);
     await createSession(request, repository.getSessionVersion(ownerId));
     log("info", "auth.login_succeeded", { requestId });
-    return ok({ authenticated: true });
+    // A new browser has no preference cookies yet; without them the first pages
+    // render with the default language and theme instead of the saved ones.
+    const response = ok({ authenticated: true });
+    writePreferenceCookies(response, request, repository.getSettings(ownerId));
+    return response;
 });
