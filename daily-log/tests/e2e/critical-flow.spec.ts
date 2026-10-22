@@ -23,6 +23,8 @@ test("sign in and log a meal straight from its Today tile", async ({ page }, tes
 
     await expect(sheet).toBeHidden();
     await expect(page.getByText(details)).toBeVisible();
+    // The toast fades out on its own before it is removed.
+    await expect(page.locator(".toast")).toHaveCSS("animation-name", "toast-in, toast-out");
 });
 
 test("signing in restores the saved language and theme", async ({ page }) => {
@@ -100,5 +102,26 @@ test.describe("sheet", () => {
             return (dialog as HTMLDialogElement).open;
         });
         expect(isOpen).toBe(false);
+    });
+
+    test("date popover enters from its side, fades out, and returns focus", async ({ page }) => {
+        await page.getByRole("button", { name: /^Meals:/ }).click();
+        const trigger = page.getByRole("dialog").locator("#record-start");
+        await trigger.click();
+        const popover = page.locator(".date-popover");
+        await expect(popover).toHaveAttribute("data-side", /bottom|top/);
+
+        const exit = await popover.evaluate(async (node) => {
+            node.querySelector<HTMLButtonElement>(".time-row .button-primary")?.click();
+            await new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+            return node
+                .getAnimations()
+                .map((animation) => (animation as CSSAnimation).animationName);
+        });
+        expect(exit).toContain("pop-out");
+        await expect(popover).toHaveCount(0);
+        await expect(trigger).toBeFocused();
     });
 });

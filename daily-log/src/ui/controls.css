@@ -59,6 +59,25 @@
 }
 
 .select-content {
+    transform-origin: var(--radix-select-content-transform-origin);
+}
+
+.date-popover {
+    transform-origin: var(--radix-popover-content-transform-origin);
+}
+
+/* Enter from the trigger's side, also when the panel flips above it. */
+.select-content[data-side="top"],
+.date-popover[data-side="top"] {
+    animation-name: pop-in-above;
+}
+
+/* Radix keeps the popover mounted until this exit animation ends. */
+.date-popover[data-state="closed"] {
+    animation: pop-out var(--motion-exit) var(--ease-in) forwards;
+}
+
+.select-content {
     width: var(--radix-select-trigger-width);
     max-height: min(320px, var(--radix-select-content-available-height));
     overflow: hidden;
@@ -96,7 +115,21 @@
 @keyframes pop-in {
     from {
         opacity: 0;
-        transform: translateY(-4px);
+        transform: translateY(-4px) scale(0.98);
+    }
+}
+
+@keyframes pop-in-above {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.98);
+    }
+}
+
+@keyframes pop-out {
+    to {
+        opacity: 0;
+        transform: scale(0.98);
     }
 }
 

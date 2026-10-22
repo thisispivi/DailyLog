@@ -630,6 +630,8 @@ h2 {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    /* Hidden for the first 300ms, so quick navigations don't flash it. */
+    animation: fade-in var(--motion-standard) var(--ease-out) 300ms both;
 }
 
 .page-loading i {
@@ -713,7 +715,10 @@ h2 {
     color: var(--success);
     font-size: 14px;
     font-weight: 700;
-    animation: toast-in var(--motion-standard) var(--ease-out);
+    /* The exit ends as the toast is removed; keep the 4000ms in step with TOAST_MS in toast.tsx. */
+    animation:
+        toast-in var(--motion-standard) var(--ease-out),
+        toast-out var(--motion-exit) var(--ease-in) calc(4000ms - var(--motion-exit)) forwards;
 }
 
 .toast[data-tone="error"] {
@@ -722,6 +727,13 @@ h2 {
 
 @keyframes toast-in {
     from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+}
+
+@keyframes toast-out {
+    to {
         opacity: 0;
         transform: translateY(12px);
     }

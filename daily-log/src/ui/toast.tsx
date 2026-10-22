@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 type Toast = { id: number; message: string; tone: "error" | "success" };
 
 const TOAST_EVENT = "dailylog:toast";
+// globals.css times the toast exit animation to end at this point.
 const TOAST_MS = 4000;
 
 /**
