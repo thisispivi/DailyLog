@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.4](https://github.com/thisispivi/DailyLog/compare/v2.0.3...v2.0.4) (2026-10-22)
+
+
+### Bug Fixes
+
+* restore saved language and theme cookies on sign-in ([f8e2885](https://github.com/thisispivi/DailyLog/commit/f8e2885dad0f8cd44a4240da2d97ec38d4b5c456)), closes [#223](https://github.com/thisispivi/DailyLog/issues/223)
+
 ## [2.0.3](https://github.com/thisispivi/DailyLog/compare/v2.0.2...v2.0.3) (2026-10-21)
 
 
