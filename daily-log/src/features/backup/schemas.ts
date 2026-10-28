@@ -23,9 +23,11 @@ export const backupSchema = z.strictObject({
             }),
         )
         .max(50_000),
-    // Backups made before weight goals existed have no goal fields.
+    // Backups made before weight goals existed have no goal fields, and older ones
+    // with a goal have no goalSetAt; the import then starts the goal anew.
     profile: profileSchema.extend({
         goalDate: goalDateSchema.default(null),
+        goalSetAt: isoTimestamp.nullable().default(null),
         goalWeightGrams: goalWeightGramsSchema.default(null),
     }),
     // Backups made before the time format existed have no timeFormat.

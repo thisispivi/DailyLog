@@ -19,6 +19,7 @@ const backup = {
         birthDate: null,
         firstName: "",
         goalDate: "2026-12-31",
+        goalSetAt: "2026-01-05T08:00:00.000+00:00",
         goalWeightGrams: 70_000,
         heightCm: null,
         lastName: "",
@@ -47,10 +48,16 @@ describe("backup schema", () => {
     it("reads backups made before weight goals existed as having no goal", () => {
         const legacy = {
             ...backup,
-            profile: { ...backup.profile, goalDate: undefined, goalWeightGrams: undefined },
+            profile: {
+                ...backup.profile,
+                goalDate: undefined,
+                goalSetAt: undefined,
+                goalWeightGrams: undefined,
+            },
         };
         expect(backupSchema.parse(legacy).profile).toMatchObject({
             goalDate: null,
+            goalSetAt: null,
             goalWeightGrams: null,
         });
     });
