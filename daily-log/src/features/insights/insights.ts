@@ -72,6 +72,13 @@ export function dailyTotals(
         ]),
     );
     const dayOf = (timestamp: string) => totals.get(localDateInZone(new Date(timestamp), timeZone));
+    // Each date's UTC bounds, worked out once rather than for every training.
+    const dayBounds = new Map(
+        dates.map((date) => {
+            const [dayStart, dayEnd] = localDateRangeBounds(date, date, timeZone);
+            return [date, [Date.parse(dayStart), Date.parse(dayEnd)] as const];
+        }),
+    );
 
     for (const entry of entries) {
         if (entry.kind === "meal") {
@@ -80,10 +87,10 @@ export function dailyTotals(
         } else if (entry.kind === "training") {
             if (!entry.endAt) continue;
             for (const [date, day] of totals) {
-                const [dayStart, dayEnd] = localDateRangeBounds(date, date, timeZone);
+                const [dayStart, dayEnd] = dayBounds.get(date) ?? [0, 0];
                 const overlap =
-                    Math.min(Date.parse(entry.endAt), Date.parse(dayEnd)) -
-                    Math.max(Date.parse(entry.startAt), Date.parse(dayStart));
+                    Math.min(Date.parse(entry.endAt), dayEnd) -
+                    Math.max(Date.parse(entry.startAt), dayStart);
                 if (overlap > 0) day.activeMinutes += overlap / 60_000;
             }
         } else if (entry.endAt) {
