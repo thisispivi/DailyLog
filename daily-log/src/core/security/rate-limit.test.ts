@@ -32,6 +32,15 @@ describe("login rate limit", () => {
         expect(isLoginBlocked("192.0.2.1", NOW)).toBe(true);
     });
 
+    it("lets a client that signed in before through the shared cap, within its own limit", () => {
+        clearLoginAttempts("192.0.2.1");
+        fail(60, (index) => `198.51.100.${index}`);
+        expect(isLoginBlocked("192.0.2.1", NOW)).toBe(false);
+        expect(isLoginBlocked("192.0.2.2", NOW)).toBe(true);
+        fail(8, () => "192.0.2.1");
+        expect(isLoginBlocked("192.0.2.1", NOW)).toBe(true);
+    });
+
     it("resets a client after a successful sign-in", () => {
         fail(8, () => "203.0.113.5");
         clearLoginAttempts("203.0.113.5");
