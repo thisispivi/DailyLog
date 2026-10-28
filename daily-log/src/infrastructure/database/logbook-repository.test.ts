@@ -156,7 +156,7 @@ describe("LogbookRepository", () => {
         expect(logbook.getGoalSetAt(STRANGER)).toBe("2026-01-05T08:00:00.000+00:00");
     });
 
-    it("rolls back the whole import when it would open a second activity", () => {
+    it("skips an open activity when one is already running and imports the rest", () => {
         const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
         startRun();
         const withOpenSleep = {
@@ -172,10 +172,13 @@ describe("LogbookRepository", () => {
             ],
             weighIns: [{ recordedAt: "2026-08-31T07:00:00+02:00", weightGrams: 70_000 }],
         };
-        expect(() => logbook.importBackup(OWNER, withOpenSleep)).toThrow(
-            DuplicateOpenActivityError,
-        );
-        expect(logbook.listWeighIns(OWNER)).toHaveLength(0);
+        const run = logbook.activeActivity(OWNER);
+        expect(logbook.importBackup(OWNER, withOpenSleep)).toEqual({
+            entries: 0,
+            notes: 0,
+            weighIns: 1,
+        });
+        expect(logbook.activeActivity(OWNER)).toEqual(run);
     });
 
     it("rejects finishing an activity before it started", () => {
