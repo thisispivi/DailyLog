@@ -23,16 +23,29 @@ export function DayNote({
     const [status, setStatus] = useState<Status>("idle");
     const savedText = useRef(initialText);
     const latestText = useRef(initialText);
+    const isSaving = useRef(false);
 
     useEffect(() => {
         latestText.current = text;
         if (text === savedText.current) return;
-        const timer = window.setTimeout(async () => {
+        // One save at a time, so a slow earlier request can't overwrite newer text;
+        // whatever was typed meanwhile is sent when it finishes.
+        const save = async (): Promise<void> => {
+            const sending = latestText.current;
+            if (isSaving.current || sending === savedText.current) return;
+            isSaving.current = true;
             setStatus("saving");
-            const { ok } = await sendJson(`/api/notes/${day}`, "PUT", { text });
-            if (ok) savedText.current = text;
-            setStatus(ok ? "saved" : "error");
-        }, AUTOSAVE_DELAY_MS);
+            const { ok } = await sendJson(`/api/notes/${day}`, "PUT", { text: sending });
+            isSaving.current = false;
+            if (!ok) {
+                setStatus("error");
+                return;
+            }
+            savedText.current = sending;
+            if (latestText.current === sending) setStatus("saved");
+            else void save();
+        };
+        const timer = window.setTimeout(save, AUTOSAVE_DELAY_MS);
         return () => window.clearTimeout(timer);
     }, [day, text]);
 
