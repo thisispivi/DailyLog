@@ -782,11 +782,22 @@ export class LogbookRepository {
         if (result.changes === 0) throw new RecordNotFoundError("Trash item not found.");
     }
 
-    /** Hard-deletes the owner's records trashed before the retention window. */
+    /**
+     * Hard-deletes the owner's records trashed before the retention window. Checks
+     * with a read first, so listing the trash only takes a write lock when
+     * something has actually expired.
+     */
     purgeExpiredTrash(userId: number, now = new Date()): number {
         const cutoff = toStorageTimestamp(
             new Date(now.getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         );
+        const { expired } = this.database
+            .prepare(
+                `SELECT EXISTS (SELECT 1 FROM entries WHERE user_id = ? AND deleted_at < ?)
+           OR EXISTS (SELECT 1 FROM weigh_ins WHERE user_id = ? AND deleted_at < ?) AS expired`,
+            )
+            .get(userId, cutoff, userId, cutoff) as { expired: number };
+        if (!expired) return 0;
         return this.database.transaction(() => {
             const entries = this.database
                 .prepare("DELETE FROM entries WHERE user_id = ? AND deleted_at < ?")
