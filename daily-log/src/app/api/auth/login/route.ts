@@ -8,8 +8,11 @@ import { loginSchema } from "@/features/auth/schemas";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 export const POST = publicRoute(async (request, requestId) => {
-    const { appPassword, ownerId } = getEnvironment();
-    if (!appPassword) {
+    const { appPassword, ownerId, sessionSecret } = getEnvironment();
+    const repository = new LogbookRepository();
+    // A password set in Settings replaces APP_PASSWORD, which may then be removed.
+    const passwordHash = repository.getPasswordHash(ownerId);
+    if (!sessionSecret || (!appPassword && !passwordHash)) {
         throw new ApiError(503, "AUTH_NOT_CONFIGURED", "Authentication is not configured.");
     }
     // The right-most X-Forwarded-For entry is the one the nearest proxy appended.
@@ -20,8 +23,7 @@ export const POST = publicRoute(async (request, requestId) => {
     if (isLoginBlocked(clientKey)) {
         throw new ApiError(429, "RATE_LIMITED", "Too many sign-in attempts.");
     }
-    const repository = new LogbookRepository();
-    if (!verifyPassword(password, repository.getPasswordHash(ownerId))) {
+    if (!verifyPassword(password, passwordHash)) {
         recordLoginFailure(clientKey);
         log("warn", "auth.login_rejected", { requestId });
         throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid credentials.");
