@@ -797,9 +797,10 @@ function entryWhere(userId: number, filters: Omit<EntryFilters, "limit" | "offse
         parameters.push(query, query);
     }
     if (filters.from) {
-        // A meal is an instant, so one at exactly `from` belongs to this range.
+        // A meal is an instant, so one at exactly `from` belongs to this range. An
+        // open activity is still running, so it overlaps every range up to now.
         clauses.push(
-            "((kind = 'meal' AND start_at >= ?) OR (kind != 'meal' AND COALESCE(end_at, start_at) > ?))",
+            "((kind = 'meal' AND start_at >= ?) OR (kind != 'meal' AND (end_at IS NULL OR end_at > ?)))",
         );
         parameters.push(filters.from, filters.from);
     }
