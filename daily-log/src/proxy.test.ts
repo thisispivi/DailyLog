@@ -1,10 +1,11 @@
 import { createHmac } from "node:crypto";
 
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { SESSION_COOKIE } from "@/core/security/session";
-import { proxy } from "@/proxy";
+import { config, proxy } from "@/proxy";
 
 const SECRET = "proxy-test-session-secret-at-least-32-chars";
 const CURRENT_VERSION = 2;
@@ -35,6 +36,18 @@ function signedIn(path: string, version: number) {
 }
 
 describe("proxy", () => {
+    // Routes and pages read the session without its version, so revocation holds
+    // only while the proxy runs on every one of them.
+    it("runs on every page and API route, and skips only static assets", () => {
+        const matches = (url: string) => unstable_doesMiddlewareMatch({ config, url });
+        for (const url of ["/", "/today", "/login", "/api/entries", "/api/auth/logout"]) {
+            expect(matches(url)).toBe(true);
+        }
+        for (const url of ["/_next/static/chunks/app.js", "/icon.svg", "/favicon.ico"]) {
+            expect(matches(url)).toBe(false);
+        }
+    });
+
     it("sends signed-out page requests to sign-in, even with a file extension", () => {
         for (const path of ["/today", "/today.x", "/entries/1.json"]) {
             expect(signedOut(path).headers.get("location")).toBe("https://dailylog.example/login");
