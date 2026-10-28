@@ -251,6 +251,21 @@ describe("LogbookRepository", () => {
         expect(logbook.listHistory(OWNER, { limit: 10, offset: 0, query: "100%" }).total).toBe(0);
     });
 
+    it("lists a meal at exactly midnight on its own day only", () => {
+        const midnight = logbook.createEntry(OWNER, {
+            kind: "meal",
+            label: "Snack",
+            startAt: "2026-08-31T00:00:00+00:00",
+            text: "",
+        });
+        const ids = (from: string, to: string) =>
+            logbook.listEntriesInRange(OWNER, from, to).map((entry) => entry.id);
+        expect(ids("2026-08-31T00:00:00+00:00", "2026-09-01T00:00:00+00:00")).toEqual([
+            midnight.id,
+        ]);
+        expect(ids("2026-08-30T00:00:00+00:00", "2026-08-31T00:00:00+00:00")).toEqual([]);
+    });
+
     it("lists trashed weigh-ins with their weight so the UI can format the unit", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         logbook.softDeleteWeighIn(OWNER, weighIn.id);

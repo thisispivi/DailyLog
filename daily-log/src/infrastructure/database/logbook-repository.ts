@@ -797,8 +797,11 @@ function entryWhere(userId: number, filters: Omit<EntryFilters, "limit" | "offse
         parameters.push(query, query);
     }
     if (filters.from) {
-        clauses.push("COALESCE(end_at, start_at) > ?");
-        parameters.push(filters.from);
+        // A meal is an instant, so one at exactly `from` belongs to this range.
+        clauses.push(
+            "((kind = 'meal' AND start_at >= ?) OR (kind != 'meal' AND COALESCE(end_at, start_at) > ?))",
+        );
+        parameters.push(filters.from, filters.from);
     }
     if (filters.to) {
         clauses.push("start_at < ?");
