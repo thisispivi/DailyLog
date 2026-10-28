@@ -394,6 +394,19 @@ describe("LogbookRepository", () => {
         });
     });
 
+    it("reads default settings without writing, and saves the first change", () => {
+        const count = () =>
+            (database.prepare("SELECT COUNT(*) AS n FROM user_settings").get() as { n: number }).n;
+        expect(logbook.getSettings(OWNER)).toMatchObject({ locale: "en", weightUnit: "kg" });
+        expect(count()).toBe(0);
+        expect(logbook.updateSettings(OWNER, { locale: "it" })).toMatchObject({
+            locale: "it",
+            weightUnit: "kg",
+        });
+        expect(count()).toBe(1);
+        expect(logbook.getSettings(STRANGER).locale).toBe("en");
+    });
+
     it("stores one password hash per owner and replaces it on change", () => {
         expect(logbook.getPasswordHash(OWNER)).toBeNull();
         logbook.setPasswordHash(OWNER, "scrypt:a:b");
