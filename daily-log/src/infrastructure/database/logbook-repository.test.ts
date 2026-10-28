@@ -145,6 +145,17 @@ describe("LogbookRepository", () => {
         expect(logbook.exportBackup(STRANGER, backup.exportedAt)).toEqual(backup);
     });
 
+    it("restores when the goal was set, so its progress survives a restore", () => {
+        logbook.updateProfile(OWNER, { goalWeightGrams: 70_000 });
+        database
+            .prepare("UPDATE user_profiles SET goal_set_at = ? WHERE user_id = ?")
+            .run("2026-01-05T08:00:00.000+00:00", OWNER);
+        const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
+        expect(backup.profile.goalSetAt).toBe("2026-01-05T08:00:00.000+00:00");
+        logbook.importBackup(STRANGER, backup);
+        expect(logbook.getGoalSetAt(STRANGER)).toBe("2026-01-05T08:00:00.000+00:00");
+    });
+
     it("rolls back the whole import when it would open a second activity", () => {
         const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
         startRun();

@@ -247,7 +247,7 @@ export class LogbookRepository {
             })),
             exportedAt,
             notes,
-            profile: this.getProfile(userId),
+            profile: { ...this.getProfile(userId), goalSetAt: this.getGoalSetAt(userId) },
             settings: { exportLocale, locale, theme, timeFormat, weightUnit },
             version: BACKUP_VERSION,
             weighIns: weighIns.map((row) => ({
@@ -265,7 +265,14 @@ export class LogbookRepository {
     importBackup(userId: number, backup: Backup): ImportResult {
         return this.database.transaction(() => {
             this.updateSettings(userId, backup.settings);
-            this.updateProfile(userId, backup.profile);
+            const { goalSetAt, ...profile } = backup.profile;
+            this.updateProfile(userId, profile);
+            // Keep the goal's original start, so its progress survives a restore.
+            if (goalSetAt && profile.goalWeightGrams !== null) {
+                this.database
+                    .prepare("UPDATE user_profiles SET goal_set_at = ? WHERE user_id = ?")
+                    .run(toStorageTimestamp(goalSetAt), userId);
+            }
             const hasEntry = this.database.prepare(
                 `SELECT 1 FROM entries WHERE user_id = ? AND deleted_at IS NULL AND kind = ?
            AND label = ? AND text = ? AND start_at = ? AND end_at IS ?`,
