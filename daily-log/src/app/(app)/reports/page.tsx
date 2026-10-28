@@ -55,7 +55,10 @@ export default function ReportsPage() {
                             weightUnit={weightUnit}
                         />
                     </div>
-                    <TrainingChart activities={trainingMinutesByLabel(entries)} locale={locale} />
+                    <TrainingChart
+                        activities={trainingMinutesByLabel(entries, [from, to])}
+                        locale={locale}
+                    />
                 </div>
                 <ExportPanel
                     defaultFrom={dates[0] ?? today}
