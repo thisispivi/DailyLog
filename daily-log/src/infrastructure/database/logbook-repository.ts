@@ -83,18 +83,21 @@ type WhereClause = { parameters: Array<number | string>; sql: string };
 export class LogbookRepository {
     constructor(private readonly database: Database.Database = getDatabase()) {}
 
+    /** The owner's settings, or the defaults until they first change one. */
     getSettings(userId: number): UserSettings {
-        this.database
-            .prepare(
-                `INSERT OR IGNORE INTO user_settings
-          (user_id, locale, export_locale, weight_unit, theme)
-         VALUES (?, 'en', 'en', 'kg', 'system')`,
-            )
-            .run(userId);
         const row = this.database
             .prepare("SELECT * FROM user_settings WHERE user_id = ?")
-            .get(userId) as SettingsRow;
-        return mapSettings(row);
+            .get(userId) as SettingsRow | undefined;
+        return row
+            ? mapSettings(row)
+            : {
+                  exportLocale: "en",
+                  locale: "en",
+                  theme: "system",
+                  timeFormat: "24h",
+                  userId,
+                  weightUnit: "kg",
+              };
     }
 
     /** The owner's password hash, or null while APP_PASSWORD is still the password. */
@@ -138,17 +141,20 @@ export class LogbookRepository {
         const current = this.getSettings(userId);
         this.database
             .prepare(
-                `UPDATE user_settings
-         SET locale = ?, export_locale = ?, weight_unit = ?, theme = ?, time_format = ?
-         WHERE user_id = ?`,
+                `INSERT INTO user_settings
+           (user_id, locale, export_locale, weight_unit, theme, time_format)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET locale = excluded.locale,
+           export_locale = excluded.export_locale, weight_unit = excluded.weight_unit,
+           theme = excluded.theme, time_format = excluded.time_format`,
             )
             .run(
+                userId,
                 changes.locale ?? current.locale,
                 changes.exportLocale ?? current.exportLocale,
                 changes.weightUnit ?? current.weightUnit,
                 changes.theme ?? current.theme,
                 changes.timeFormat ?? current.timeFormat,
-                userId,
             );
         return this.getSettings(userId);
     }
