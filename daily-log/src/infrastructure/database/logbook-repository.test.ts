@@ -323,13 +323,16 @@ describe("LogbookRepository", () => {
         ]);
     });
 
-    it("purges trash older than the retention window only", () => {
+    it("purges only the owner's trash older than the retention window", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         logbook.softDeleteWeighIn(OWNER, weighIn.id);
         const in29Days = new Date(Date.now() + 29 * 24 * 60 * 60 * 1000);
         const in31Days = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
-        expect(logbook.purgeExpiredTrash(in29Days)).toBe(0);
-        expect(logbook.purgeExpiredTrash(in31Days)).toBe(1);
+        const strangers = logbook.createWeighIn(STRANGER, 72400, "2026-08-31T07:00:00+02:00");
+        logbook.softDeleteWeighIn(STRANGER, strangers.id);
+        expect(logbook.purgeExpiredTrash(OWNER, in29Days)).toBe(0);
+        expect(logbook.purgeExpiredTrash(OWNER, in31Days)).toBe(1);
+        expect(logbook.listTrash(STRANGER)).toHaveLength(1);
     });
 
     it("reports the full recorded range across entries and weigh-ins", () => {
