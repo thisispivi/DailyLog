@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.4.1](https://github.com/thisispivi/DailyLog/compare/v2.4.0...v2.4.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **auth:** allow sign-in with a Settings password when APP_PASSWORD is unset ([9518480](https://github.com/thisispivi/DailyLog/commit/9518480b0a5a1a142f90d1658d3140c3476486d7)), closes [#251](https://github.com/thisispivi/DailyLog/issues/251)
+* **auth:** stop failed sign-ins from others locking the owner out ([749a57c](https://github.com/thisispivi/DailyLog/commit/749a57ceaf0afb379a47b0e02fdecdc03b06a588)), closes [#250](https://github.com/thisispivi/DailyLog/issues/250)
+* **backup:** import the rest of a backup when an activity is already open ([06a2923](https://github.com/thisispivi/DailyLog/commit/06a292316a4fbf8a6000330247b51871ffd96102)), closes [#249](https://github.com/thisispivi/DailyLog/issues/249)
+* **backup:** keep when the weight goal was set across a restore ([52478cb](https://github.com/thisispivi/DailyLog/commit/52478cb5d892a054931307a44c2155b557bb3e27)), closes [#248](https://github.com/thisispivi/DailyLog/issues/248)
+* **logbook:** delete a day exactly as the day view lists it ([766925f](https://github.com/thisispivi/DailyLog/commit/766925f03f732ad5b22127bcf89e4c811ecda3c5)), closes [#247](https://github.com/thisispivi/DailyLog/issues/247)
+* **logbook:** keep a meal at local midnight on its own day ([adc8294](https://github.com/thisispivi/DailyLog/commit/adc829486d4e403f44262f295b73d1600fdb228c)), closes [#245](https://github.com/thisispivi/DailyLog/issues/245)
+* **logbook:** show activities still open from an earlier day ([3493317](https://github.com/thisispivi/DailyLog/commit/3493317e4db6349c10780e50163ddb3dda6549cb)), closes [#246](https://github.com/thisispivi/DailyLog/issues/246)
+* **trash:** purge only the owner's expired trash ([e6672d3](https://github.com/thisispivi/DailyLog/commit/e6672d39999549a9d0832b31af12e897db4d9705)), closes [#253](https://github.com/thisispivi/DailyLog/issues/253)
+
+
+### Performance Improvements
+
+* **settings:** read settings without writing to the database ([3763c63](https://github.com/thisispivi/DailyLog/commit/3763c63dc3886fea44e04b874f0705e9af08a3a9)), closes [#254](https://github.com/thisispivi/DailyLog/issues/254)
+
 ## [2.4.0](https://github.com/thisispivi/DailyLog/compare/v2.3.0...v2.4.0) (2026-10-22)
 
 
