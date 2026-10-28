@@ -22,8 +22,10 @@ export function DayNote({
     const [text, setText] = useState(initialText);
     const [status, setStatus] = useState<Status>("idle");
     const savedText = useRef(initialText);
+    const latestText = useRef(initialText);
 
     useEffect(() => {
+        latestText.current = text;
         if (text === savedText.current) return;
         const timer = window.setTimeout(async () => {
             setStatus("saving");
@@ -33,6 +35,21 @@ export function DayNote({
         }, AUTOSAVE_DELAY_MS);
         return () => window.clearTimeout(timer);
     }, [day, text]);
+
+    // Switching day or page unmounts the note and cancels the timer above, so send
+    // what is still unsaved with a request that outlives the component.
+    useEffect(
+        () => () => {
+            if (latestText.current === savedText.current) return;
+            void sendJson(
+                `/api/notes/${day}`,
+                "PUT",
+                { text: latestText.current },
+                { keepalive: true },
+            );
+        },
+        [day],
+    );
 
     const statusText = {
         error: translate(locale, "common.error"),
