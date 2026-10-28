@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.4.2](https://github.com/thisispivi/DailyLog/compare/v2.4.1...v2.4.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **notes:** save a pending note when leaving the day ([9f0f9a2](https://github.com/thisispivi/DailyLog/commit/9f0f9a20ee27fb390aba21169419bd396ceb4aa4)), closes [#266](https://github.com/thisispivi/DailyLog/issues/266)
+* **notes:** send one note save at a time ([345d5e6](https://github.com/thisispivi/DailyLog/commit/345d5e6a506440a2f8fe26b8fc47e89e2ad3e486)), closes [#267](https://github.com/thisispivi/DailyLog/issues/267)
+* **reports:** count only training minutes inside the period ([9b70b95](https://github.com/thisispivi/DailyLog/commit/9b70b95c093785219ae200fc158cd89a4c653b32)), closes [#269](https://github.com/thisispivi/DailyLog/issues/269)
+
+
+### Performance Improvements
+
+* **insights:** work out each day's bounds once in daily totals ([20bcc7a](https://github.com/thisispivi/DailyLog/commit/20bcc7af2d5010a993a49989e6d7b1c7bdb78b9c)), closes [#270](https://github.com/thisispivi/DailyLog/issues/270)
+* **trash:** delete expired trash only when there is some ([1eda590](https://github.com/thisispivi/DailyLog/commit/1eda590d5f9609f83d85fdfa289d31588edec5b9)), closes [#271](https://github.com/thisispivi/DailyLog/issues/271)
+
 ## [2.4.1](https://github.com/thisispivi/DailyLog/compare/v2.4.0...v2.4.1) (2026-10-28)
 
 
