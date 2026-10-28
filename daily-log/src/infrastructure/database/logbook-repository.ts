@@ -259,8 +259,9 @@ export class LogbookRepository {
 
     /**
      * Restores a backup in one transaction: settings and profile are replaced,
-     * records are added unless an identical live one exists, and a day that
-     * already has a note keeps it. Importing the same file twice adds nothing.
+     * records are added unless an identical live one exists or they would open a
+     * second activity, and a day that already has a note keeps it. Importing the
+     * same file twice adds nothing.
      */
     importBackup(userId: number, backup: Backup): ImportResult {
         return this.database.transaction(() => {
@@ -292,6 +293,8 @@ export class LogbookRepository {
                 if (hasEntry.get(userId, entry.kind, entry.label, entry.text, startAt, endAt)) {
                     continue;
                 }
+                // Only one activity may be open; the one already running wins.
+                if (entry.kind !== "meal" && !endAt && this.activeActivity(userId)) continue;
                 this.createEntry(userId, entry);
                 entries += 1;
             }
