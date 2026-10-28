@@ -191,24 +191,39 @@ describe("mealLabelForHour", () => {
 });
 
 describe("trainingMinutesByLabel", () => {
+    const period = ["2026-10-07T00:00:00+00:00", "2026-10-09T00:00:00+00:00"] as const;
+
     it("adds finished sessions per activity, longest first, and skips open ones", () => {
         const run = (start: string, end: string | null) =>
             entry({ endAt: end, kind: "training", label: "Run", startAt: start });
         expect(
-            trainingMinutesByLabel([
-                run("2026-10-07T06:00:00+00:00", "2026-10-07T06:30:00+00:00"),
-                run("2026-10-08T06:00:00+00:00", "2026-10-08T06:45:00+00:00"),
-                run("2026-10-08T18:00:00+00:00", null),
-                entry({
-                    endAt: "2026-10-08T19:00:00+00:00",
-                    kind: "training",
-                    label: "Gym",
-                    startAt: "2026-10-08T18:00:00+00:00",
-                }),
-            ]),
+            trainingMinutesByLabel(
+                [
+                    run("2026-10-07T06:00:00+00:00", "2026-10-07T06:30:00+00:00"),
+                    run("2026-10-08T06:00:00+00:00", "2026-10-08T06:45:00+00:00"),
+                    run("2026-10-08T18:00:00+00:00", null),
+                    entry({
+                        endAt: "2026-10-08T19:00:00+00:00",
+                        kind: "training",
+                        label: "Gym",
+                        startAt: "2026-10-08T18:00:00+00:00",
+                    }),
+                ],
+                period,
+            ),
         ).toEqual([
             { label: "Run", minutes: 75 },
             { label: "Gym", minutes: 60 },
         ]);
+    });
+
+    it("counts only the part of a session inside the period", () => {
+        const ride = entry({
+            endAt: "2026-10-07T01:00:00+00:00",
+            kind: "training",
+            label: "Ride",
+            startAt: "2026-10-06T23:00:00+00:00",
+        });
+        expect(trainingMinutesByLabel([ride], period)).toEqual([{ label: "Ride", minutes: 60 }]);
     });
 });

@@ -163,12 +163,22 @@ export function mealLabelForHour(hour: number): MealLabel {
 
 export type ActivityTotal = Readonly<{ label: string; minutes: number }>;
 
-/** Minutes of finished training per activity label, longest first. */
-export function trainingMinutesByLabel(entries: readonly Entry[], limit = 5): ActivityTotal[] {
+/**
+ * Minutes of finished training per activity label, longest first. Only the part
+ * inside the period's UTC bounds counts, like the daily totals.
+ */
+export function trainingMinutesByLabel(
+    entries: readonly Entry[],
+    [from, to]: readonly [string, string],
+    limit = 5,
+): ActivityTotal[] {
     const totals = new Map<string, number>();
     for (const entry of entries) {
-        if (entry.kind !== "training") continue;
-        totals.set(entry.label, (totals.get(entry.label) ?? 0) + entryDurationMs(entry) / 60_000);
+        if (entry.kind !== "training" || !entry.endAt) continue;
+        const overlap =
+            Math.min(Date.parse(entry.endAt), Date.parse(to)) -
+            Math.max(Date.parse(entry.startAt), Date.parse(from));
+        if (overlap > 0) totals.set(entry.label, (totals.get(entry.label) ?? 0) + overlap / 60_000);
     }
     return [...totals]
         .map(([label, minutes]) => ({ label, minutes: Math.round(minutes) }))
