@@ -266,6 +266,21 @@ describe("LogbookRepository", () => {
         expect(ids("2026-08-30T00:00:00+00:00", "2026-08-31T00:00:00+00:00")).toEqual([]);
     });
 
+    it("lists an activity still open from an earlier day", () => {
+        const sleep = logbook.createEntry(OWNER, {
+            kind: "sleep",
+            label: "Sleep",
+            startAt: "2026-08-30T23:30:00+00:00",
+            text: "",
+        });
+        const nextDay = logbook.listEntriesInRange(
+            OWNER,
+            "2026-08-31T00:00:00+00:00",
+            "2026-09-01T00:00:00+00:00",
+        );
+        expect(nextDay.map((entry) => entry.id)).toEqual([sleep.id]);
+    });
+
     it("lists trashed weigh-ins with their weight so the UI can format the unit", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         logbook.softDeleteWeighIn(OWNER, weighIn.id);
