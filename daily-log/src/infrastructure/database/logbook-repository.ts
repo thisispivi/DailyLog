@@ -749,7 +749,7 @@ export class LogbookRepository {
     }
 
     listTrash(userId: number, limit = 100): TrashItem[] {
-        this.purgeExpiredTrash();
+        this.purgeExpiredTrash(userId);
         const rows = this.database
             .prepare(
                 `SELECT 'entry' AS record_type, id AS record_id, kind, label, NULL AS weight_grams, deleted_at
@@ -776,18 +776,18 @@ export class LogbookRepository {
         if (result.changes === 0) throw new RecordNotFoundError("Trash item not found.");
     }
 
-    /** Hard-deletes records trashed before the retention window, for every owner. */
-    purgeExpiredTrash(now = new Date()): number {
+    /** Hard-deletes the owner's records trashed before the retention window. */
+    purgeExpiredTrash(userId: number, now = new Date()): number {
         const cutoff = toStorageTimestamp(
             new Date(now.getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
         );
         return this.database.transaction(() => {
             const entries = this.database
-                .prepare("DELETE FROM entries WHERE deleted_at < ?")
-                .run(cutoff).changes;
+                .prepare("DELETE FROM entries WHERE user_id = ? AND deleted_at < ?")
+                .run(userId, cutoff).changes;
             const weighIns = this.database
-                .prepare("DELETE FROM weigh_ins WHERE deleted_at < ?")
-                .run(cutoff).changes;
+                .prepare("DELETE FROM weigh_ins WHERE user_id = ? AND deleted_at < ?")
+                .run(userId, cutoff).changes;
             return entries + weighIns;
         })();
     }
