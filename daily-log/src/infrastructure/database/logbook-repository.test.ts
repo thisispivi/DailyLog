@@ -281,6 +281,26 @@ describe("LogbookRepository", () => {
         expect(nextDay.map((entry) => entry.id)).toEqual([sleep.id]);
     });
 
+    it("deletes a day's entries exactly as the day view lists them", () => {
+        const day = ["2026-08-31T00:00:00+00:00", "2026-09-01T00:00:00+00:00"] as const;
+        const at = (startAt: string, kind: "meal" | "sleep" = "meal", endAt?: string) =>
+            logbook.createEntry(OWNER, { endAt, kind, label: "Record", startAt, text: "" });
+        at("2026-08-30T22:00:00+00:00", "sleep", "2026-08-31T06:00:00+00:00");
+        at("2026-08-31T00:00:00+00:00");
+        at("2026-08-30T23:59:00+00:00");
+        at("2026-09-01T00:00:00+00:00");
+        const listed = logbook.listEntriesInRange(OWNER, ...day).map((entry) => entry.id);
+        expect(listed).toHaveLength(2);
+        expect(logbook.softDeleteEntriesBetween(OWNER, ...day)).toBe(listed.length);
+        expect(logbook.listEntriesInRange(OWNER, ...day)).toEqual([]);
+        expect(
+            logbook
+                .listTrash(OWNER)
+                .map((item) => item.recordId)
+                .sort(),
+        ).toEqual(listed.sort());
+    });
+
     it("lists trashed weigh-ins with their weight so the UI can format the unit", () => {
         const weighIn = logbook.createWeighIn(OWNER, 72400, "2026-08-31T07:00:00+02:00");
         logbook.softDeleteWeighIn(OWNER, weighIn.id);

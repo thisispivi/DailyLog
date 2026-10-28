@@ -572,17 +572,16 @@ export class LogbookRepository {
         if (result.changes === 0) throw new RecordNotFoundError("Entry not found.");
     }
 
-    /** Trashes meals inside the range and activities overlapping it; weigh-ins are kept. */
+    /**
+     * Trashes exactly the entries a day view of the range lists: meals inside it and
+     * activities overlapping it. Weigh-ins are kept.
+     */
     softDeleteEntriesBetween(userId: number, from: string, to: string): number {
         const now = storageNow();
+        const where = entryWhere(userId, { from, to });
         const result = this.database
-            .prepare(
-                `UPDATE entries SET deleted_at = ?, updated_at = ?
-         WHERE user_id = ? AND deleted_at IS NULL AND start_at < ?
-           AND ((kind = 'meal' AND start_at >= ?)
-             OR (kind IN ('training', 'sleep') AND (end_at IS NULL OR end_at > ?)))`,
-            )
-            .run(now, now, userId, to, from, from);
+            .prepare(`UPDATE entries SET deleted_at = ?, updated_at = ? WHERE ${where.sql}`)
+            .run(now, now, ...where.parameters);
         return result.changes;
     }
 
