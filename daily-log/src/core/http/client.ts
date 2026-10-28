@@ -2,15 +2,18 @@ type JsonMethod = "DELETE" | "PATCH" | "POST" | "PUT";
 
 /**
  * Sends a same-origin JSON request from the browser. Network failures resolve to
- * status 0 so callers handle every outcome in one place.
+ * status 0 so callers handle every outcome in one place. `keepalive` lets the
+ * request finish after the page or component that sent it is gone.
  */
 export async function sendJson(
     path: string,
     method: JsonMethod,
     body?: unknown,
+    { keepalive = false }: { keepalive?: boolean } = {},
 ): Promise<{ ok: boolean; status: number }> {
     try {
         const response = await fetch(path, {
+            keepalive,
             method,
             ...(body === undefined
                 ? {}
