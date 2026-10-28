@@ -135,7 +135,11 @@ export async function destroySession(request: NextRequest): Promise<void> {
     (await cookies()).set(SESSION_COOKIE, "", sessionCookieOptions(request, 0));
 }
 
-/** Validates signature, expiry, shape, and owner binding for the current session cookie. */
+/**
+ * Validates signature, expiry, shape, and owner binding for the current session cookie.
+ * The version is not checked here: core code can't reach the database, so the proxy
+ * removes a revoked cookie before any route or page reads it (see proxy.test.ts).
+ */
 export async function readSession(): Promise<SessionPayload | null> {
     const environment = getEnvironment();
     if (!environment.sessionSecret) return null;
