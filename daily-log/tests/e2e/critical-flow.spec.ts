@@ -125,6 +125,18 @@ test.describe("sheet", () => {
         await expect(trigger).toBeFocused();
     });
 
+    test("date popover keeps Done reachable in a six-week month", async ({ page }) => {
+        await page.clock.setFixedTime(new Date("2026-11-15T12:00:00Z"));
+        await page.getByRole("button", { name: /^Active:/ }).click();
+        const sheet = page.getByRole("dialog");
+        const popover = page.locator('.date-popover[data-state="open"]');
+
+        await sheet.locator("#record-start").click();
+        await expect(popover.locator(".rdp-week")).toHaveCount(6);
+        await popover.getByRole("button", { name: "Done" }).click();
+        await expect(popover).toHaveCount(0);
+    });
+
     test("a range end opens on the start day", async ({ page }) => {
         await page.getByRole("button", { name: /^Active:/ }).click();
         const sheet = page.getByRole("dialog");

@@ -148,6 +148,9 @@
 }
 
 .date-popover {
+    /* A six-week month with the time row can be taller than the space beside the trigger. */
+    max-height: var(--radix-popover-content-available-height);
+    overflow-y: auto;
     padding: 12px;
     font-size: 14px;
     font-weight: 600;
