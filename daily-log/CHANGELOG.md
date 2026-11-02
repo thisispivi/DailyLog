@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.3](https://github.com/thisispivi/DailyLog/compare/v2.4.2...v2.4.3) (2026-11-02)
+
+
+### Bug Fixes
+
+* **ui:** keep the date popover inside the viewport in six-week months ([a79d2d6](https://github.com/thisispivi/DailyLog/commit/a79d2d68f5f54c1605ba5774a34c372e8ac4077f))
+
 ## [2.4.2](https://github.com/thisispivi/DailyLog/compare/v2.4.1...v2.4.2) (2026-10-28)
 
 
