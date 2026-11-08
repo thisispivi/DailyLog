@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.4](https://github.com/thisispivi/DailyLog/compare/v2.4.3...v2.4.4) (2026-11-08)
+
+
+### Security
+
+* **deps:** bump next to 16.4.5, which fixes seven advisories including GHSA-pc58-hwjq-p385 and GHSA-f3mh-rxg3-f5g2 ([c5d2e61](https://github.com/thisispivi/DailyLog/commit/c5d2e61))
+
+
+### Dependencies
+
+* bump lucide-react to 1.69.0 ([c5d2e61](https://github.com/thisispivi/DailyLog/commit/c5d2e61))
+* bump eslint-config-next to 16.4.5 and vitest to 5.1.0 ([afd9080](https://github.com/thisispivi/DailyLog/commit/afd9080))
+
 ## [2.4.3](https://github.com/thisispivi/DailyLog/compare/v2.4.2...v2.4.3) (2026-11-02)
 
 
