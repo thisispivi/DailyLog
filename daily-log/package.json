@@ -50,12 +50,12 @@
     "@types/react-dom": "19.3.0",
     "@types/sql.js": "1.4.11",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.5",
     "prettier": "3.9.10",
     "sql.js": "1.15.2",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
