@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.5](https://github.com/thisispivi/DailyLog/compare/v2.4.4...v2.4.5) (2026-11-09)
+
+
+### Dependencies
+
+* bump @playwright/test to 1.65.0 ([5c806c2](https://github.com/thisispivi/DailyLog/commit/5c806c2))
+
 ## [2.4.4](https://github.com/thisispivi/DailyLog/compare/v2.4.3...v2.4.4) (2026-11-08)
 
 
