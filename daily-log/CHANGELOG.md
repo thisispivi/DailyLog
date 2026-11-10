@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/thisispivi/DailyLog/compare/v2.6.0...v2.6.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* remove the hint under the travel day button ([58dc9bd](https://github.com/thisispivi/DailyLog/commit/58dc9bd2bcbe3ad05d2ab3b7410617c2d82ddb25)), closes [#300](https://github.com/thisispivi/DailyLog/issues/300)
+
 ## [2.6.0](https://github.com/thisispivi/DailyLog/compare/v2.5.0...v2.6.0) (2026-11-10)
 
 
