@@ -61,7 +61,12 @@ export type DayNote = Readonly<{ day: string; text: string; updatedAt: string }>
 export const DAY_NOTE_MAX_LENGTH = 10_000;
 
 /** What was logged about one local calendar day (YYYY-MM-DD) as a whole. */
-export type DayLog = Readonly<{ day: string; steps: number | null }>;
+export type DayLog = Readonly<{
+    day: string;
+    steps: number | null;
+    /** A travel day: tracking is harder and the diet is not followed exactly. */
+    travel: boolean;
+}>;
 
 export const MAX_DAILY_STEPS = 200_000;
 

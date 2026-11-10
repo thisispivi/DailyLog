@@ -8,6 +8,17 @@
     color: var(--primary);
 }
 
+.day-log {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.day-log-travel {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+}
+
 .day-log .status-message {
     min-height: 0;
 }

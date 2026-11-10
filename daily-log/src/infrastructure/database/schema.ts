@@ -4,7 +4,7 @@ import type Database from "better-sqlite3";
  * Free of Node APIs, so the browser demo can run the same migrations on SQLite
  * compiled to WebAssembly.
  */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /** Applies all additive schema changes in one transaction for app startup and tests. */
 export function migrateDatabase(
@@ -118,7 +118,13 @@ export function migrateDatabase(
         user_id INTEGER PRIMARY KEY,
         version INTEGER NOT NULL CHECK (version >= 0)
       );
-      PRAGMA user_version = ${SCHEMA_VERSION};
     `);
+        const dayLogColumns = db.pragma("table_info(day_logs)") as Array<{ name: string }>;
+        if (!dayLogColumns.some((column) => column.name === "travel")) {
+            db.exec(
+                "ALTER TABLE day_logs ADD COLUMN travel INTEGER NOT NULL DEFAULT 0 CHECK (travel IN (0, 1))",
+            );
+        }
+        db.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
     })();
 }

@@ -100,10 +100,12 @@
     white-space: nowrap;
 }
 
-.calendar-note {
+.calendar-marks {
     position: absolute;
     top: 9px;
     right: 8px;
+    display: flex;
+    gap: 3px;
     color: var(--primary);
 }
 
@@ -138,9 +140,13 @@
         font-size: 0;
     }
 
-    .calendar-note {
+    .calendar-marks {
         top: 4px;
         right: 3px;
+        gap: 1px;
+    }
+
+    .calendar-marks svg {
         width: 10px;
         height: 10px;
     }

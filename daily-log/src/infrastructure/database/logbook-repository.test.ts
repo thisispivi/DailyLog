@@ -71,15 +71,29 @@ describe("LogbookRepository", () => {
         expect(logbook.saveDayLog(OWNER, "2026-10-09", { steps: 11_500 })).toEqual({
             day: "2026-10-09",
             steps: 11_500,
+            travel: false,
         });
         logbook.saveDayLog(OWNER, "2026-10-09", { steps: 9_000 });
         logbook.saveDayLog(OWNER, "2026-10-12", { steps: 4_000 });
         expect(logbook.getDayLog(STRANGER, "2026-10-09")).toBeNull();
         expect(logbook.listDayLogs(OWNER, "2026-10-01", "2026-10-10")).toEqual([
-            { day: "2026-10-09", steps: 9_000 },
+            { day: "2026-10-09", steps: 9_000, travel: false },
         ]);
         expect(logbook.saveDayLog(OWNER, "2026-10-09", { steps: null })).toBeNull();
         expect(logbook.getDayLog(OWNER, "2026-10-09")).toBeNull();
+    });
+
+    it("keeps a travel day without steps until both are cleared", () => {
+        logbook.saveDayLog(OWNER, "2026-10-09", { steps: 8_000, travel: true });
+        expect(logbook.saveDayLog(OWNER, "2026-10-09", { steps: null })).toEqual({
+            day: "2026-10-09",
+            steps: null,
+            travel: true,
+        });
+        expect(() =>
+            database.prepare("UPDATE day_logs SET travel = 2 WHERE user_id = ?").run(OWNER),
+        ).toThrow(/CHECK/);
+        expect(logbook.saveDayLog(OWNER, "2026-10-09", { travel: false })).toBeNull();
     });
 
     it("restarts the goal only when the goal weight changes", () => {
@@ -98,7 +112,7 @@ describe("LogbookRepository", () => {
         startRun();
         logbook.createWeighIn(OWNER, 73_200, "2026-08-31T07:00:00+02:00");
         logbook.saveDayNote(OWNER, "2026-08-31", "Felt good");
-        logbook.saveDayLog(OWNER, "2026-08-31", { steps: 12_000 });
+        logbook.saveDayLog(OWNER, "2026-08-31", { steps: 12_000, travel: true });
         logbook.updateProfile(OWNER, { firstName: "Ada", heightCm: 180 });
         const backup = logbook.exportBackup(OWNER, "2026-09-01T00:00:00+00:00");
 
@@ -415,7 +429,7 @@ describe("legacy schema migration", () => {
             time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(12);
+        expect(database.pragma("user_version", { simple: true })).toBe(13);
         database.close();
     });
 });

@@ -73,6 +73,8 @@ type ProfileRow = {
     last_name: string;
 };
 
+type DayLogRow = { day: string; steps: number | null; travel: 0 | 1 };
+
 type TrashRow = {
     kind: EntryKind | null;
     deleted_at: string;
@@ -247,9 +249,11 @@ export class LogbookRepository {
         const notes = this.database
             .prepare("SELECT day, text FROM day_notes WHERE user_id = ? ORDER BY day")
             .all(userId) as Array<{ day: string; text: string }>;
-        const days = this.database
-            .prepare("SELECT day, steps FROM day_logs WHERE user_id = ? ORDER BY day")
-            .all(userId) as Array<{ day: string; steps: number | null }>;
+        const days = (
+            this.database
+                .prepare("SELECT day, steps, travel FROM day_logs WHERE user_id = ? ORDER BY day")
+                .all(userId) as DayLogRow[]
+        ).map(mapDayLog);
         return {
             app: "DailyLog",
             days,
@@ -302,8 +306,8 @@ export class LogbookRepository {
          VALUES (?, ?, ?, ?)`,
             );
             const addDayLog = this.database.prepare(
-                `INSERT OR IGNORE INTO day_logs (user_id, day, steps, updated_at)
-         VALUES (?, ?, ?, ?)`,
+                `INSERT OR IGNORE INTO day_logs (user_id, day, steps, travel, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
             );
             let entries = 0;
             for (const entry of backup.entries) {
@@ -329,7 +333,9 @@ export class LogbookRepository {
                 (count, note) => count + addNote.run(userId, note.day, note.text, now).changes,
                 0,
             );
-            for (const day of backup.days) addDayLog.run(userId, day.day, day.steps, now);
+            for (const day of backup.days) {
+                addDayLog.run(userId, day.day, day.steps, Number(day.travel), now);
+            }
             return { entries, notes, weighIns };
         })();
     }
@@ -732,25 +738,26 @@ export class LogbookRepository {
 
     getDayLog(userId: number, day: string): DayLog | null {
         const row = this.database
-            .prepare("SELECT day, steps FROM day_logs WHERE user_id = ? AND day = ?")
-            .get(userId, day) as DayLog | undefined;
-        return row ?? null;
+            .prepare("SELECT day, steps, travel FROM day_logs WHERE user_id = ? AND day = ?")
+            .get(userId, day) as DayLogRow | undefined;
+        return row ? mapDayLog(row) : null;
     }
 
     /** Day logs between two local dates, inclusive, oldest first. */
     listDayLogs(userId: number, fromDay: string, toDay: string): DayLog[] {
-        return this.database
+        const rows = this.database
             .prepare(
-                `SELECT day, steps FROM day_logs
+                `SELECT day, steps, travel FROM day_logs
          WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day`,
             )
-            .all(userId, fromDay, toDay) as DayLog[];
+            .all(userId, fromDay, toDay) as DayLogRow[];
+        return rows.map(mapDayLog);
     }
 
     /** Applies changes to a day's log; a day with nothing left is removed. */
     saveDayLog(userId: number, day: string, changes: DayLogChanges): DayLog | null {
-        const next = { steps: null, ...this.getDayLog(userId, day), ...changes };
-        if (next.steps === null) {
+        const next = { steps: null, travel: false, ...this.getDayLog(userId, day), ...changes };
+        if (next.steps === null && !next.travel) {
             this.database
                 .prepare("DELETE FROM day_logs WHERE user_id = ? AND day = ?")
                 .run(userId, day);
@@ -758,10 +765,11 @@ export class LogbookRepository {
         }
         this.database
             .prepare(
-                `INSERT INTO day_logs (user_id, day, steps, updated_at) VALUES (?, ?, ?, ?)
-         ON CONFLICT (user_id, day) DO UPDATE SET steps = excluded.steps, updated_at = excluded.updated_at`,
+                `INSERT INTO day_logs (user_id, day, steps, travel, updated_at) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, day) DO UPDATE SET steps = excluded.steps, travel = excluded.travel,
+           updated_at = excluded.updated_at`,
             )
-            .run(userId, day, next.steps, storageNow());
+            .run(userId, day, next.steps, Number(next.travel), storageNow());
         return this.getDayLog(userId, day);
     }
 
@@ -857,6 +865,10 @@ function withActivityConstraint<T>(write: () => T): T {
         }
         throw error;
     }
+}
+
+function mapDayLog(row: DayLogRow): DayLog {
+    return { day: row.day, steps: row.steps, travel: row.travel === 1 };
 }
 
 function storageNow(): string {

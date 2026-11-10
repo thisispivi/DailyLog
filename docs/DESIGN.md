@@ -105,7 +105,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 ## Screens and patterns
 
-**Today:** greeting with the date as eyebrow, streak pill, "Add record" button. Then the running-activity card (if any), four record-type tiles (each opens its own form directly), and a two-column row with the day timeline and the day's notes.
+**Today:** greeting with the date as eyebrow, a travel pill on travel days, streak pill, "Add record" button. Then the running-activity card (if any), four record-type tiles (each opens its own form directly), and a two-column row with the day timeline beside the day's notes and "The day" card (steps, saved on blur, and a travel-day chip). With no training logged, 10,000 steps or more fill the Active tile instead.
 
 **Logging:** always through the logger sheet. Order of fields: what (type, label/activity, details), then when (start, optional end), then actions (Back ghost on the left, primary on the right). The primary label is "Start" for an activity without an end and "Add" otherwise. Prefill sensible defaults and focus the first field the user must type in.
 
@@ -113,7 +113,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 **History:** a search field and a From/To date pair on one row, type chips below, then a list card of 20 records per page with Previous/Next under it. Filters and the page live in the URL (`?type=&q=&from=&to=&page=`), so Back, reload, and shared links keep them; either date alone leaves that side open. While the next view loads, the count pill shows a spinner and the list dims. When filters match nothing, the empty state says so and offers "Clear filters". "Move this day’s entries to trash" appears when From and To are the same day. A row opens the editor in the sheet; delete lives inside the editor, never on the row.
 
-**Calendar:** month grid starting Monday, with arrows and a "Today" link. Each day shows small figures as record-type chips (dots on phones), a note marker, a filled violet circle for today, and a violet outline for the selected day. Details for the selected day appear beside the grid (below it on phones).
+**Calendar:** month grid starting Monday, with arrows and a "Today" link. Each day shows small figures as record-type chips (dots on phones), travel and note markers, a steps chip in training colours on days with 10,000 steps or more, a filled violet circle for today, and a violet outline for the selected day. Details for the selected day appear beside the grid (below it on phones).
 
 **Reports:** a "Last 7 days" summary of tiles, charts, and an export card with one download button per format.
 

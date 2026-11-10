@@ -109,7 +109,7 @@ export const saveDayNoteSchema = z.strictObject({
 export const stepsSchema = z.number().int().min(0).max(MAX_DAILY_STEPS).nullable();
 
 export const updateDayLogSchema = z
-    .strictObject({ steps: stepsSchema })
+    .strictObject({ steps: stepsSchema, travel: z.boolean() })
     .partial()
     .refine((value) => Object.keys(value).length > 0, "At least one change is required.");
 
