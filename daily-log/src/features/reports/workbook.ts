@@ -4,9 +4,12 @@ import { translate } from "@/core/i18n/translate";
 import { localInputValue } from "@/core/time/zoned-time";
 import { gramsToUnit } from "@/features/logbook/domain";
 import {
+    type DayBadge,
+    dayBadges,
     profileLine,
     reportDays,
     summaryTiles,
+    travelSummary,
     type ReportInput,
 } from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
@@ -31,7 +34,7 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
     const toUnit = (grams: number) => Math.round(gramsToUnit(grams, input.weightUnit) * 10) / 10;
     const longDate = new Intl.DateTimeFormat(input.locale, { dateStyle: "full", timeZone: "UTC" });
 
-    const person = profileLine(input);
+    const person = [profileLine(input), travelSummary(input)].filter(Boolean).join(" · ");
     // A cell with columnSpan is followed by nulls for the columns it covers.
     const journal: SheetData = [
         [title("DailyLog", 4), null, null, null],
@@ -39,10 +42,11 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
         ...(person ? [[subtitle(neutralizeSpreadsheetFormula(person), 4), null, null, null]] : []),
         [],
         ...summaryTiles(input).map((tile) => metricRow(tile.label, tile.value, tile.kind)),
-        ...reportDays(input).flatMap(({ date, note, rows }): Cell[][] => [
+        ...reportDays(input).flatMap((day): Cell[][] => [
             [],
-            [dayHeading(capitalize(longDate.format(dayDate(date)))), null, null, null],
-            ...rows.map((row, index): Cell[] => [
+            [dayHeading(capitalize(longDate.format(dayDate(day.date)))), null, null, null],
+            ...tagRow(dayBadges(day, input)),
+            ...day.rows.map((row, index): Cell[] => [
                 { ...body(index), fontWeight: "bold", textColor: palette.muted, value: row.time },
                 kindCell(row.kind, t(`dashboard.${row.kind}`)),
                 {
@@ -56,7 +60,9 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
                     value: neutralizeSpreadsheetFormula(row.detail),
                 },
             ]),
-            ...(note ? [noteRow(t("export.columnNote"), neutralizeSpreadsheetFormula(note))] : []),
+            ...(day.note
+                ? [noteRow(t("export.columnNote"), neutralizeSpreadsheetFormula(day.note))]
+                : []),
         ]),
     ];
 
@@ -100,7 +106,7 @@ export async function createWorkbook(input: ReportInput): Promise<Buffer> {
 
     return writeExcelFile([
         {
-            columns: [{ width: 14 }, { width: 16 }, { width: 28 }, { width: 70 }],
+            columns: [{ width: 19 }, { width: 18 }, { width: 28 }, { width: 70 }],
             data: journal,
             orientation: "landscape",
             sheet: t("reports.journalSheet"),
@@ -205,6 +211,30 @@ function dayHeading(value: string): Cell {
         textColor: palette.text,
         value,
     };
+}
+
+/** The day's travel tag and steps as coloured cells under its heading, like the PDF pills. */
+function tagRow(badges: readonly DayBadge[]): Cell[][] {
+    if (!badges.length) return [];
+    const colors = {
+        steps: kindColors.training,
+        travel: { ink: palette.primary, tile: palette.primarySoft },
+    };
+    // Travel always sits in the type column and steps in the title column, so days line up.
+    const cell = (tone: DayBadge["tone"]): Cell | null => {
+        const badge = badges.find((item) => item.tone === tone);
+        return badge
+            ? {
+                  align: "center",
+                  backgroundColor: colors[tone].tile,
+                  fontWeight: "bold",
+                  height: 20,
+                  textColor: colors[tone].ink,
+                  value: badge.label,
+              }
+            : null;
+    };
+    return [[null, cell("travel"), cell("steps"), null]];
 }
 
 function noteRow(label: string, text: string): Cell[] {

@@ -9,6 +9,7 @@ import {
 import { localDateInZone, localDateRangeBounds, shiftDate } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import type {
+    DayLog,
     DayNote,
     Entry,
     Locale,
@@ -22,6 +23,7 @@ import type { RecordKind } from "@/ui/kind-icon";
 
 /** Everything an export needs; all lists are oldest first. */
 export type ReportInput = Readonly<{
+    dayLogs: readonly DayLog[];
     endDate: string;
     entries: readonly Entry[];
     locale: Locale;
@@ -44,7 +46,16 @@ export type DayRow = Readonly<{
     title: string;
 }>;
 
-export type ReportDay = Readonly<{ date: string; note: string | undefined; rows: DayRow[] }>;
+export type ReportDay = Readonly<{
+    date: string;
+    note: string | undefined;
+    rows: DayRow[];
+    steps: number | null;
+    travel: boolean;
+}>;
+
+/** A tag shown beside a day's heading. */
+export type DayBadge = Readonly<{ label: string; tone: "steps" | "travel" }>;
 
 export type SummaryTile = Readonly<{ kind: RecordKind; label: string; value: string }>;
 
@@ -55,17 +66,48 @@ function datesInRange(startDate: string, endDate: string): string[] {
 }
 
 /**
- * The days that have records or a note, oldest first. Activities that cross
+ * The days that have records, a note, steps, or a travel tag, oldest first. Activities that cross
  * midnight appear on each day with that day's part.
  */
 export function reportDays(input: ReportInput, now: Date = new Date()): ReportDay[] {
     const notes = new Map(input.notes.map((note) => [note.day, note.text]));
+    const logs = new Map(input.dayLogs.map((log) => [log.day, log]));
     const loneSnacks = loneSnackIds(input.entries, input.timeZone);
     return datesInRange(input.startDate, input.endDate).flatMap((date) => {
         const rows = rowsForDay(input, date, loneSnacks, now);
         const note = notes.get(date);
-        return rows.length || note ? [{ date, note, rows }] : [];
+        const log = logs.get(date);
+        return rows.length || note || log
+            ? [{ date, note, rows, steps: log?.steps ?? null, travel: log?.travel ?? false }]
+            : [];
     });
+}
+
+/** The travel tag and the step count of a day, in that order. */
+export function dayBadges(day: ReportDay, input: ReportInput): DayBadge[] {
+    return [
+        ...(day.travel
+            ? [{ label: translate(input.locale, "dayLog.travel"), tone: "travel" as const }]
+            : []),
+        ...(day.steps === null
+            ? []
+            : [
+                  {
+                      label: translate(input.locale, "dayLog.stepsCount", {
+                          count: formatNumber(day.steps, input.numbers),
+                      }),
+                      tone: "steps" as const,
+                  },
+              ]),
+    ];
+}
+
+/** "2 travel days" for the export header, or null when the period has none. */
+export function travelSummary(input: ReportInput): string | null {
+    const inPeriod = input.dayLogs.filter(
+        (log) => log.travel && log.day >= input.startDate && log.day <= input.endDate,
+    ).length;
+    return inPeriod ? translate(input.locale, "export.travelDays", { count: inPeriod }) : null;
 }
 
 /**
@@ -99,6 +141,11 @@ export function summaryTiles(input: ReportInput): SummaryTile[] {
     const days = dailyTotals(dates, input.entries, input.weighIns, input.timeZone);
     const summary = summarizePeriod(days);
     const change = summary.weightChangeGrams;
+    const steps = input.dayLogs.flatMap((log) =>
+        log.steps === null || log.day < input.startDate || log.day > input.endDate
+            ? []
+            : [log.steps],
+    );
     return [
         {
             kind: "meal",
@@ -109,6 +156,16 @@ export function summaryTiles(input: ReportInput): SummaryTile[] {
             kind: "training",
             label: t("reports.activeTime"),
             value: formatMinutes(summary.activeMinutes, input.locale),
+        },
+        {
+            kind: "training",
+            label: t("export.stepsPerDay"),
+            value: steps.length
+                ? formatNumber(
+                      Math.round(steps.reduce((sum, value) => sum + value, 0) / steps.length),
+                      input.numbers,
+                  )
+                : "–",
         },
         {
             kind: "sleep",

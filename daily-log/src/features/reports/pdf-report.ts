@@ -6,9 +6,11 @@ import PDFDocument from "pdfkit";
 import { translate } from "@/core/i18n/translate";
 import { localDateInZone } from "@/core/time/zoned-time";
 import {
+    dayBadges,
     profileLine,
     reportDays,
     summaryTiles,
+    travelSummary,
     type ReportInput,
 } from "@/features/reports/report-input";
 import { kindColors, palette } from "@/features/reports/report-palette";
@@ -86,7 +88,7 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
         .fontSize(11)
         .fillColor(palette.muted)
         .text(period, PAGE_MARGIN + 60, headerTop + 50);
-    const person = profileLine(input);
+    const person = [profileLine(input), travelSummary(input)].filter(Boolean).join(" · ");
     if (person) {
         font("regular")
             .fontSize(9.5)
@@ -124,9 +126,9 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
                 width: tileWidth - 24,
             });
         font("extraBold")
-            .fontSize(15)
+            .fontSize(13)
             .fillColor(palette.text)
-            .text(tile.value, x + 12, tilesTop + 34, {
+            .text(tile.value, x + 12, tilesTop + 36, {
                 lineBreak: false,
                 width: tileWidth - 24,
             });
@@ -134,12 +136,35 @@ export async function createPdf(input: ReportInput): Promise<Buffer> {
     document.y = tilesTop + 64 + 26;
 
     // One section per day with something to show
-    for (const { date, note, rows } of reportDays(input)) {
+    for (const day of reportDays(input)) {
+        const { date, note, rows } = day;
         ensureSpace(64);
+        const headingTop = document.y;
         font("extraBold")
             .fontSize(13)
             .fillColor(palette.text)
-            .text(capitalize(longDate.format(asDay(date))), PAGE_MARGIN, document.y);
+            .text(capitalize(longDate.format(asDay(date))), PAGE_MARGIN, headingTop);
+        const afterHeading = document.y;
+        // Travel and steps pills sit on the heading line, right-aligned.
+        let badgeRight = PAGE_MARGIN + CONTENT_WIDTH;
+        for (const badge of dayBadges(day, input).reverse()) {
+            const colors =
+                badge.tone === "travel"
+                    ? { ink: palette.primary, tile: palette.primarySoft }
+                    : kindColors.training;
+            const label = badge.label.toUpperCase();
+            font("extraBold").fontSize(PILL_FONT_SIZE);
+            const width = document.widthOfString(label) + PILL_PADDING * 2;
+            badgeRight -= width;
+            document.roundedRect(badgeRight, headingTop + 1, width, 16, 8).fill(colors.tile);
+            document.fillColor(colors.ink).text(label, badgeRight, headingTop + 5, {
+                align: "center",
+                lineBreak: false,
+                width,
+            });
+            badgeRight -= 6;
+        }
+        document.y = afterHeading;
         const ruleY = document.y + 4;
         document
             .moveTo(PAGE_MARGIN, ruleY)

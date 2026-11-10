@@ -32,6 +32,7 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
     const [from, to] = localDateRangeBounds(startDate, endDate, timezone);
     const settings = logbook.getSettings(userId);
     const input = {
+        dayLogs: logbook.listDayLogs(userId, startDate, endDate),
         endDate,
         entries: logbook.listEntriesInRange(userId, from, to),
         locale: settings.exportLocale,
@@ -44,7 +45,12 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
         weighIns: logbook.listWeighIns(userId, { from, limit: null, to }).reverse(),
         weightUnit: settings.weightUnit,
     };
-    if (!input.entries.length && !input.weighIns.length && !input.notes.length) {
+    if (
+        !input.entries.length &&
+        !input.weighIns.length &&
+        !input.notes.length &&
+        !input.dayLogs.length
+    ) {
         throw new ApiError(404, "NO_DATA", "There is no data to export.");
     }
     const file = query.format === "pdf" ? await createPdf(input) : await createWorkbook(input);
