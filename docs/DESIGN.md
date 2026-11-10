@@ -113,7 +113,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 **History:** a search field and a From/To date pair on one row, type chips below, then a list card of 20 records per page with Previous/Next under it. Filters and the page live in the URL (`?type=&q=&from=&to=&page=`), so Back, reload, and shared links keep them; either date alone leaves that side open. While the next view loads, the count pill shows a spinner and the list dims. When filters match nothing, the empty state says so and offers "Clear filters". "Move this day’s entries to trash" appears when From and To are the same day. A row opens the editor in the sheet; delete lives inside the editor, never on the row.
 
-**Calendar:** month grid starting Monday, with arrows and a "Today" link. Each day shows small figures as record-type chips (dots on phones), travel and note markers, a steps chip in training colours on days with 10,000 steps or more, a filled violet circle for today, and a violet outline for the selected day. Details for the selected day appear beside the grid (below it on phones).
+**Calendar:** month grid starting Monday, with arrows and a "Today" link. Every week row has the same height. Each day has a header row with the number and the travel and note markers beside it (under it on phones, so nothing overlaps or leaves the cell), then small figures as record-type chips (dots on phones), including a footprints chip in training colours on days with 10,000 steps or more, a filled violet circle for today, and a violet outline for the selected day. Details for the selected day appear beside the grid (below it on phones).
 
 **Reports:** a "Last 7 days" summary of tiles, charts, and an export card with one download button per format.
 
