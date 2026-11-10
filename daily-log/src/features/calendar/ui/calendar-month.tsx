@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, NotebookPen, Plane } from "lucide-react";
 import Link from "next/link";
 
-import { formatMinutes, translate } from "@/core/i18n/translate";
+import { formatMinutes, formatNumber, type NumberStyle, translate } from "@/core/i18n/translate";
 import { shiftMonth } from "@/features/calendar/month";
 import type { DayTotals } from "@/features/insights/insights";
 import {
@@ -30,6 +30,7 @@ export function CalendarMonth({
     locale,
     month,
     noteDays,
+    numbers,
     selected,
     today,
     weightUnit,
@@ -40,6 +41,7 @@ export function CalendarMonth({
     locale: Locale;
     month: string;
     noteDays: readonly string[];
+    numbers: NumberStyle;
     selected: string;
     today: string;
     weightUnit: WeightUnit;
@@ -55,9 +57,8 @@ export function CalendarMonth({
         ),
     );
     const longDate = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" });
-    const decimal = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const decimal = (value: number) => formatNumber(value, numbers, { maximumFractionDigits: 1 });
     const withNotes = new Set(noteDays);
-    const compact = new Intl.NumberFormat(locale, { notation: "compact" });
 
     return (
         <section aria-labelledby="calendar-title" className="card calendar">
@@ -128,20 +129,21 @@ export function CalendarMonth({
                                     {daySteps >= ACTIVE_DAY_STEPS && (
                                         <span className="calendar-stat" data-kind="training">
                                             {translate(locale, "dayLog.stepsCount", {
-                                                count: compact.format(daySteps),
+                                                count: formatNumber(daySteps, numbers, {
+                                                    maximumFractionDigits: 1,
+                                                    notation: "compact",
+                                                }),
                                             })}
                                         </span>
                                     )}
                                     {day.sleepMinutes > 0 && (
                                         <span className="calendar-stat" data-kind="sleep">
-                                            {decimal.format(day.sleepMinutes / 60)} h
+                                            {decimal(day.sleepMinutes / 60)} h
                                         </span>
                                     )}
                                     {day.weightGrams !== null && (
                                         <span className="calendar-stat" data-kind="weight">
-                                            {decimal.format(
-                                                gramsToUnit(day.weightGrams, weightUnit),
-                                            )}
+                                            {decimal(gramsToUnit(day.weightGrams, weightUnit))}
                                         </span>
                                     )}
                                 </span>

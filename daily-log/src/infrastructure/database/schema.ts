@@ -4,7 +4,7 @@ import type Database from "better-sqlite3";
  * Free of Node APIs, so the browser demo can run the same migrations on SQLite
  * compiled to WebAssembly.
  */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /** Applies all additive schema changes in one transaction for app startup and tests. */
 export function migrateDatabase(
@@ -50,6 +50,11 @@ export function migrateDatabase(
         }
         if (!settingsColumns.some((column) => column.name === "theme")) {
             db.exec("ALTER TABLE user_settings ADD COLUMN theme TEXT NOT NULL DEFAULT 'system'");
+        }
+        if (!settingsColumns.some((column) => column.name === "number_format")) {
+            db.exec(
+                "ALTER TABLE user_settings ADD COLUMN number_format TEXT NOT NULL DEFAULT 'auto' CHECK (number_format IN ('auto', 'comma-dot', 'dot-comma', 'space-comma', 'apostrophe-dot'))",
+            );
         }
         if (!settingsColumns.some((column) => column.name === "time_format")) {
             db.exec(

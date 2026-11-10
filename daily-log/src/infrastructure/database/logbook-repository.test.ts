@@ -429,7 +429,7 @@ describe("legacy schema migration", () => {
             time_format: "24h",
             weight_unit: "kg",
         });
-        expect(database.pragma("user_version", { simple: true })).toBe(13);
+        expect(database.pragma("user_version", { simple: true })).toBe(14);
         database.close();
     });
 });

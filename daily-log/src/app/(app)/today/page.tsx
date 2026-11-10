@@ -1,7 +1,14 @@
 import { Flame, Plane } from "lucide-react";
 
 import { getEnvironment } from "@/core/config/env";
-import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatDate,
+    formatMinutes,
+    formatNumber,
+    formatWeight,
+    numberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import {
     localDateInZone,
@@ -33,7 +40,8 @@ const STREAK_LOOKBACK_DAYS = 365;
 export default function TodayPage() {
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, numberFormat, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const numbers = numberStyle(locale, numberFormat);
     const now = new Date();
     const today = localDateInZone(now, timezone);
     const [from, to] = localDateRangeBounds(today, today, timezone);
@@ -71,7 +79,7 @@ export default function TodayPage() {
             value:
                 activeMinutes === 0 && steps >= ACTIVE_DAY_STEPS
                     ? translate(locale, "dayLog.stepsCount", {
-                          count: new Intl.NumberFormat(locale).format(steps),
+                          count: formatNumber(steps, numbers),
                       })
                     : formatMinutes(activeMinutes, locale),
         },
@@ -83,7 +91,7 @@ export default function TodayPage() {
         {
             kind: "weight",
             label: translate(locale, "dashboard.weight"),
-            value: lastWeighIn ? formatWeight(lastWeighIn.weightGrams, weightUnit, locale) : "–",
+            value: lastWeighIn ? formatWeight(lastWeighIn.weightGrams, weightUnit, numbers) : "–",
         },
     ];
 
@@ -141,6 +149,7 @@ export default function TodayPage() {
                     timeFormat={timeFormat}
                     timeZone={timezone}
                     weighIns={weighIns}
+                    numbers={numbers}
                     weightUnit={weightUnit}
                 />
                 <div className="today-side">

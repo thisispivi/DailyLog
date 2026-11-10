@@ -1,6 +1,12 @@
 import { CalendarHeart } from "lucide-react";
 
-import { formatDuration, formatTime, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatDuration,
+    formatTime,
+    formatWeight,
+    type NumberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import { clipToDay } from "@/features/insights/insights";
 import type { Entry, Locale, TimeFormat, WeighIn, WeightUnit } from "@/features/logbook/domain";
 import { entryDisplayLabel, loneSnackIds } from "@/features/logbook/entry-label";
@@ -25,6 +31,7 @@ export function DayTimeline({
     dayStart,
     entries,
     locale,
+    numbers,
     timeFormat,
     timeZone,
     title,
@@ -35,6 +42,7 @@ export function DayTimeline({
     dayStart: string;
     entries: Entry[];
     locale: Locale;
+    numbers: NumberStyle;
     timeFormat: TimeFormat;
     timeZone: string;
     title?: string;
@@ -70,7 +78,7 @@ export function DayTimeline({
             detail: translate(locale, "dashboard.weight"),
             id: `weight-${weighIn.id}`,
             kind: "weight" as const,
-            title: formatWeight(weighIn.weightGrams, weightUnit, locale),
+            title: formatWeight(weighIn.weightGrams, weightUnit, numbers),
         })),
     ].sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
 

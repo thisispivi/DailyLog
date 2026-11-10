@@ -34,6 +34,7 @@ const input: ReportInput = {
     ],
     locale: "it",
     notes: [{ day: "2026-08-31", text: "+ felt great", updatedAt: "2026-08-31T22:00:00+00:00" }],
+    numbers: "dot-comma",
     profile: {
         birthDate: "1990-10-10",
         firstName: "Ada",

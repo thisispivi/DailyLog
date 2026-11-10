@@ -10,6 +10,16 @@ export type Theme = (typeof themes)[number];
 export const timeFormats = ["24h", "12h"] as const;
 export type TimeFormat = (typeof timeFormats)[number];
 
+/** How numbers are written; "auto" follows the interface language. */
+export const numberFormats = [
+    "auto",
+    "comma-dot",
+    "dot-comma",
+    "space-comma",
+    "apostrophe-dot",
+] as const;
+export type NumberFormat = (typeof numberFormats)[number];
+
 export const weightUnits = ["kg", "lb"] as const;
 export type WeightUnit = (typeof weightUnits)[number];
 
@@ -42,6 +52,7 @@ export type WeighIn = Readonly<{
 export type UserSettings = Readonly<{
     exportLocale: Locale;
     locale: Locale;
+    numberFormat: NumberFormat;
     theme: Theme;
     timeFormat: TimeFormat;
     userId: number;

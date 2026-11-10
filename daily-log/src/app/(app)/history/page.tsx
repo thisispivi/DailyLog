@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
-import { translate } from "@/core/i18n/translate";
+import { numberStyle, translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { HistoryWorkspace, type HistoryView } from "@/features/history/ui/history-workspace";
@@ -33,7 +33,8 @@ export default async function HistoryPage({
     const query = querySchema.parse(await searchParams);
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, numberFormat, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const numbers = numberStyle(locale, numberFormat);
 
     // Either date alone leaves that side open; dates picked in the wrong order are swapped.
     const days = [query.from, query.to].filter((day) => day !== undefined).sort();
@@ -107,6 +108,7 @@ export default async function HistoryPage({
                 total={result.total}
                 trash={isTrash ? logbook.listTrash(ownerId) : []}
                 view={view}
+                numbers={numbers}
                 weightUnit={weightUnit}
             />
         </>

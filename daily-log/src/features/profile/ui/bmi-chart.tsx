@@ -11,7 +11,7 @@ import {
     YAxis,
 } from "recharts";
 
-import { formatDate, translate } from "@/core/i18n/translate";
+import { formatDate, formatNumber, type NumberStyle, translate } from "@/core/i18n/translate";
 import type { Locale, WeighIn } from "@/features/logbook/domain";
 import { bodyMassIndex } from "@/features/profile/profile";
 import { niceTicks, timeTicks } from "@/features/reports/chart-scale";
@@ -31,11 +31,13 @@ const BMI_BOUNDARIES = [18.5, 25, 30];
 export function BmiChart({
     heightCm,
     locale,
+    numbers,
     timeZone,
     weighIns,
 }: Readonly<{
     heightCm: number | null;
     locale: Locale;
+    numbers: NumberStyle;
     timeZone: string;
     weighIns: readonly WeighIn[];
 }>) {
@@ -59,7 +61,9 @@ export function BmiChart({
     const domain = start === end ? [start - DAY_MS, end + DAY_MS] : [start, end];
     const values = data.map((point) => point.bmi);
     const ticks = niceTicks(Math.min(...values), Math.max(...values));
-    const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const number = {
+        format: (value: number) => formatNumber(value, numbers, { maximumFractionDigits: 1 }),
+    };
     const tickFormat = new Intl.DateTimeFormat(
         locale,
         end - start > 180 * DAY_MS

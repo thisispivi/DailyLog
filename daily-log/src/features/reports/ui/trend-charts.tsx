@@ -18,7 +18,14 @@ import {
     type TooltipContentProps,
 } from "recharts";
 
-import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatDate,
+    formatMinutes,
+    formatNumber,
+    formatWeight,
+    type NumberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import type { ActivityTotal, DayTotals } from "@/features/insights/insights";
 import { niceTicks, timeTicks } from "@/features/reports/chart-scale";
 import { gramsToUnit, type Locale, type WeighIn, type WeightUnit } from "@/features/logbook/domain";
@@ -184,6 +191,7 @@ const DAY_MS = 86_400_000;
 export function WeightChart({
     goalGrams = null,
     locale,
+    numbers,
     timeZone,
     weighIns,
     weightUnit,
@@ -191,6 +199,7 @@ export function WeightChart({
     /** Drawn as a dashed line when set. */
     goalGrams?: number | null;
     locale: Locale;
+    numbers: NumberStyle;
     timeZone: string;
     weighIns: readonly WeighIn[];
     weightUnit: WeightUnit;
@@ -227,6 +236,7 @@ export function WeightChart({
                         goalGrams={goalGrams}
                         label={title}
                         locale={locale}
+                        numbers={numbers}
                         timeZone={timeZone}
                         weighIns={weighIns}
                         weightUnit={weightUnit}
@@ -236,11 +246,11 @@ export function WeightChart({
                             {first === last
                                 ? null
                                 : translate(locale, "reports.weightSince", {
-                                      change: `${sign}${formatWeight(Math.abs(change), weightUnit, locale)}`,
+                                      change: `${sign}${formatWeight(Math.abs(change), weightUnit, numbers)}`,
                                       date: formatDate(first.recordedAt, locale, timeZone),
                                   })}
                         </span>
-                        <strong>{formatWeight(last.weightGrams, weightUnit, locale)}</strong>
+                        <strong>{formatWeight(last.weightGrams, weightUnit, numbers)}</strong>
                     </div>
                     <Sheet
                         className="chart-sheet"
@@ -254,6 +264,7 @@ export function WeightChart({
                                 goalGrams={goalGrams}
                                 label={title}
                                 locale={locale}
+                                numbers={numbers}
                                 timeZone={timeZone}
                                 weighIns={weighIns}
                                 weightUnit={weightUnit}
@@ -270,6 +281,7 @@ function WeightPlot({
     goalGrams,
     label,
     locale,
+    numbers,
     timeZone,
     weighIns,
     weightUnit,
@@ -277,6 +289,7 @@ function WeightPlot({
     goalGrams: number | null;
     label: string;
     locale: Locale;
+    numbers: NumberStyle;
     timeZone: string;
     weighIns: readonly WeighIn[];
     weightUnit: WeightUnit;
@@ -298,7 +311,9 @@ function WeightPlot({
             ? { month: "short", timeZone, year: "2-digit" }
             : { day: "numeric", month: "short", timeZone },
     );
-    const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+    const number = {
+        format: (value: number) => formatNumber(value, numbers, { maximumFractionDigits: 1 }),
+    };
     const goal =
         goalGrams === null ? null : Math.round(gramsToUnit(goalGrams, weightUnit) * 10) / 10;
     // The goal line must stay on the chart, even far from the recorded weights.
@@ -358,7 +373,7 @@ function WeightPlot({
                                     }
                                     value={
                                         typeof point?.grams === "number"
-                                            ? formatWeight(point.grams, weightUnit, locale)
+                                            ? formatWeight(point.grams, weightUnit, numbers)
                                             : null
                                     }
                                 />

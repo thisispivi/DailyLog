@@ -18,6 +18,7 @@ import {
     formatDateTime,
     formatDuration,
     formatWeight,
+    type NumberStyle,
     translate,
 } from "@/core/i18n/translate";
 import { localInputToUtc, localInputValue } from "@/core/time/zoned-time";
@@ -67,6 +68,7 @@ const trashKey = (item: TrashItem) => `${item.recordType}-${item.recordId}`;
 
 type Shared = Readonly<{
     locale: Locale;
+    numbers: NumberStyle;
     timeFormat: TimeFormat;
     timeZone: string;
     weightUnit: WeightUnit;
@@ -75,6 +77,7 @@ type Shared = Readonly<{
 export function HistoryWorkspace({
     locale,
     loneSnacks,
+    numbers,
     pageCount,
     records,
     timeFormat,
@@ -106,7 +109,7 @@ export function HistoryWorkspace({
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [failed, setFailed] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
-    const shared = { locale, timeFormat, timeZone, weightUnit };
+    const shared = { locale, numbers, timeFormat, timeZone, weightUnit };
     const lone = useMemo(() => new Set(loneSnacks), [loneSnacks]);
     const filter = view.type ?? "all";
     const hasFilters = filter !== "all" || Boolean(view.q || view.from || view.to);
@@ -327,7 +330,13 @@ export function HistoryWorkspace({
                                         />
                                         <span className="record-text">
                                             <strong>
-                                                {recordTitle(record, locale, weightUnit, lone)}
+                                                {recordTitle(
+                                                    record,
+                                                    locale,
+                                                    weightUnit,
+                                                    numbers,
+                                                    lone,
+                                                )}
                                             </strong>
                                             <span>{recordDetail(record, locale)}</span>
                                         </span>
@@ -408,6 +417,7 @@ export function HistoryWorkspace({
 
 function RecordEditor({
     locale,
+    numbers,
     onDone,
     record,
     timeFormat,
@@ -465,7 +475,7 @@ function RecordEditor({
         const label =
             record.recordType === "entry"
                 ? shownLabel
-                : formatWeight(record.item.weightGrams, weightUnit, locale);
+                : formatWeight(record.item.weightGrams, weightUnit, numbers);
         if (!window.confirm(translate(locale, "history.confirmDelete", { label }))) return;
         void settle(sendJson(path, "DELETE"), "toast.movedToTrash");
     }
@@ -597,6 +607,7 @@ function RecordEditor({
 function TrashList({
     items,
     locale,
+    numbers,
     busy,
     onRestore,
     timeFormat,
@@ -626,7 +637,7 @@ function TrashList({
                                 <strong>
                                     {item.recordType === "entry"
                                         ? entryDisplayLabel(item, locale)
-                                        : formatWeight(item.weightGrams, weightUnit, locale)}
+                                        : formatWeight(item.weightGrams, weightUnit, numbers)}
                                 </strong>
                                 <span>
                                     {formatDateTime(item.deletedAt, locale, timeZone, timeFormat)}
@@ -670,11 +681,12 @@ function recordTitle(
     record: HistoryRecord,
     locale: Locale,
     unit: WeightUnit,
+    numbers: NumberStyle,
     loneSnacks: ReadonlySet<number>,
 ): string {
     return record.recordType === "entry"
         ? entryDisplayLabel(record.item, locale, loneSnacks)
-        : formatWeight(record.item.weightGrams, unit, locale);
+        : formatWeight(record.item.weightGrams, unit, numbers);
 }
 
 function recordDetail(record: HistoryRecord, locale: Locale): string {

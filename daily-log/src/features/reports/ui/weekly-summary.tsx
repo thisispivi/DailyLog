@@ -1,13 +1,25 @@
-import { formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatMinutes,
+    formatNumber,
+    formatWeight,
+    type NumberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import type { PeriodSummary } from "@/features/insights/insights";
 import type { Locale, WeightUnit } from "@/features/logbook/domain";
 import { KindIcon, type RecordKind } from "@/ui/kind-icon";
 
 export function WeeklySummary({
     locale,
+    numbers,
     summary,
     weightUnit,
-}: Readonly<{ locale: Locale; summary: PeriodSummary; weightUnit: WeightUnit }>) {
+}: Readonly<{
+    locale: Locale;
+    numbers: NumberStyle;
+    summary: PeriodSummary;
+    weightUnit: WeightUnit;
+}>) {
     const change = summary.weightChangeGrams;
     const tiles: Array<{ kind: RecordKind; label: string; value: string }> = [
         {
@@ -26,9 +38,7 @@ export function WeeklySummary({
         {
             kind: "meal",
             label: translate(locale, "reports.mealsPerDay"),
-            value: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
-                summary.mealsPerDay,
-            ),
+            value: formatNumber(summary.mealsPerDay, numbers, { maximumFractionDigits: 1 }),
         },
         {
             kind: "weight",
@@ -36,7 +46,7 @@ export function WeeklySummary({
             value:
                 change === null
                     ? "–"
-                    : `${change > 0 ? "+" : change < 0 ? "−" : "±"}${formatWeight(Math.abs(change), weightUnit, locale)}`,
+                    : `${change > 0 ? "+" : change < 0 ? "−" : "±"}${formatWeight(Math.abs(change), weightUnit, numbers)}`,
         },
     ];
     return (
