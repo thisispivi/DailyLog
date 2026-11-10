@@ -4,7 +4,7 @@ import type Database from "better-sqlite3";
  * Free of Node APIs, so the browser demo can run the same migrations on SQLite
  * compiled to WebAssembly.
  */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /** Applies all additive schema changes in one transaction for app startup and tests. */
 export function migrateDatabase(
@@ -106,6 +106,13 @@ export function migrateDatabase(
         user_id INTEGER PRIMARY KEY,
         plan TEXT NOT NULL CHECK (json_valid(plan)),
         updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS day_logs (
+        user_id INTEGER NOT NULL,
+        day TEXT NOT NULL CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+        steps INTEGER CHECK (steps BETWEEN 0 AND 200000),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, day)
       );
       CREATE TABLE IF NOT EXISTS session_versions (
         user_id INTEGER PRIMARY KEY,

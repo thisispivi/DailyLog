@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 import { DAY_NOTE_MAX_LENGTH, timeFormats } from "@/features/logbook/domain";
-import { createEntrySchema, isoTimestamp, settingsSchema } from "@/features/logbook/schemas";
+import {
+    createEntrySchema,
+    isoTimestamp,
+    settingsSchema,
+    stepsSchema,
+} from "@/features/logbook/schemas";
 import { goalDateSchema, goalWeightGramsSchema, profileSchema } from "@/features/profile/schemas";
 
 /** Bump when the file shape changes in a way older imports cannot read. */
@@ -13,6 +18,11 @@ export const BACKUP_VERSION = 1;
  */
 export const backupSchema = z.strictObject({
     app: z.literal("DailyLog"),
+    // Backups made before day logs existed have no days.
+    days: z
+        .array(z.strictObject({ day: z.iso.date(), steps: stepsSchema }))
+        .max(50_000)
+        .default([]),
     entries: z.array(createEntrySchema).max(200_000),
     exportedAt: isoTimestamp,
     notes: z

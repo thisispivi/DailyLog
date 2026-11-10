@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
     DAY_NOTE_MAX_LENGTH,
+    MAX_DAILY_STEPS,
     entryKinds,
     locales,
     themes,
@@ -104,6 +105,15 @@ export const saveDayNoteSchema = z.strictObject({
         .max(DAY_NOTE_MAX_LENGTH)
         .transform((text) => text.trimEnd()),
 });
+
+export const stepsSchema = z.number().int().min(0).max(MAX_DAILY_STEPS).nullable();
+
+export const updateDayLogSchema = z
+    .strictObject({ steps: stepsSchema })
+    .partial()
+    .refine((value) => Object.keys(value).length > 0, "At least one change is required.");
+
+export type DayLogChanges = z.infer<typeof updateDayLogSchema>;
 
 export const restoreSchema = z.strictObject({
     recordId: z.number().int().positive(),
