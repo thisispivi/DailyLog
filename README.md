@@ -18,7 +18,7 @@ It replaced an earlier Telegram bot and still reads that bot's SQLite database.
 - Search, filter, edit, and delete records in **History**. Deleted records stay in the trash for 30 days.
 - See a 7-day summary, 14 nights of sleep, 30 days of training, and your full weight history in **Reports**, and export any range as XLSX or PDF.
 - Browse past days in **Calendar** and keep a note for any day.
-- Track BMI and a weight goal on **Profile**, and generate a weekly **Meal plan** from your diet.
+- Track BMI and a weight goal on **Profile**.
 - Back up the account to a JSON file and import it again from **Settings**.
 - Choose UI language, report language, theme (light, dark, or system), weight unit (kg or lb), and 12- or 24-hour time separately.
 

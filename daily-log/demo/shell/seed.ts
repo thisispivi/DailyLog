@@ -5,8 +5,6 @@ import {
     toStorageTimestamp,
 } from "@/core/time/zoned-time";
 import type { Locale } from "@/features/logbook/domain";
-import { generateWeek, mondayOf } from "@/features/meal-plan/meal-plan";
-import { type Diet, dietSchema } from "@/features/meal-plan/schemas";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 
 import { getDemoDatabase } from "@demo/shell/database";
@@ -102,145 +100,6 @@ const trainings = [
     ["Tennis", "18:15", 75],
 ] as const;
 
-type Unit = "g" | "ml" | "pcs";
-const option = (
-    id: string,
-    name: string,
-    items: Array<{ amount: number; food: string; unit: Unit }>,
-    limits: { maxPerDay?: number; maxPerWeek?: number; weight?: number } = {},
-) => ({ id, items, name, ...limits });
-
-const milk = bilingual("Milk", "Latte");
-const oats = bilingual("Oats", "Avena");
-const toast = bilingual("Wholegrain toast", "Pane integrale");
-const eggs = bilingual("Eggs", "Uova");
-const eggsOnToast = bilingual("Eggs on toast", "Uova e pane tostato");
-const apple = bilingual("Apple", "Mela");
-const pear = bilingual("Pear", "Pera");
-const almonds = bilingual("Almonds", "Mandorle");
-const lentils = bilingual("Lentils", "Lenticchie");
-const rice = bilingual("Rice", "Riso");
-const bread = bilingual("Bread", "Pane");
-const snack = bilingual("Snack", "Spuntino");
-const protein = bilingual("Protein", "Proteine");
-const proteins = ["chicken", "fish", "lentils", "beef"];
-
-const diet: Diet = dietSchema.parse({
-    meals: [
-        {
-            key: "breakfast",
-            variants: [
-                {
-                    id: "classic",
-                    name: bilingual("Classic", "Classica"),
-                    slots: [
-                        { name: bilingual("Drink", "Bevanda"), optionIds: ["milk", "yogurt"] },
-                        { name: "Base", optionIds: ["oats", "toast"] },
-                    ],
-                },
-                {
-                    id: "eggs",
-                    maxPerWeek: 2,
-                    name: eggsOnToast,
-                    slots: [{ name: eggs, optionIds: ["eggs"] }],
-                },
-            ],
-        },
-        ...(["snack1", "snack2"] as const).map((key) => ({
-            key,
-            variants: [
-                {
-                    id: `snack-${key}`,
-                    name: snack,
-                    slots: [{ name: snack, optionIds: ["apple", "pear", "almonds", "yogurt"] }],
-                },
-            ],
-        })),
-        {
-            key: "lunch",
-            variants: [
-                {
-                    id: "lunch",
-                    name: bilingual("Lunch", "Pranzo"),
-                    slots: [
-                        { name: protein, optionIds: proteins },
-                        {
-                            name: bilingual("Carbs", "Carboidrati"),
-                            optionIds: ["pasta", "rice", "bread"],
-                        },
-                    ],
-                },
-            ],
-        },
-        {
-            key: "dinner",
-            variants: [
-                {
-                    id: "dinner",
-                    name: bilingual("Balanced", "Bilanciata"),
-                    slots: [
-                        { name: protein, optionIds: proteins },
-                        {
-                            name: bilingual("Fruit", "Frutta"),
-                            optional: true,
-                            optionIds: ["apple", "pear"],
-                        },
-                    ],
-                },
-                {
-                    id: "free-dinner",
-                    maxPerWeek: 1,
-                    name: bilingual("Free dinner", "Cena libera"),
-                    slots: [],
-                },
-            ],
-        },
-    ],
-    name: bilingual("Sample balanced diet", "Dieta equilibrata di esempio"),
-    notes: [
-        bilingual(
-            "Vegetables as you like at lunch and dinner.",
-            "Verdure a piacere a pranzo e a cena.",
-        ),
-        bilingual(
-            "One tablespoon of olive oil per meal.",
-            "Un cucchiaio di olio d'oliva per pasto.",
-        ),
-    ],
-    options: [
-        option("milk", milk, [{ amount: 200, food: milk, unit: "ml" }]),
-        option("yogurt", "Yogurt", [{ amount: 125, food: "Yogurt", unit: "g" }]),
-        option("oats", oats, [{ amount: 40, food: oats, unit: "g" }]),
-        option("toast", bilingual("Toast", "Pane tostato"), [
-            { amount: 2, food: toast, unit: "pcs" },
-        ]),
-        option("eggs", eggsOnToast, [
-            { amount: 2, food: eggs, unit: "pcs" },
-            { amount: 1, food: toast, unit: "pcs" },
-        ]),
-        option("apple", apple, [{ amount: 1, food: apple, unit: "pcs" }], { maxPerDay: 2 }),
-        option("pear", pear, [{ amount: 1, food: pear, unit: "pcs" }], { maxPerDay: 2 }),
-        option("almonds", almonds, [{ amount: 30, food: almonds, unit: "g" }], { maxPerWeek: 3 }),
-        option("chicken", bilingual("Chicken", "Pollo"), [
-            { amount: 150, food: bilingual("Chicken breast", "Petto di pollo"), unit: "g" },
-        ]),
-        option("fish", bilingual("Fish", "Pesce"), [
-            { amount: 150, food: bilingual("White fish", "Pesce bianco"), unit: "g" },
-        ]),
-        option("lentils", lentils, [{ amount: 80, food: lentils, unit: "g" }]),
-        option(
-            "beef",
-            bilingual("Beef", "Manzo"),
-            [{ amount: 120, food: bilingual("Lean beef", "Manzo magro"), unit: "g" }],
-            { weight: 0.3 },
-        ),
-        option("pasta", "Pasta", [{ amount: 80, food: "Pasta", unit: "g" }]),
-        option("rice", rice, [{ amount: 80, food: rice, unit: "g" }]),
-        option("bread", bread, [{ amount: 60, food: bread, unit: "g" }]),
-    ],
-    version: 1,
-});
-
 /**
  * Rewrites the sample texts in the visitor's language. Only texts that still
  * read as seeded change, so the visitor's own records are left alone.
@@ -253,17 +112,10 @@ export function localizeDemo(from: Locale, to: Locale): void {
         "UPDATE entries SET label = ? WHERE user_id = ? AND kind = 'training' AND label = ?",
         "UPDATE day_notes SET text = ? WHERE user_id = ? AND text = ?",
     ].map((sql) => database.prepare(sql));
-    // The diet and plan are JSON: replacing whole quoted strings never touches part of a word.
-    const json = [
-        "UPDATE diets SET document = replace(document, ?, ?) WHERE user_id = ?",
-        "UPDATE meal_plans SET plan = replace(plan, ?, ?) WHERE user_id = ?",
-    ].map((sql) => database.prepare(sql));
     database.transaction(() => {
         for (const [en, it] of translations) {
             const [source, target] = from === "en" ? [en, it] : [it, en];
             for (const statement of exact) statement.run(target, OWNER, source);
-            for (const statement of json)
-                statement.run(JSON.stringify(source), JSON.stringify(target), OWNER);
         }
     })();
 }
@@ -346,8 +198,6 @@ export function seedDemo(timeZone: string, locale: Locale): void {
     getDemoDatabase()
         .prepare("UPDATE user_profiles SET goal_set_at = ? WHERE user_id = ?")
         .run(toStorageTimestamp(at(shiftDate(today, -28), "08:00")), OWNER);
-    logbook.saveDiet(OWNER, diet);
-    logbook.saveMealPlan(OWNER, generateWeek(diet, mondayOf(today), random));
     logbook.updateSettings(OWNER, { exportLocale: locale, locale });
     localizeDemo("en", locale);
 }
