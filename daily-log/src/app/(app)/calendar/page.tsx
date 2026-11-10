@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { getEnvironment } from "@/core/config/env";
-import { translate } from "@/core/i18n/translate";
+import { numberStyle, translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { monthGrid, monthPattern } from "@/features/calendar/month";
@@ -28,7 +28,8 @@ export default async function CalendarPage({
     const query = querySchema.parse(await searchParams);
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, numberFormat, timeFormat, weightUnit } = logbook.getSettings(ownerId);
+    const numbers = numberStyle(locale, numberFormat);
     const today = localDateInZone(new Date(), timezone);
     const month = query.month ?? query.day?.slice(0, 7) ?? today.slice(0, 7);
     const selected = query.day?.startsWith(month)
@@ -72,6 +73,7 @@ export default async function CalendarPage({
                             .map((log) => [log.day, log]),
                     )}
                     today={today}
+                    numbers={numbers}
                     weightUnit={weightUnit}
                 />
                 <div className="calendar-detail">
@@ -84,6 +86,7 @@ export default async function CalendarPage({
                         timeZone={timezone}
                         title={dayTitle}
                         weighIns={logbook.listWeighIns(ownerId, { from: dayStart, to: dayEnd })}
+                        numbers={numbers}
                         weightUnit={weightUnit}
                     />
                     <DayNote

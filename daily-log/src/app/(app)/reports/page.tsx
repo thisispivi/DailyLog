@@ -1,5 +1,5 @@
 import { getEnvironment } from "@/core/config/env";
-import { translate } from "@/core/i18n/translate";
+import { numberStyle, translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { datesEndingOn, localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { dailyTotals, summarizePeriod, trainingMinutesByLabel } from "@/features/insights/insights";
@@ -19,7 +19,8 @@ const SUMMARY_DAYS = 7;
 export default function ReportsPage() {
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, numberFormat, weightUnit } = logbook.getSettings(ownerId);
+    const numbers = numberStyle(locale, numberFormat);
     const today = localDateInZone(new Date(), timezone);
     const dates = datesEndingOn(today, TREND_DAYS);
     const [from, to] = localDateRangeBounds(dates[0] ?? today, today, timezone);
@@ -44,6 +45,7 @@ export default function ReportsPage() {
                     <WeeklySummary
                         locale={locale}
                         summary={summarizePeriod(days.slice(-SUMMARY_DAYS))}
+                        numbers={numbers}
                         weightUnit={weightUnit}
                     />
                     <div className="reports-charts">
@@ -52,6 +54,7 @@ export default function ReportsPage() {
                             locale={locale}
                             timeZone={timezone}
                             weighIns={logbook.listWeighIns(ownerId, { limit: null }).reverse()}
+                            numbers={numbers}
                             weightUnit={weightUnit}
                         />
                     </div>

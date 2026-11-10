@@ -6,6 +6,7 @@ import {
     DatabaseBackup,
     ExternalLink,
     FileText,
+    Hash,
     Info,
     KeyRound,
     Languages,
@@ -18,7 +19,7 @@ import { type ReactNode, useState } from "react";
 
 import { APP_VERSION, AUTHOR_URL, REPOSITORY_URL } from "@/core/config/build-info";
 import { sendJson } from "@/core/http/client";
-import { translate } from "@/core/i18n/translate";
+import { formatNumber, numberStyle, translate } from "@/core/i18n/translate";
 import { ChangePasswordForm } from "@/features/auth/ui/change-password-form";
 import { BackupControls } from "@/features/backup/ui/backup-controls";
 import type { Locale, UserSettings } from "@/features/logbook/domain";
@@ -27,7 +28,7 @@ import { LanguageFlag } from "@/ui/language-flag";
 type Status = { message: string; tone: "error" | "success" } | null;
 type Preferences = Pick<
     UserSettings,
-    "exportLocale" | "locale" | "theme" | "timeFormat" | "weightUnit"
+    "exportLocale" | "locale" | "numberFormat" | "theme" | "timeFormat" | "weightUnit"
 >;
 
 /** Every choice saves as soon as it is made; there is no separate save step. */
@@ -55,6 +56,20 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
         });
         if (ok) router.refresh();
     }
+
+    const example = (style: Exclude<Preferences["numberFormat"], "auto">) =>
+        formatNumber(1234.5, style, { minimumFractionDigits: 1 });
+    const numberFormats = (
+        [
+            ["comma-dot", "settings.numbersUkUs"],
+            ["dot-comma", "settings.numbersItaly"],
+            ["space-comma", "settings.numbersFrance"],
+            ["apostrophe-dot", "settings.numbersSwitzerland"],
+        ] as const
+    ).map(([value, region]) => ({
+        label: `${example(value)} · ${translate(locale, region)}`,
+        value,
+    }));
 
     const languages = (["en", "it"] as const).map((value) => ({
         icon: <LanguageFlag locale={value} />,
@@ -132,6 +147,27 @@ export function SettingsForm({ initial }: Readonly<{ initial: UserSettings }>) {
                     ]}
                     title={translate(locale, "settings.timeFormat")}
                     value={settings.timeFormat}
+                />
+            </SettingSection>
+            <SettingSection
+                hint={translate(locale, "settings.numberFormatHint")}
+                icon={Hash}
+                title={translate(locale, "settings.numberFormat")}
+            >
+                <OptionGroup
+                    name="numberFormat"
+                    onChange={(value) => void change("numberFormat", value)}
+                    options={[
+                        {
+                            label: translate(locale, "settings.numbersAuto", {
+                                example: example(numberStyle(locale, "auto")),
+                            }),
+                            value: "auto",
+                        },
+                        ...numberFormats,
+                    ]}
+                    title={translate(locale, "settings.numberFormat")}
+                    value={settings.numberFormat}
                 />
             </SettingSection>
             <SettingSection

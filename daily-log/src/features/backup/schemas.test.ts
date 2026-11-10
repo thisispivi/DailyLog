@@ -28,6 +28,7 @@ const backup = {
     settings: {
         exportLocale: "en",
         locale: "en",
+        numberFormat: "dot-comma",
         theme: "system",
         timeFormat: "12h",
         weightUnit: "kg",
@@ -49,6 +50,11 @@ describe("backup schema", () => {
     it("reads day logs made before travel days existed as not travel", () => {
         const legacy = { ...backup, days: [{ day: "2026-08-31", steps: 12_000 }] };
         expect(backupSchema.parse(legacy).days[0]?.travel).toBe(false);
+    });
+
+    it("reads backups made before the number format existed as following the language", () => {
+        const legacy = { ...backup, settings: { ...backup.settings, numberFormat: undefined } };
+        expect(backupSchema.parse(legacy).settings.numberFormat).toBe("auto");
     });
 
     it("reads backups made before the time format existed as 24-hour", () => {

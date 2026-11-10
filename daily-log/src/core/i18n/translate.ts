@@ -2,6 +2,7 @@ import { catalogs, type PluralForms, type TranslationKey } from "@/core/i18n/cat
 import {
     gramsToUnit,
     type Locale,
+    type NumberFormat,
     type TimeFormat,
     type WeightUnit,
 } from "@/features/logbook/domain";
@@ -68,11 +69,38 @@ export function formatTime(
     }).format(new Date(value));
 }
 
-export function formatWeight(grams: number, unit: WeightUnit, locale: Locale): string {
-    const value = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
-        gramsToUnit(grams, unit),
-    );
-    return `${value} ${unit}`;
+/** A number format with "auto" resolved against the language it is shown in. */
+export type NumberStyle = Exclude<NumberFormat, "auto">;
+
+const separators: Readonly<Record<NumberStyle, { decimal: string; group: string }>> = {
+    "apostrophe-dot": { decimal: ".", group: "’" },
+    "comma-dot": { decimal: ".", group: "," },
+    "dot-comma": { decimal: ",", group: "." },
+    "space-comma": { decimal: ",", group: " " },
+};
+
+export function numberStyle(locale: Locale, format: NumberFormat): NumberStyle {
+    if (format !== "auto") return format;
+    return locale === "it" ? "dot-comma" : "comma-dot";
+}
+
+/** Formats with the chosen separators; every number from 1,000 up is grouped. */
+export function formatNumber(
+    value: number,
+    style: NumberStyle,
+    options: Intl.NumberFormatOptions = {},
+): string {
+    const { decimal, group } = separators[style];
+    return new Intl.NumberFormat("en-US", options)
+        .formatToParts(value)
+        .map((part) =>
+            part.type === "group" ? group : part.type === "decimal" ? decimal : part.value,
+        )
+        .join("");
+}
+
+export function formatWeight(grams: number, unit: WeightUnit, style: NumberStyle): string {
+    return `${formatNumber(gramsToUnit(grams, unit), style, { maximumFractionDigits: 2 })} ${unit}`;
 }
 
 export function formatDuration(startAt: string, endAt: string | null, locale: Locale): string {

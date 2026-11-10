@@ -1,4 +1,11 @@
-import { formatMinutes, formatTime, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatMinutes,
+    formatNumber,
+    formatTime,
+    formatWeight,
+    type NumberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import { localDateInZone, localDateRangeBounds, shiftDate } from "@/core/time/zoned-time";
 import { clipToDay, dailyTotals, summarizePeriod } from "@/features/insights/insights";
 import type {
@@ -19,6 +26,7 @@ export type ReportInput = Readonly<{
     entries: readonly Entry[];
     locale: Locale;
     notes: readonly DayNote[];
+    numbers: NumberStyle;
     profile: UserProfile;
     startDate: string;
     timeFormat: TimeFormat;
@@ -70,7 +78,7 @@ export function profileLine(
 ): string | null {
     const { birthDate, heightCm } = input.profile;
     const latest = input.weighIns.at(-1);
-    const number = new Intl.NumberFormat(input.locale, { maximumFractionDigits: 1 });
+    const bmi = (value: number) => formatNumber(value, input.numbers, { maximumFractionDigits: 1 });
     const parts = [
         fullName(input.profile),
         birthDate
@@ -78,7 +86,7 @@ export function profileLine(
             : "",
         heightCm ? `${heightCm} cm` : "",
         heightCm && latest
-            ? `${translate(input.locale, "profile.bmi")} ${number.format(bodyMassIndex(latest.weightGrams, heightCm))}`
+            ? `${translate(input.locale, "profile.bmi")} ${bmi(bodyMassIndex(latest.weightGrams, heightCm))}`
             : "",
     ].filter(Boolean);
     return parts.length ? parts.join(" · ") : null;
@@ -116,7 +124,7 @@ export function summaryTiles(input: ReportInput): SummaryTile[] {
             value:
                 change === null
                     ? "–"
-                    : `${change > 0 ? "+" : change < 0 ? "−" : "±"}${formatWeight(Math.abs(change), input.weightUnit, input.locale)}`,
+                    : `${change > 0 ? "+" : change < 0 ? "−" : "±"}${formatWeight(Math.abs(change), input.weightUnit, input.numbers)}`,
         },
     ];
 }
@@ -181,7 +189,7 @@ function rowsForDay(
             detail: "",
             kind: "weight",
             time: time(weighIn.recordedAt),
-            title: formatWeight(weighIn.weightGrams, input.weightUnit, input.locale),
+            title: formatWeight(weighIn.weightGrams, input.weightUnit, input.numbers),
         });
     }
     return rows.sort((left, right) => Date.parse(left.at) - Date.parse(right.at));

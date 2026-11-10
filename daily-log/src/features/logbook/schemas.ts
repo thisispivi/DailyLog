@@ -5,6 +5,7 @@ import {
     MAX_DAILY_STEPS,
     entryKinds,
     locales,
+    numberFormats,
     themes,
     timeFormats,
     weightUnits,
@@ -85,6 +86,7 @@ export const updateWeighInSchema = createWeighInSchema
 export const settingsSchema = z.strictObject({
     exportLocale: z.enum(locales),
     locale: z.enum(locales),
+    numberFormat: z.enum(numberFormats),
     theme: z.enum(themes),
     timeFormat: z.enum(timeFormats),
     weightUnit: z.enum(weightUnits),

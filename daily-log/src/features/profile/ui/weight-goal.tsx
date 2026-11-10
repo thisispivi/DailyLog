@@ -1,6 +1,12 @@
 import { Target } from "lucide-react";
 
-import { formatDate, formatWeight, translate } from "@/core/i18n/translate";
+import {
+    formatDate,
+    formatNumber,
+    formatWeight,
+    type NumberStyle,
+    translate,
+} from "@/core/i18n/translate";
 import type { Locale, WeightUnit } from "@/features/logbook/domain";
 import type { WeightGoal, WeightGoalProgress } from "@/features/profile/profile";
 
@@ -8,17 +14,19 @@ import type { WeightGoal, WeightGoalProgress } from "@/features/profile/profile"
 export function WeightGoalCard({
     goal,
     locale,
+    numbers,
     progress,
     timeZone,
     weightUnit,
 }: Readonly<{
     goal: WeightGoal | null;
     locale: Locale;
+    numbers: NumberStyle;
     progress: WeightGoalProgress | null;
     timeZone: string;
     weightUnit: WeightUnit;
 }>) {
-    const weight = (grams: number) => formatWeight(grams, weightUnit, locale);
+    const weight = (grams: number) => formatWeight(grams, weightUnit, numbers);
     const signed = (grams: number) =>
         `${grams > 0 ? "+" : grams < 0 ? "−" : "±"}${weight(Math.abs(Math.round(grams)))}`;
     const perWeek = (grams: number) =>
@@ -57,9 +65,7 @@ export function WeightGoalCard({
                     </div>
                     <p className="muted numeric">
                         {translate(locale, "profile.goalProgress", {
-                            percent: new Intl.NumberFormat(locale, { style: "percent" }).format(
-                                progress.progress,
-                            ),
+                            percent: formatNumber(progress.progress, numbers, { style: "percent" }),
                         })}
                     </p>
                     <dl className="profile-stats">

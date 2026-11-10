@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getEnvironment } from "@/core/config/env";
 import { ApiError, authenticatedRoute, readQuery } from "@/core/http/api";
+import { numberStyle } from "@/core/i18n/translate";
 import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { exportQuerySchema } from "@/features/logbook/schemas";
 import { createPdf } from "@/features/reports/pdf-report";
@@ -35,6 +36,7 @@ export const GET = authenticatedRoute(async (request, { userId }) => {
         entries: logbook.listEntriesInRange(userId, from, to),
         locale: settings.exportLocale,
         notes: logbook.listDayNotes(userId, startDate, endDate),
+        numbers: numberStyle(settings.exportLocale, settings.numberFormat),
         profile: logbook.getProfile(userId),
         startDate,
         timeFormat: settings.timeFormat,

@@ -14,6 +14,7 @@ import {
     type HistoryRecord,
     type EntryKind,
     type Locale,
+    type NumberFormat,
     type Theme,
     type TimeFormat,
     type TrashItem,
@@ -58,6 +59,7 @@ type WeighInRow = {
 type SettingsRow = {
     export_locale: Locale;
     locale: Locale;
+    number_format: NumberFormat;
     theme: Theme;
     time_format: TimeFormat;
     user_id: number;
@@ -100,6 +102,7 @@ export class LogbookRepository {
             : {
                   exportLocale: "en",
                   locale: "en",
+                  numberFormat: "auto",
                   theme: "system",
                   timeFormat: "24h",
                   userId,
@@ -149,11 +152,12 @@ export class LogbookRepository {
         this.database
             .prepare(
                 `INSERT INTO user_settings
-           (user_id, locale, export_locale, weight_unit, theme, time_format)
-         VALUES (?, ?, ?, ?, ?, ?)
+           (user_id, locale, export_locale, weight_unit, theme, time_format, number_format)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (user_id) DO UPDATE SET locale = excluded.locale,
            export_locale = excluded.export_locale, weight_unit = excluded.weight_unit,
-           theme = excluded.theme, time_format = excluded.time_format`,
+           theme = excluded.theme, time_format = excluded.time_format,
+           number_format = excluded.number_format`,
             )
             .run(
                 userId,
@@ -162,6 +166,7 @@ export class LogbookRepository {
                 changes.weightUnit ?? current.weightUnit,
                 changes.theme ?? current.theme,
                 changes.timeFormat ?? current.timeFormat,
+                changes.numberFormat ?? current.numberFormat,
             );
         return this.getSettings(userId);
     }
@@ -231,7 +236,8 @@ export class LogbookRepository {
 
     /** Every live record, the notes, settings, and profile, in the backup file shape. */
     exportBackup(userId: number, exportedAt: string): Backup {
-        const { exportLocale, locale, theme, timeFormat, weightUnit } = this.getSettings(userId);
+        const { exportLocale, locale, numberFormat, theme, timeFormat, weightUnit } =
+            this.getSettings(userId);
         const entries = this.database
             .prepare(
                 `SELECT kind, label, text, start_at, end_at FROM entries
@@ -267,7 +273,7 @@ export class LogbookRepository {
             exportedAt,
             notes,
             profile: { ...this.getProfile(userId), goalSetAt: this.getGoalSetAt(userId) },
-            settings: { exportLocale, locale, theme, timeFormat, weightUnit },
+            settings: { exportLocale, locale, numberFormat, theme, timeFormat, weightUnit },
             version: BACKUP_VERSION,
             weighIns: weighIns.map((row) => ({
                 recordedAt: row.recorded_at,
@@ -904,6 +910,7 @@ function mapSettings(row: SettingsRow): UserSettings {
     return {
         exportLocale: row.export_locale,
         locale: row.locale,
+        numberFormat: row.number_format,
         theme: row.theme,
         timeFormat: row.time_format,
         userId: row.user_id,

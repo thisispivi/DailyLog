@@ -1,5 +1,5 @@
 import { getEnvironment } from "@/core/config/env";
-import { formatWeight, translate } from "@/core/i18n/translate";
+import { formatNumber, formatWeight, numberStyle, translate } from "@/core/i18n/translate";
 import { localizedTitle } from "@/core/preferences/preference-cookies";
 import { localDateInZone } from "@/core/time/zoned-time";
 import {
@@ -25,7 +25,8 @@ export const generateMetadata = () => localizedTitle("nav.profile");
 export default function ProfilePage() {
     const { ownerId, timezone } = getEnvironment();
     const logbook = new LogbookRepository();
-    const { locale, weightUnit } = logbook.getSettings(ownerId);
+    const { locale, numberFormat, weightUnit } = logbook.getSettings(ownerId);
+    const numbers = numberStyle(locale, numberFormat);
     const profile = logbook.getProfile(ownerId);
     const weighIns = logbook.listWeighIns(ownerId, { limit: null }).reverse();
     const latest = weighIns.at(-1);
@@ -40,7 +41,6 @@ export default function ProfilePage() {
                   weightGrams: profile.goalWeightGrams,
               };
     const goalProgress = goal ? weightGoalProgress(weighIns, goal, new Date().getTime()) : null;
-    const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
     const stats = [
         {
             label: translate(locale, "profile.age"),
@@ -56,7 +56,7 @@ export default function ProfilePage() {
         },
         {
             label: translate(locale, "dashboard.weight"),
-            value: latest ? formatWeight(latest.weightGrams, weightUnit, locale) : "–",
+            value: latest ? formatWeight(latest.weightGrams, weightUnit, numbers) : "–",
         },
     ];
 
@@ -86,7 +86,9 @@ export default function ProfilePage() {
                             <div className="profile-stat tile" data-kind="weight">
                                 <dt>{translate(locale, "profile.bmi")}</dt>
                                 <dd className="numeric">
-                                    {bmi === null ? "–" : number.format(bmi)}
+                                    {bmi === null
+                                        ? "–"
+                                        : formatNumber(bmi, numbers, { maximumFractionDigits: 1 })}
                                 </dd>
                                 {bmi !== null && (
                                     <span className="profile-bmi-category">
@@ -101,12 +103,14 @@ export default function ProfilePage() {
                         locale={locale}
                         progress={goalProgress}
                         timeZone={timezone}
+                        numbers={numbers}
                         weightUnit={weightUnit}
                     />
                     <div className="reports-charts">
                         <BmiChart
                             heightCm={profile.heightCm}
                             locale={locale}
+                            numbers={numbers}
                             timeZone={timezone}
                             weighIns={weighIns}
                         />
@@ -115,6 +119,7 @@ export default function ProfilePage() {
                             locale={locale}
                             timeZone={timezone}
                             weighIns={weighIns}
+                            numbers={numbers}
                             weightUnit={weightUnit}
                         />
                     </div>
