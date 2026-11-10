@@ -75,21 +75,15 @@ export function DayLogCard({
                     {translate(locale, "dayLog.stepsHint")}
                 </p>
             </div>
-            <div className="day-log-travel">
-                <button
-                    aria-describedby={`day-travel-hint-${day}`}
-                    aria-pressed={travel}
-                    className="chip"
-                    onClick={() => void toggleTravel()}
-                    type="button"
-                >
-                    <Plane aria-hidden="true" size={16} />
-                    {translate(locale, "dayLog.travel")}
-                </button>
-                <p className="muted" id={`day-travel-hint-${day}`}>
-                    {translate(locale, "dayLog.travelHint")}
-                </p>
-            </div>
+            <button
+                aria-pressed={travel}
+                className="chip day-log-travel"
+                onClick={() => void toggleTravel()}
+                type="button"
+            >
+                <Plane aria-hidden="true" size={16} />
+                {translate(locale, "dayLog.travel")}
+            </button>
         </section>
     );
 }
