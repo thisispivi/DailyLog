@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/thisispivi/DailyLog/compare/v2.5.0...v2.6.0) (2026-11-10)
+
+
+### Features
+
+* add a number format setting ([5c39f0e](https://github.com/thisispivi/DailyLog/commit/5c39f0e1c972d610b3e1d5e5b9393379de6820d2)), closes [#298](https://github.com/thisispivi/DailyLog/issues/298)
+
 ## [2.5.0](https://github.com/thisispivi/DailyLog/compare/v2.4.5...v2.5.0) (2026-11-10)
 
 
