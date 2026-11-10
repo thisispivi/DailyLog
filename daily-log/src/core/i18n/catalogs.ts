@@ -126,7 +126,9 @@ const en = {
         columnChange: "Change",
         columnNote: "Note",
         exportedOn: "Exported on {date}",
+        stepsPerDay: "Steps per day",
         totalMeals: "Meals logged",
+        travelDays: { one: "{count} travel day", other: "{count} travel days" },
     },
     entry: {
         activityName: "Activity name",
@@ -413,7 +415,9 @@ const it: CatalogShape = {
         columnChange: "Variazione",
         columnNote: "Nota",
         exportedOn: "Esportato il {date}",
+        stepsPerDay: "Passi al giorno",
         totalMeals: "Pasti registrati",
+        travelDays: { one: "{count} giorno di viaggio", other: "{count} giorni di viaggio" },
     },
     entry: {
         activityName: "Nome attività",

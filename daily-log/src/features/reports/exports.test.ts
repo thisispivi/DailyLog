@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { Entry } from "@/features/logbook/domain";
 import { EMPTY_PROFILE } from "@/features/profile/profile";
-import { profileLine, reportDays, type ReportInput } from "@/features/reports/report-input";
+import {
+    dayBadges,
+    profileLine,
+    reportDays,
+    summaryTiles,
+    travelSummary,
+    type ReportInput,
+} from "@/features/reports/report-input";
 import { createPdf } from "@/features/reports/pdf-report";
 import { createWorkbook, neutralizeSpreadsheetFormula } from "@/features/reports/workbook";
 
@@ -19,6 +26,10 @@ const entry: Entry = {
 };
 
 const input: ReportInput = {
+    dayLogs: [
+        { day: "2026-08-30", steps: null, travel: true },
+        { day: "2026-08-31", steps: 12_400, travel: false },
+    ],
     endDate: "2026-08-31",
     entries: [
         entry,
@@ -68,12 +79,26 @@ describe("report generation", () => {
 
     it("shows activity ranges in the time column and skips days with nothing recorded", () => {
         const days = reportDays(input);
-        expect(days.map((day) => day.date)).toEqual(["2026-08-31"]);
-        expect(days[0]?.rows.find((row) => row.kind === "training")).toMatchObject({
+        expect(days.map((day) => day.date)).toEqual(["2026-08-30", "2026-08-31"]);
+        expect(days[1]?.rows.find((row) => row.kind === "training")).toMatchObject({
             detail: "30 min",
             time: "23:00–23:30",
         });
-        expect(days[0]?.note).toBe("+ felt great");
+        expect(days[1]?.note).toBe("+ felt great");
+    });
+
+    it("tags travel days and steps, and averages the logged steps", () => {
+        const [travelDay, walkDay] = reportDays(input);
+        expect(travelDay && dayBadges(travelDay, input)).toEqual([
+            { label: "Giorno di viaggio", tone: "travel" },
+        ]);
+        expect(walkDay && dayBadges(walkDay, input)).toEqual([
+            { label: "12.400 passi", tone: "steps" },
+        ]);
+        expect(travelSummary(input)).toBe("1 giorno di viaggio");
+        expect(summaryTiles(input).find((tile) => tile.label === "Passi al giorno")?.value).toBe(
+            "12.400",
+        );
     });
 
     it("describes the person in the export header, skipping what is not set", () => {
