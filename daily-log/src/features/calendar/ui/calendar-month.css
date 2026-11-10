@@ -25,29 +25,42 @@
     padding: 8px 14px;
 }
 
+.calendar-weekdays,
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 6px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
 }
 
-.calendar-weekday {
-    padding: 0 4px 4px;
+.calendar-weekdays {
+    margin-bottom: 6px;
+    padding: 0 4px;
     color: var(--text-muted);
     font-size: 12px;
     font-weight: 700;
     text-transform: capitalize;
 }
 
-.calendar-day {
-    position: relative;
+/* 1fr rows all take the height of the tallest week, so the month reads as an even grid. */
+.calendar-grid {
+    grid-auto-rows: 1fr;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.calendar-grid > li {
     display: flex;
-    min-height: 104px;
+    min-width: 0;
+}
+
+.calendar-day {
+    display: flex;
+    width: 100%;
+    min-height: 112px;
     flex-direction: column;
     gap: 6px;
+    overflow: hidden;
     border-radius: var(--radius-tile);
     background: var(--surface-muted);
     padding: 8px;
@@ -69,19 +82,38 @@
     box-shadow: inset 0 0 0 2px var(--primary);
 }
 
+/* The number and the travel and note markers share one row, so they can never overlap. */
+.calendar-day-head {
+    display: flex;
+    min-height: 26px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
 .calendar-day-number {
+    display: grid;
+    min-width: 26px;
+    height: 26px;
+    place-items: center;
     font-size: 14px;
     font-weight: 800;
 }
 
 .calendar-day[data-today] .calendar-day-number {
-    display: grid;
-    width: 26px;
-    height: 26px;
-    place-items: center;
     border-radius: 50%;
     background: var(--primary);
     color: var(--on-primary);
+}
+
+.calendar-marks {
+    display: flex;
+    gap: 4px;
+    color: var(--primary);
+}
+
+.calendar-marks svg {
+    flex: none;
 }
 
 .calendar-day-stats {
@@ -91,39 +123,66 @@
 }
 
 .calendar-stat {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 3px;
+    overflow: hidden;
     border-radius: 999px;
     background: var(--kind-tile);
     padding: 1px 6px;
     color: var(--kind-ink);
     font-size: 11px;
     font-weight: 800;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.calendar-marks {
-    position: absolute;
-    top: 9px;
-    right: 8px;
-    display: flex;
-    gap: 3px;
-    color: var(--primary);
-}
-
-/* Phones: the figures don't fit, so each record type becomes a coloured dot. */
+/* Phones: the figures don't fit, so each record type becomes a coloured dot and the
+   markers move under the number, all centred inside the cell. */
 @media (max-width: 720px) {
     .calendar {
         padding: 14px 10px;
     }
 
+    .calendar-weekdays,
     .calendar-grid {
         gap: 3px;
     }
 
+    .calendar-weekdays {
+        padding: 0;
+        font-size: 11px;
+        text-align: center;
+    }
+
     .calendar-day {
-        min-height: 58px;
+        min-height: 64px;
         align-items: center;
         gap: 4px;
-        padding: 6px 2px;
+        padding: 5px 2px;
+    }
+
+    .calendar-day-head {
+        min-height: 0;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 2px;
+    }
+
+    .calendar-day-number {
+        min-width: 22px;
+        height: 22px;
+        font-size: 13px;
+    }
+
+    .calendar-marks {
+        gap: 2px;
+    }
+
+    .calendar-marks svg {
+        width: 10px;
+        height: 10px;
     }
 
     .calendar-day-stats {
@@ -134,26 +193,12 @@
     .calendar-stat {
         width: 6px;
         height: 6px;
-        overflow: hidden;
         padding: 0;
         background: var(--kind-ink);
         font-size: 0;
     }
 
-    .calendar-marks {
-        top: 4px;
-        right: 3px;
-        gap: 1px;
-    }
-
-    .calendar-marks svg {
-        width: 10px;
-        height: 10px;
-    }
-
-    .calendar-weekday {
-        padding: 0 0 4px;
-        font-size: 11px;
-        text-align: center;
+    .calendar-stat svg {
+        display: none;
     }
 }

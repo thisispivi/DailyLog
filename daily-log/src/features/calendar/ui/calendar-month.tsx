@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, NotebookPen, Plane } from "lucide-react";
+import { ChevronLeft, ChevronRight, Footprints, NotebookPen, Plane } from "lucide-react";
 import Link from "next/link";
 
 import { formatMinutes, formatNumber, type NumberStyle, translate } from "@/core/i18n/translate";
@@ -90,30 +90,46 @@ export function CalendarMonth({
                     </Link>
                 </nav>
             </header>
-            <ol className="calendar-grid">
+            <div aria-hidden="true" className="calendar-weekdays">
                 {weekdays.map((weekday) => (
-                    <li aria-hidden="true" className="calendar-weekday" key={weekday}>
-                        {weekday}
-                    </li>
+                    <span key={weekday}>{weekday}</span>
                 ))}
+            </div>
+            <ol className="calendar-grid">
                 {days.map((day) => {
                     const inMonth = day.date.startsWith(month);
                     const hasNote = withNotes.has(day.date);
                     const dayLog = dayLogs[day.date];
                     const daySteps = dayLog?.steps ?? 0;
+                    // The icons are decorative; the link name carries what they mean.
+                    const label = [
+                        longDate.format(asDate(day.date)),
+                        dayLog?.travel ? translate(locale, "dayLog.travel") : "",
+                        hasNote ? translate(locale, "calendar.hasNote") : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" · ");
                     return (
                         <li key={day.date}>
                             <Link
                                 aria-current={day.date === selected ? "date" : undefined}
-                                aria-label={longDate.format(asDate(day.date))}
+                                aria-label={label}
                                 className="calendar-day"
                                 data-outside={!inMonth || undefined}
                                 data-today={day.date === today || undefined}
                                 href={calendarHref(day.date.slice(0, 7), day.date)}
                                 scroll={false}
                             >
-                                <span className="calendar-day-number numeric">
-                                    {Number(day.date.slice(8))}
+                                <span className="calendar-day-head">
+                                    <span className="calendar-day-number numeric">
+                                        {Number(day.date.slice(8))}
+                                    </span>
+                                    {(dayLog?.travel || hasNote) && (
+                                        <span aria-hidden="true" className="calendar-marks">
+                                            {dayLog?.travel && <Plane size={14} />}
+                                            {hasNote && <NotebookPen size={14} />}
+                                        </span>
+                                    )}
                                 </span>
                                 <span className="calendar-day-stats">
                                     {day.meals > 0 && (
@@ -128,11 +144,10 @@ export function CalendarMonth({
                                     )}
                                     {daySteps >= ACTIVE_DAY_STEPS && (
                                         <span className="calendar-stat" data-kind="training">
-                                            {translate(locale, "dayLog.stepsCount", {
-                                                count: formatNumber(daySteps, numbers, {
-                                                    maximumFractionDigits: 1,
-                                                    notation: "compact",
-                                                }),
+                                            <Footprints aria-hidden="true" size={11} />
+                                            {formatNumber(daySteps, numbers, {
+                                                maximumFractionDigits: 1,
+                                                notation: "compact",
                                             })}
                                         </span>
                                     )}
@@ -145,20 +160,6 @@ export function CalendarMonth({
                                         <span className="calendar-stat" data-kind="weight">
                                             {decimal(gramsToUnit(day.weightGrams, weightUnit))}
                                         </span>
-                                    )}
-                                </span>
-                                <span className="calendar-marks">
-                                    {dayLog?.travel && (
-                                        <Plane
-                                            aria-label={translate(locale, "dayLog.travel")}
-                                            size={14}
-                                        />
-                                    )}
-                                    {hasNote && (
-                                        <NotebookPen
-                                            aria-label={translate(locale, "calendar.hasNote")}
-                                            size={14}
-                                        />
                                     )}
                                 </span>
                             </Link>
