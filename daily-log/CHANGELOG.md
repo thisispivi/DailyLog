@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/thisispivi/DailyLog/compare/v2.4.5...v2.5.0) (2026-11-10)
+
+
+### Features
+
+* log daily steps as an alternative to an activity ([fb651fd](https://github.com/thisispivi/DailyLog/commit/fb651fdf070fe91e30ef26f5aac32bc76a02b018)), closes [#292](https://github.com/thisispivi/DailyLog/issues/292)
+
 ## [2.4.5](https://github.com/thisispivi/DailyLog/compare/v2.4.4...v2.4.5) (2026-11-09)
 
 
