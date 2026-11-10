@@ -70,7 +70,6 @@ const en = {
         stepsHint: "10,000 or more counts as an active day.",
         title: "The day",
         travel: "Travel day",
-        travelHint: "Tracking is harder and the diet is not followed exactly.",
     },
     calendar: {
         hasNote: "Has a note",
@@ -358,7 +357,6 @@ const it: CatalogShape = {
         stepsHint: "Da 10.000 in su conta come giornata attiva.",
         title: "La giornata",
         travel: "Giorno di viaggio",
-        travelHint: "Tracciare è più difficile e la dieta non è seguita alla lettera.",
     },
     calendar: {
         hasNote: "Ha una nota",
