@@ -4,7 +4,12 @@ import Link from "next/link";
 import { formatMinutes, translate } from "@/core/i18n/translate";
 import { shiftMonth } from "@/features/calendar/month";
 import type { DayTotals } from "@/features/insights/insights";
-import { gramsToUnit, type Locale, type WeightUnit } from "@/features/logbook/domain";
+import {
+    ACTIVE_DAY_STEPS,
+    gramsToUnit,
+    type Locale,
+    type WeightUnit,
+} from "@/features/logbook/domain";
 
 import "./calendar-month.css";
 
@@ -24,6 +29,7 @@ export function CalendarMonth({
     month,
     noteDays,
     selected,
+    steps,
     today,
     weightUnit,
 }: Readonly<{
@@ -32,6 +38,8 @@ export function CalendarMonth({
     month: string;
     noteDays: readonly string[];
     selected: string;
+    /** Logged steps per day; days without any are left out. */
+    steps: Readonly<Record<string, number>>;
     today: string;
     weightUnit: WeightUnit;
 }>) {
@@ -48,6 +56,7 @@ export function CalendarMonth({
     const longDate = new Intl.DateTimeFormat(locale, { dateStyle: "full", timeZone: "UTC" });
     const decimal = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
     const withNotes = new Set(noteDays);
+    const compact = new Intl.NumberFormat(locale, { notation: "compact" });
 
     return (
         <section aria-labelledby="calendar-title" className="card calendar">
@@ -88,6 +97,7 @@ export function CalendarMonth({
                 {days.map((day) => {
                     const inMonth = day.date.startsWith(month);
                     const hasNote = withNotes.has(day.date);
+                    const daySteps = steps[day.date] ?? 0;
                     return (
                         <li key={day.date}>
                             <Link
@@ -111,6 +121,13 @@ export function CalendarMonth({
                                     {day.activeMinutes > 0 && (
                                         <span className="calendar-stat" data-kind="training">
                                             {formatMinutes(day.activeMinutes, locale)}
+                                        </span>
+                                    )}
+                                    {daySteps >= ACTIVE_DAY_STEPS && (
+                                        <span className="calendar-stat" data-kind="training">
+                                            {translate(locale, "dayLog.stepsCount", {
+                                                count: compact.format(daySteps),
+                                            })}
                                         </span>
                                     )}
                                     {day.sleepMinutes > 0 && (

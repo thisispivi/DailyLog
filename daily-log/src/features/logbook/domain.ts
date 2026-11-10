@@ -60,6 +60,14 @@ export type DayNote = Readonly<{ day: string; text: string; updatedAt: string }>
 
 export const DAY_NOTE_MAX_LENGTH = 10_000;
 
+/** What was logged about one local calendar day (YYYY-MM-DD) as a whole. */
+export type DayLog = Readonly<{ day: string; steps: number | null }>;
+
+export const MAX_DAILY_STEPS = 200_000;
+
+/** A day with at least this many steps counts as active even without a training. */
+export const ACTIVE_DAY_STEPS = 10_000;
+
 export type EntryFilters = Readonly<{
     from?: string;
     kind?: EntryKind;

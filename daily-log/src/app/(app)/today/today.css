@@ -68,6 +68,11 @@
     gap: var(--space-6);
 }
 
+.today-side {
+    display: grid;
+    gap: var(--space-6);
+}
+
 /* Running activity */
 
 .active-activity {

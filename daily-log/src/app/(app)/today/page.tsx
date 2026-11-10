@@ -16,7 +16,9 @@ import {
     LogTile,
     RecordLoggerProvider,
 } from "@/features/dashboard/ui/record-logger";
+import { DayLogCard } from "@/features/day-log/ui/day-log-card";
 import { dailyTotals, loggingStreak } from "@/features/insights/insights";
+import { ACTIVE_DAY_STEPS } from "@/features/logbook/domain";
 import { DayNote } from "@/features/notes/ui/day-note";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
 import type { RecordKind } from "@/ui/kind-icon";
@@ -40,6 +42,9 @@ export default function TodayPage() {
     const active = logbook.activeActivity(ownerId);
     const lastWeighIn = logbook.listWeighIns(ownerId, { limit: 1 })[0];
     const [totals] = dailyTotals([today], entries, weighIns, timezone);
+    const dayLog = logbook.getDayLog(ownerId, today);
+    const activeMinutes = totals?.activeMinutes ?? 0;
+    const steps = dayLog?.steps ?? 0;
 
     const [streakFrom] = localDateRangeBounds(
         shiftDate(today, -STREAK_LOOKBACK_DAYS),
@@ -62,7 +67,13 @@ export default function TodayPage() {
         {
             kind: "training",
             label: translate(locale, "dashboard.statTraining"),
-            value: formatMinutes(totals?.activeMinutes ?? 0, locale),
+            // Enough steps make the day active even with no training logged.
+            value:
+                activeMinutes === 0 && steps >= ACTIVE_DAY_STEPS
+                    ? translate(locale, "dayLog.stepsCount", {
+                          count: new Intl.NumberFormat(locale).format(steps),
+                      })
+                    : formatMinutes(activeMinutes, locale),
         },
         {
             kind: "sleep",
@@ -126,12 +137,15 @@ export default function TodayPage() {
                     weighIns={weighIns}
                     weightUnit={weightUnit}
                 />
-                <DayNote
-                    day={today}
-                    initialText={logbook.getDayNote(ownerId, today)?.text ?? ""}
-                    key={today}
-                    locale={locale}
-                />
+                <div className="today-side">
+                    <DayNote
+                        day={today}
+                        initialText={logbook.getDayNote(ownerId, today)?.text ?? ""}
+                        key={today}
+                        locale={locale}
+                    />
+                    <DayLogCard day={today} initial={dayLog} key={`log-${today}`} locale={locale} />
+                </div>
             </div>
         </RecordLoggerProvider>
     );

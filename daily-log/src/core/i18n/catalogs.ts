@@ -64,6 +64,11 @@ const en = {
         saving: "Saving…",
         title: "Notes",
     },
+    dayLog: {
+        steps: "Steps",
+        stepsCount: "{count} steps",
+        stepsHint: "10,000 or more counts as an active day.",
+    },
     calendar: {
         hasNote: "Has a note",
         nextMonth: "Next month",
@@ -334,6 +339,11 @@ const it: CatalogShape = {
         placeholder: "Come è andata la giornata? Emozioni, lavoro, qualsiasi cosa da ricordare.",
         saving: "Salvataggio…",
         title: "Note",
+    },
+    dayLog: {
+        steps: "Passi",
+        stepsCount: "{count} passi",
+        stepsHint: "Da 10.000 in su conta come giornata attiva.",
     },
     calendar: {
         hasNote: "Ha una nota",

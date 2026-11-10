@@ -191,6 +191,9 @@ export function seedDemo(timeZone: string, locale: Locale): void {
         }
 
         if (random() < 0.3) logbook.saveDayNote(OWNER, day, pick(notes));
+        if (past(at(day, "22:00")) && random() < 0.6) {
+            logbook.saveDayLog(OWNER, day, { steps: Math.round(4_000 + random() * 9_000) });
+        }
     }
 
     // The goal was set four weeks ago, so the profile shows some progress.

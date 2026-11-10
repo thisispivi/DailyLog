@@ -7,6 +7,7 @@ import { localDateInZone, localDateRangeBounds } from "@/core/time/zoned-time";
 import { monthGrid, monthPattern } from "@/features/calendar/month";
 import { CalendarMonth } from "@/features/calendar/ui/calendar-month";
 import { DayTimeline } from "@/features/dashboard/ui/day-timeline";
+import { DayLogCard } from "@/features/day-log/ui/day-log-card";
 import { dailyTotals } from "@/features/insights/insights";
 import { DayNote } from "@/features/notes/ui/day-note";
 import { LogbookRepository } from "@/infrastructure/database/logbook-repository";
@@ -65,6 +66,11 @@ export default async function CalendarPage({
                         .listDayNotes(ownerId, firstDay, lastDay)
                         .map((note) => note.day)}
                     selected={selected}
+                    steps={Object.fromEntries(
+                        logbook
+                            .listDayLogs(ownerId, firstDay, lastDay)
+                            .map((log) => [log.day, log.steps ?? 0]),
+                    )}
                     today={today}
                     weightUnit={weightUnit}
                 />
@@ -84,6 +90,12 @@ export default async function CalendarPage({
                         day={selected}
                         initialText={logbook.getDayNote(ownerId, selected)?.text ?? ""}
                         key={selected}
+                        locale={locale}
+                    />
+                    <DayLogCard
+                        day={selected}
+                        initial={logbook.getDayLog(ownerId, selected)}
+                        key={`log-${selected}`}
                         locale={locale}
                     />
                 </div>

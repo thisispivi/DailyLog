@@ -3,6 +3,7 @@ import * as login from "@/app/api/auth/login/route";
 import * as logout from "@/app/api/auth/logout/route";
 import * as password from "@/app/api/auth/password/route";
 import * as backup from "@/app/api/backup/route";
+import * as day from "@/app/api/days/[day]/route";
 import * as entry from "@/app/api/entries/[id]/route";
 import * as entriesDay from "@/app/api/entries/day/route";
 import * as entries from "@/app/api/entries/route";
@@ -32,6 +33,7 @@ const routes: ReadonlyArray<readonly [string, object]> = [
     ["/api/auth/logout", logout],
     ["/api/auth/password", password],
     ["/api/backup", backup],
+    ["/api/days/:day", day],
     ["/api/entries/day", entriesDay],
     ["/api/entries/:id", entry],
     ["/api/entries", entries],

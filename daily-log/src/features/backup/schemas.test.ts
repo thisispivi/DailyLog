@@ -4,6 +4,7 @@ import { backupSchema } from "@/features/backup/schemas";
 
 const backup = {
     app: "DailyLog",
+    days: [{ day: "2026-08-31", steps: 12_000 }],
     entries: [
         {
             endAt: null,
@@ -38,6 +39,11 @@ const backup = {
 describe("backup schema", () => {
     it("accepts an exported backup", () => {
         expect(backupSchema.parse(backup)).toEqual(backup);
+    });
+
+    it("reads backups made before day logs existed as having none", () => {
+        const legacy = { ...backup, days: undefined };
+        expect(backupSchema.parse(legacy).days).toEqual([]);
     });
 
     it("reads backups made before the time format existed as 24-hour", () => {

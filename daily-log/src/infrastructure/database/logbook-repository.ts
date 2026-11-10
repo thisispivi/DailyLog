@@ -7,6 +7,7 @@ import {
     RecordNotFoundError,
     TRASH_RETENTION_DAYS,
     type Entry,
+    type DayLog,
     type DayNote,
     type EntryFilters,
     type HistoryFilters,
@@ -21,7 +22,12 @@ import {
     type WeightUnit,
 } from "@/features/logbook/domain";
 import { BACKUP_VERSION, type Backup, type ImportResult } from "@/features/backup/schemas";
-import type { EntryChanges, NewEntry, SettingsChanges } from "@/features/logbook/schemas";
+import type {
+    DayLogChanges,
+    EntryChanges,
+    NewEntry,
+    SettingsChanges,
+} from "@/features/logbook/schemas";
 import { EMPTY_PROFILE, type UserProfile } from "@/features/profile/profile";
 import type { ProfileChanges } from "@/features/profile/schemas";
 import { getDatabase } from "@/infrastructure/database/client";
@@ -241,8 +247,12 @@ export class LogbookRepository {
         const notes = this.database
             .prepare("SELECT day, text FROM day_notes WHERE user_id = ? ORDER BY day")
             .all(userId) as Array<{ day: string; text: string }>;
+        const days = this.database
+            .prepare("SELECT day, steps FROM day_logs WHERE user_id = ? ORDER BY day")
+            .all(userId) as Array<{ day: string; steps: number | null }>;
         return {
             app: "DailyLog",
+            days,
             entries: entries.map((row) => ({
                 endAt: row.end_at,
                 kind: row.kind,
@@ -291,6 +301,10 @@ export class LogbookRepository {
                 `INSERT OR IGNORE INTO day_notes (user_id, day, text, updated_at)
          VALUES (?, ?, ?, ?)`,
             );
+            const addDayLog = this.database.prepare(
+                `INSERT OR IGNORE INTO day_logs (user_id, day, steps, updated_at)
+         VALUES (?, ?, ?, ?)`,
+            );
             let entries = 0;
             for (const entry of backup.entries) {
                 const startAt = toStorageTimestamp(entry.startAt);
@@ -315,6 +329,7 @@ export class LogbookRepository {
                 (count, note) => count + addNote.run(userId, note.day, note.text, now).changes,
                 0,
             );
+            for (const day of backup.days) addDayLog.run(userId, day.day, day.steps, now);
             return { entries, notes, weighIns };
         })();
     }
@@ -713,6 +728,41 @@ export class LogbookRepository {
             )
             .run(userId, day, text, storageNow());
         return this.getDayNote(userId, day);
+    }
+
+    getDayLog(userId: number, day: string): DayLog | null {
+        const row = this.database
+            .prepare("SELECT day, steps FROM day_logs WHERE user_id = ? AND day = ?")
+            .get(userId, day) as DayLog | undefined;
+        return row ?? null;
+    }
+
+    /** Day logs between two local dates, inclusive, oldest first. */
+    listDayLogs(userId: number, fromDay: string, toDay: string): DayLog[] {
+        return this.database
+            .prepare(
+                `SELECT day, steps FROM day_logs
+         WHERE user_id = ? AND day BETWEEN ? AND ? ORDER BY day`,
+            )
+            .all(userId, fromDay, toDay) as DayLog[];
+    }
+
+    /** Applies changes to a day's log; a day with nothing left is removed. */
+    saveDayLog(userId: number, day: string, changes: DayLogChanges): DayLog | null {
+        const next = { steps: null, ...this.getDayLog(userId, day), ...changes };
+        if (next.steps === null) {
+            this.database
+                .prepare("DELETE FROM day_logs WHERE user_id = ? AND day = ?")
+                .run(userId, day);
+            return null;
+        }
+        this.database
+            .prepare(
+                `INSERT INTO day_logs (user_id, day, steps, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (user_id, day) DO UPDATE SET steps = excluded.steps, updated_at = excluded.updated_at`,
+            )
+            .run(userId, day, next.steps, storageNow());
+        return this.getDayLog(userId, day);
     }
 
     listTrash(userId: number, limit = 100): TrashItem[] {
