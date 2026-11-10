@@ -1,4 +1,4 @@
-import { Flame } from "lucide-react";
+import { Flame, Plane } from "lucide-react";
 
 import { getEnvironment } from "@/core/config/env";
 import { formatDate, formatMinutes, formatWeight, translate } from "@/core/i18n/translate";
@@ -109,6 +109,12 @@ export default function TodayPage() {
                     </h1>
                 </div>
                 <div className="today-actions">
+                    {dayLog?.travel && (
+                        <span className="pill today-travel">
+                            <Plane aria-hidden="true" size={16} />
+                            {translate(locale, "dayLog.travel")}
+                        </span>
+                    )}
                     {streak > 0 && (
                         <span className="pill streak numeric">
                             <Flame aria-hidden="true" size={16} />

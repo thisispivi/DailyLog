@@ -1,6 +1,6 @@
 "use client";
 
-import { Footprints } from "lucide-react";
+import { CalendarHeart, Plane } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -13,7 +13,7 @@ import "./day-log-card.css";
 
 type Status = { message: string; tone: "error" | "success" } | null;
 
-/** The day's step count. Saves when the field loses focus; no save button. */
+/** Steps and the travel tag for one day. Steps save on blur, the tag on toggle; no save button. */
 export function DayLogCard({
     day,
     initial,
@@ -21,6 +21,7 @@ export function DayLogCard({
 }: Readonly<{ day: string; initial: DayLog | null; locale: Locale }>) {
     const router = useRouter();
     const [steps, setSteps] = useState(initial?.steps ?? null);
+    const [travel, setTravel] = useState(initial?.travel ?? false);
     const [status, setStatus] = useState<Status>(null);
 
     async function save(changes: DayLogChanges) {
@@ -41,21 +42,23 @@ export function DayLogCard({
         if (next !== steps && (await save({ steps: next }))) setSteps(next);
     }
 
+    async function toggleTravel() {
+        if (await save({ travel: !travel })) setTravel(!travel);
+    }
+
     return (
         <section aria-labelledby={`day-log-title-${day}`} className="card day-log">
             <div className="card-heading">
                 <h2 id={`day-log-title-${day}`}>
-                    <Footprints aria-hidden="true" size={20} />
-                    {translate(locale, "dayLog.steps")}
+                    <CalendarHeart aria-hidden="true" size={20} />
+                    {translate(locale, "dayLog.title")}
                 </h2>
                 <p aria-live="polite" className="status-message" data-tone={status?.tone}>
                     {status?.message}
                 </p>
             </div>
             <div className="field">
-                <label className="sr-only" htmlFor={`day-steps-${day}`}>
-                    {translate(locale, "dayLog.steps")}
-                </label>
+                <label htmlFor={`day-steps-${day}`}>{translate(locale, "dayLog.steps")}</label>
                 <input
                     aria-describedby={`day-steps-hint-${day}`}
                     className="input numeric"
@@ -70,6 +73,21 @@ export function DayLogCard({
                 />
                 <p className="muted" id={`day-steps-hint-${day}`}>
                     {translate(locale, "dayLog.stepsHint")}
+                </p>
+            </div>
+            <div className="day-log-travel">
+                <button
+                    aria-describedby={`day-travel-hint-${day}`}
+                    aria-pressed={travel}
+                    className="chip"
+                    onClick={() => void toggleTravel()}
+                    type="button"
+                >
+                    <Plane aria-hidden="true" size={16} />
+                    {translate(locale, "dayLog.travel")}
+                </button>
+                <p className="muted" id={`day-travel-hint-${day}`}>
+                    {translate(locale, "dayLog.travelHint")}
                 </p>
             </div>
         </section>

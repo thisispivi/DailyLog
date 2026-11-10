@@ -4,6 +4,11 @@
     gap: var(--space-3);
 }
 
+.today-travel {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+
 .streak {
     background: var(--training-tile);
     color: var(--training-ink);

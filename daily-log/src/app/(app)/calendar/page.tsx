@@ -66,10 +66,10 @@ export default async function CalendarPage({
                         .listDayNotes(ownerId, firstDay, lastDay)
                         .map((note) => note.day)}
                     selected={selected}
-                    steps={Object.fromEntries(
+                    dayLogs={Object.fromEntries(
                         logbook
                             .listDayLogs(ownerId, firstDay, lastDay)
-                            .map((log) => [log.day, log.steps ?? 0]),
+                            .map((log) => [log.day, log]),
                     )}
                     today={today}
                     weightUnit={weightUnit}

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, NotebookPen } from "lucide-react";
+import { ChevronLeft, ChevronRight, NotebookPen, Plane } from "lucide-react";
 import Link from "next/link";
 
 import { formatMinutes, translate } from "@/core/i18n/translate";
@@ -6,6 +6,7 @@ import { shiftMonth } from "@/features/calendar/month";
 import type { DayTotals } from "@/features/insights/insights";
 import {
     ACTIVE_DAY_STEPS,
+    type DayLog,
     gramsToUnit,
     type Locale,
     type WeightUnit,
@@ -24,22 +25,22 @@ function calendarHref(month: string, day?: string): string {
 
 /** A month of day cells, each a link that selects the day below the grid. */
 export function CalendarMonth({
+    dayLogs,
     days,
     locale,
     month,
     noteDays,
     selected,
-    steps,
     today,
     weightUnit,
 }: Readonly<{
+    /** Day logs by date; days without one are left out. */
+    dayLogs: Readonly<Record<string, DayLog>>;
     days: readonly DayTotals[];
     locale: Locale;
     month: string;
     noteDays: readonly string[];
     selected: string;
-    /** Logged steps per day; days without any are left out. */
-    steps: Readonly<Record<string, number>>;
     today: string;
     weightUnit: WeightUnit;
 }>) {
@@ -97,7 +98,8 @@ export function CalendarMonth({
                 {days.map((day) => {
                     const inMonth = day.date.startsWith(month);
                     const hasNote = withNotes.has(day.date);
-                    const daySteps = steps[day.date] ?? 0;
+                    const dayLog = dayLogs[day.date];
+                    const daySteps = dayLog?.steps ?? 0;
                     return (
                         <li key={day.date}>
                             <Link
@@ -143,13 +145,20 @@ export function CalendarMonth({
                                         </span>
                                     )}
                                 </span>
-                                {hasNote && (
-                                    <NotebookPen
-                                        aria-label={translate(locale, "calendar.hasNote")}
-                                        className="calendar-note"
-                                        size={14}
-                                    />
-                                )}
+                                <span className="calendar-marks">
+                                    {dayLog?.travel && (
+                                        <Plane
+                                            aria-label={translate(locale, "dayLog.travel")}
+                                            size={14}
+                                        />
+                                    )}
+                                    {hasNote && (
+                                        <NotebookPen
+                                            aria-label={translate(locale, "calendar.hasNote")}
+                                            size={14}
+                                        />
+                                    )}
+                                </span>
                             </Link>
                         </li>
                     );

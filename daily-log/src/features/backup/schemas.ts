@@ -20,7 +20,14 @@ export const backupSchema = z.strictObject({
     app: z.literal("DailyLog"),
     // Backups made before day logs existed have no days.
     days: z
-        .array(z.strictObject({ day: z.iso.date(), steps: stepsSchema }))
+        .array(
+            z.strictObject({
+                day: z.iso.date(),
+                steps: stepsSchema,
+                // Backups made before travel days existed have no travel flag.
+                travel: z.boolean().default(false),
+            }),
+        )
         .max(50_000)
         .default([]),
     entries: z.array(createEntrySchema).max(200_000),
