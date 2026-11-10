@@ -95,6 +95,7 @@ export function migrateDatabase(
         ALTER TABLE user_profiles ADD COLUMN goal_set_at TEXT;
       `);
         }
+        // diets and meal_plans belong to the paused meal plan; no code reads them, but their rows are kept.
         db.exec(`
       CREATE TABLE IF NOT EXISTS diets (
         user_id INTEGER PRIMARY KEY,

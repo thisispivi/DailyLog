@@ -6,7 +6,6 @@ import { type ReactNode, useEffect, useState, useSyncExternalStore } from "react
 
 import CalendarPage from "@/app/(app)/calendar/page";
 import HistoryPage from "@/app/(app)/history/page";
-import MealPlanPage from "@/app/(app)/meal-plan/page";
 import ProfilePage from "@/app/(app)/profile/page";
 import ReportsPage from "@/app/(app)/reports/page";
 import SettingsPage from "@/app/(app)/settings/page";
@@ -33,7 +32,6 @@ const demoViews = {
     calendar: CalendarPage,
     history: HistoryPage,
     login: LoginPage,
-    "meal-plan": MealPlanPage,
     profile: ProfilePage,
     reports: ReportsPage,
     settings: SettingsPage,

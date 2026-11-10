@@ -97,8 +97,8 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 
 ## Layout
 
-- **Desktop (> 860px):** a fixed white sidebar (logo, nav, Meal plan and Profile links, sign out) and the content area. The sidebar never scrolls with the page.
-- **Phone (≤ 860px):** a sticky top bar (logo, meal plan, profile, and sign-out icons), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
+- **Desktop (> 860px):** a fixed white sidebar (logo, nav, Profile link, sign out) and the content area. The sidebar never scrolls with the page.
+- **Phone (≤ 860px):** a sticky top bar (logo, profile, and sign-out icons), a floating rounded bottom tab bar with 5 destinations, and content padded 16px at the sides and 120px at the bottom so nothing hides behind the tab bar.
 - Page header: `.page-header` with an `.eyebrow` and the `h1`; actions go on the right and wrap under on phones.
 - Breakpoints in use: 1100px (two-column pages stack), 960px (Today columns stack), 860px (phone shell), 720px (compact cards, 2-column tiles, calendar dots). Reuse these; don't invent new ones.
 - No horizontal scrolling at 375px. Chip rows that can't wrap scroll sideways with the scrollbar hidden.
@@ -120,8 +120,6 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 **Settings:** one card per preference with an icon square, title, and hint. Options are chips, and **every change saves immediately** with a floating "Saved" pill. There are no save buttons. The Backup card has two chips: "Download JSON" (entries, weigh-ins, notes, profile, and settings; not the diet or meal plan) and "Import JSON" (confirms first, adds missing records, never deletes, and reports the result inline).
 
 **Profile:** reached from the account links next to sign-out (bottom of the sidebar, top bar on phones), so the tab bar keeps five destinations. A "Body" card of stats (age, height, latest weight, BMI with its WHO category on a weight tile), a "Weight goal" card (progress bar; start, now, goal, and to-go tiles; recent weekly pace from the last four weeks, the date it reaches the goal, and the weekly change needed by the goal date), a BMI chart with dashed guides at 18.5, 25, and 30, the weight chart with the goal as a dashed line, and an "About you" form that also holds the goal weight and optional goal date. Changing the goal weight restarts the goal from the latest weigh-in. Text fields save on blur and the birth date on pick; tapping the birth date calendar caption opens a year grid, then a month grid (Android style).
-
-**Meal plan:** reached from the account links like Profile. DailyLog has no AI of its own: the "Your diet" card explains three steps, copies a prompt for any AI assistant (`dietPrompt`, with the JSON Schema of the diet), and uploads the JSON it returns (replacing a diet confirms first and clears the plan); the diet's "with every meal" notes sit on top. The week is one full-width table read across: a row per day (today tinted violet) and a column per meal, headed by the meal name in meal ink. Each cell shows the variant, each pick with its quantities, and a re-roll icon button. On phones (≤ 720px) each day becomes a block of meal tiles that name their meal. "Generate week" (then "New week", which confirms) sits above the table. Below it, the diet card and a shopping list card (the week added up per food, in two columns) sit side by side, stacking at 1100px. Weekly and daily limits in the diet are hard limits; a gap that nothing fits says so instead of breaking a limit.
 
 **Notes:** a plain textarea that autosaves 800ms after typing stops, with a "Saving… / Saved" status.
 

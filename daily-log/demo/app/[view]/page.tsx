@@ -2,16 +2,7 @@ import { Suspense } from "react";
 
 import { DemoApp } from "@demo/shell/demo-app";
 
-const views = [
-    "calendar",
-    "history",
-    "login",
-    "meal-plan",
-    "profile",
-    "reports",
-    "settings",
-    "today",
-] as const;
+const views = ["calendar", "history", "login", "profile", "reports", "settings", "today"] as const;
 
 export const dynamicParams = false;
 

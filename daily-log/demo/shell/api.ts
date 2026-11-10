@@ -3,12 +3,9 @@ import * as login from "@/app/api/auth/login/route";
 import * as logout from "@/app/api/auth/logout/route";
 import * as password from "@/app/api/auth/password/route";
 import * as backup from "@/app/api/backup/route";
-import * as diet from "@/app/api/diet/route";
 import * as entry from "@/app/api/entries/[id]/route";
 import * as entriesDay from "@/app/api/entries/day/route";
 import * as entries from "@/app/api/entries/route";
-import * as mealPlanReroll from "@/app/api/meal-plan/reroll/route";
-import * as mealPlan from "@/app/api/meal-plan/route";
 import * as note from "@/app/api/notes/[day]/route";
 import * as profile from "@/app/api/profile/route";
 import * as settings from "@/app/api/settings/route";
@@ -35,12 +32,9 @@ const routes: ReadonlyArray<readonly [string, object]> = [
     ["/api/auth/logout", logout],
     ["/api/auth/password", password],
     ["/api/backup", backup],
-    ["/api/diet", diet],
     ["/api/entries/day", entriesDay],
     ["/api/entries/:id", entry],
     ["/api/entries", entries],
-    ["/api/meal-plan/reroll", mealPlanReroll],
-    ["/api/meal-plan", mealPlan],
     ["/api/notes/:day", note],
     ["/api/profile", profile],
     ["/api/settings", settings],

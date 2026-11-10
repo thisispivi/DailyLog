@@ -8,7 +8,6 @@ import {
     House,
     LogOut,
     Settings,
-    UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -64,16 +63,8 @@ export function AppNavigation({ locale }: Readonly<{ locale: Locale }>) {
                     ))}
                 </ul>
             </nav>
-            {/* Meal plan and profile sit with sign-out so the phone tab bar keeps five destinations. */}
+            {/* Profile sits with sign-out so the phone tab bar keeps five destinations. */}
             <div className="sidebar-account">
-                <Link
-                    aria-current={pathname.startsWith("/meal-plan") ? "page" : undefined}
-                    className="account-link"
-                    href="/meal-plan"
-                >
-                    <UtensilsCrossed aria-hidden="true" size={19} />
-                    <span>{translate(locale, "nav.mealPlan")}</span>
-                </Link>
                 <Link
                     aria-current={pathname.startsWith("/profile") ? "page" : undefined}
                     className="account-link"
