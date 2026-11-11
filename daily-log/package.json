@@ -1,6 +1,6 @@
 {
   "name": "dailylog",
-  "version": "2.6.2",
+  "version": "2.6.3",
   "private": true,
   "type": "module",
   "description": "A private, bilingual web journal for meals, activity, sleep, and body weight.",
@@ -30,7 +30,7 @@
     "@radix-ui/react-select": "2.4.1",
     "better-sqlite3": "13.0.3",
     "circle-flags": "2.8.3",
-    "lucide-react": "1.69.0",
+    "lucide-react": "1.70.0",
     "next": "16.4.5",
     "pdfkit": "0.20.2",
     "react": "19.3.1",
