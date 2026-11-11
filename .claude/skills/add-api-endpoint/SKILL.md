@@ -5,7 +5,7 @@ description: Add or change a DailyLog API route under daily-log/src/app/api. Use
 
 # Add an API endpoint
 
-Rules come from docs/CODING_STANDARDS.md ("Runtime validation", "API conventions", "Database", "Demo"). Paths are relative to `daily-log/`.
+Rules come from CODING_GUIDELINES.md ("Runtime validation", "API conventions", "Database", "Demo"). Paths are relative to `daily-log/`.
 
 ## Entry points
 

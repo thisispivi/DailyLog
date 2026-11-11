@@ -1,5 +1,7 @@
 # Changelog
 
+> Releases after v2.6.1 are published on [GitHub Releases](https://github.com/thisispivi/DailyLog/releases); this file is no longer updated.
+
 ## [2.6.1](https://github.com/thisispivi/DailyLog/compare/v2.6.0...v2.6.1) (2026-11-10)
 
 

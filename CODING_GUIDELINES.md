@@ -95,7 +95,7 @@ TypeScript types vanish at runtime. Anything from outside the process is `unknow
 
 ## Styling
 
-The full design system (colours, type, components, layouts, charts, copy, exports) is in [DESIGN.md](DESIGN.md). The rules that matter for code:
+The full design system (colours, type, components, layouts, charts, copy, exports) is in [DESIGN.md](docs/DESIGN.md). The rules that matter for code:
 
 - Use tokens from `src/app/globals.css`, never literal colours. Each colour is declared once with `light-dark(light, dark)`; don't add dark-mode blocks.
 - Record-type colours come from `data-kind` plus `--kind-tile` (background) and `--kind-ink` (text and icons).
