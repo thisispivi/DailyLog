@@ -5,7 +5,7 @@ description: Change DailyLog's SQLite schema. Use when adding a table, column, i
 
 # Change the database schema
 
-Rules: docs/CODING_STANDARDS.md ("Database", "Runtime validation"). Paths are relative to `daily-log/`.
+Rules: CODING_GUIDELINES.md ("Database", "Runtime validation"). Paths are relative to `daily-log/`.
 
 ## How migrations work here
 

@@ -5,7 +5,7 @@ description: Run DailyLog's definition of done and diagnose failures. Use before
 
 # Check
 
-The definition of done is `npm run quality` (AGENTS.md, CONTRIBUTING.md), plus `npm run test:e2e` when a user workflow, layout, or form changed. CI (`.github/workflows/ci.yml`) also runs `npm audit --audit-level=low`, `npm run demo:build`, a Docker build with a Trivy scan, and a Gitleaks history scan.
+The definition of done is `npm run quality` (AGENTS.md), plus `npm run test:e2e` when a user workflow, layout, or form changed. CI (`.github/workflows/ci.yml`) also runs `npm audit --audit-level=low`, `npm run demo:build`, a Docker build with a Trivy scan, and a Gitleaks history scan.
 
 Run everything from `daily-log/`. Use the installed dependencies; don't run `npm install` or touch `package-lock.json` just to get checks running.
 
@@ -38,10 +38,10 @@ The Docker, Trivy, and Gitleaks jobs only run in CI. Say so rather than claiming
 ## Diagnosing failures
 
 - **format:check**: run `npm run format` and review the diff. It writes every file Prettier owns, so check that only your files changed. The repo is LF everywhere (`.gitattributes`, `.editorconfig`); a CRLF file on Windows shows up here.
-- **lint, `no-restricted-imports`**: an import crosses the boundaries in docs/CODING_STANDARDS.md ("Import direction") or uses `../`. Move the code or import from the owning module; don't add an eslint-disable.
+- **lint, `no-restricted-imports`**: an import crosses the boundaries in CODING_GUIDELINES.md ("Import direction") or uses `../`. Move the code or import from the owning module; don't add an eslint-disable.
 - **typecheck, demo project only**: a module swapped in `demo/next.config.ts` gained an export its shim in `demo/shims/` lacks. Add it to the shim.
 - **test**: run one file with `npx vitest run <path>`. Repository tests use an in-memory database through `migrateDatabase`, so a schema change shows up there first.
-- **build or demo:build**: a Node API (`node:fs`, `node:crypto`, ...) reached code that pages or route handlers import. Use the web API instead (CODING_STANDARDS.md, "Demo").
+- **build or demo:build**: a Node API (`node:fs`, `node:crypto`, ...) reached code that pages or route handlers import. Use the web API instead (CODING_GUIDELINES.md, "Demo").
 - **Unexpected diff in `next-env.d.ts`**: `next dev` (which e2e starts) rewrites its imports to `./.next/dev/types/...`; `next build` writes `./.next/types/...`, the committed form. It's a side effect of the check, not your change. Restore it with `git checkout -- next-env.d.ts`.
 - **e2e**: a stale dev server on port 3000 serves old code to Playwright locally. Stop it, or run with `CI=1` to force a fresh server.
 

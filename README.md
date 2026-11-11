@@ -2,7 +2,7 @@
   <img alt="DailyLog: meals, training, sleep, and weight in one private journal" src="./assets/readme/dailylog-banner.svg" width="100%">
 </div>
 
-# DailyLog
+# [DailyLog](https://demo.dailylog.pivi.dev/)
 
 A private, single-owner web journal for meals, training, sleep, and body weight. English and Italian, light and dark, phone to desktop.
 
@@ -55,7 +55,7 @@ All variables are validated with Zod in [`src/core/config/env.ts`](daily-log/src
 
 ## Architecture
 
-The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run npm commands from `daily-log/`. See the [changelog](daily-log/CHANGELOG.md) for releases.
+The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run npm commands from `daily-log/`. Releases and their notes are on [GitHub Releases](https://github.com/thisispivi/DailyLog/releases).
 
 One Next.js 16 app with a SQLite database. No ORM, no client state library, no CSS framework. Charts use Recharts.
 
@@ -72,7 +72,7 @@ daily-log/src/
 - Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](daily-log/src/core/http/api.ts). The wrapper checks the origin and session and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`. `readJson` and `readQuery` parse input with the route's Zod schema.
 - [`LogbookRepository`](daily-log/src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
 
-ESLint enforces the import direction. The full rules are in [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md), and the design system (colours, components, layouts, copy, exports) is in [docs/DESIGN.md](docs/DESIGN.md).
+ESLint enforces the import direction. The full rules are in [CODING_GUIDELINES.md](CODING_GUIDELINES.md), and the design system (colours, components, layouts, copy, exports) is in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Runtime validation
 
@@ -143,6 +143,16 @@ See [SECURITY.md](SECURITY.md) for the deployment baseline.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
 - The proxy sets a per-request CSP that only runs scripts carrying its nonce. HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
+
+## Versioning and releases
+
+Releases are automatic and follow [Semantic Versioning](https://semver.org/).
+Every pull request that changes code bumps the version in `daily-log/package.json`, as
+[AGENTS.md](./AGENTS.md#versioning-and-releases) describes. When CI passes on
+`main`, the Release workflow tags the new version, publishes the
+[GitHub release](https://github.com/thisispivi/DailyLog/releases), and redeploys the [demo](https://demo.dailylog.pivi.dev/).
+Dependabot alerts and security updates are on; the `fix-vulnerabilities` skill
+triages them.
 
 ## License
 

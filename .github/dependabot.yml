@@ -1,17 +1,23 @@
+# Dependabot: security updates open as soon as an advisory lands; version
+# updates arrive once a week, minor and patch grouped into one pull request.
+# Triage both with the fix-vulnerabilities skill (.claude/skills/).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /daily-log
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 3
-    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
     groups:
-      production:
-        dependency-type: production
-      development:
-        dependency-type: development
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      dependencies:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
     # Next's lint config (typescript-eslint and its ESLint plugins) does not run on
     # these majors yet. Drop each rule once eslint-config-next supports it.
     ignore:
@@ -19,15 +25,51 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
+
   - package-ecosystem: docker
     directory: /daily-log
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      dependencies:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      dependencies:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
