@@ -9,7 +9,7 @@ If something you need isn't covered here, match the closest existing screen and 
 - **Soft wellness, normal monitoring app.** Calm pastels on a lavender canvas, rounded shapes, friendly but plain copy. No mascot, no gamified cheering, no illustrations.
 - **Fewest clicks.** Logging is one tap on a tile, then type, then Add. Settings save on change. Export is one button per format. Prefill everything that can be guessed (time of day → meal type, last activity, last weight).
 - **Every record type has a colour**, used everywhere: meal green, training orange, sleep blue, weight purple.
-- **Light and dark are equal citizens.** Every colour has both values; check both.
+- **Light and dark get equal care.** Every colour has both values; check both.
 - **Phones first for logging, desktop for reviewing.** Today and the logger must work one-handed at 375px.
 
 ## Colour
@@ -60,7 +60,7 @@ How to use them:
 - `.eyebrow` (small label above a title, e.g. the date on Today): 13px, weight 700, `--text-muted`.
 - Labels: 13px, weight 700, `--text-muted`.
 - Numbers that change or line up (durations, weights, counts, times) get `.numeric` (tabular figures).
-- Big stat values on tiles: 20–22px, weight 800.
+- Big stat values on tiles: 20 to 22px, weight 800.
 - Long dates capitalise only the first letter (`::first-letter`), never `text-transform: capitalize`, because Italian month names are lowercase ("Giovedì 8 ottobre").
 
 ## Spacing, shape, elevation
@@ -93,7 +93,7 @@ Reuse these before writing new CSS. They live in `src/app/globals.css` unless no
 | `LanguageFlag` (`src/ui/language-flag.tsx`)                                  | Round flag next to a language name.                                                                                                                                                                   |
 | `Logo` (`src/ui/logo.tsx`)                                                   | Pulse-line mark in a violet rounded square + "DailyLog".                                                                                                                                              |
 
-Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative icons get `aria-hidden="true"`.
+Icons are **lucide-react**, stroke width 2 to 2.2, sizes 16 to 24px. Decorative icons get `aria-hidden="true"`.
 
 ## Layout
 
@@ -150,7 +150,7 @@ Icons are **lucide-react**, stroke width 2–2.2, sizes 16–24px. Decorative ic
 - Empty states invite the next step: "Nothing logged yet. Add the first detail while it is still fresh."
 - Every string lives in `src/core/i18n/catalogs.ts` in English and Italian. Strings with a `{count}` use `{ one, other }` plural forms.
 - Meal types and sleep are stored with the bot's English labels; show them through `entryDisplayLabel` so they're translated.
-- Dates, times, and numbers go through `Intl` with the user’s locale, 12- or 24-hour preference, and the configured time zone.
+- Dates, times, and numbers go through `Intl` with the user's locale, 12- or 24-hour preference, and the configured time zone.
 
 ## Accessibility
 
