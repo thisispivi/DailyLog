@@ -2,7 +2,7 @@
 
 A playable copy of DailyLog for GitHub Pages, served at [demo.dailylog.pivi.dev](https://demo.dailylog.pivi.dev).
 
-It is not a mock-up: the static export runs the app's real pages and API route handlers in the browser, against the real repository and migrations on SQLite compiled to WebAssembly ([sql.js](https://github.com/sql-js/sql.js)). A fictional person's six weeks of records are seeded on the first visit, and every change is saved in `localStorage`, so it survives reloads but never leaves the browser. **Reset demo** starts over.
+The static export runs the app's real pages and API route handlers in the browser, against the real repository and migrations on SQLite compiled to WebAssembly ([sql.js](https://github.com/sql-js/sql.js)). A fictional person's six weeks of records are seeded on the first visit, and every change is saved in `localStorage`, so it survives reloads but never leaves the browser. **Reset demo** starts over.
 
 ## How it fits together
 
