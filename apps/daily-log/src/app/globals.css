@@ -138,7 +138,8 @@ select,
 input[type="checkbox"],
 input[type="radio"],
 label:has(> input[type="checkbox"]),
-label:has(> input[type="radio"]) {
+label:has(> input[type="radio"]),
+label:has(> input[type="file"]) {
     cursor: pointer;
 }
 
@@ -150,7 +151,8 @@ label:has(> input:disabled) {
 }
 
 [aria-busy="true"],
-button[aria-busy="true"]:disabled {
+button[aria-busy="true"]:disabled,
+label[aria-busy="true"]:has(> input:disabled) {
     cursor: progress;
 }
 
