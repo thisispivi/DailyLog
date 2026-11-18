@@ -17,18 +17,18 @@ jobs:
     name: Quality and security
     defaults:
       run:
-        working-directory: daily-log
+        working-directory: apps/daily-log
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          package_json_file: daily-log/package.json
+          package_json_file: package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: pnpm
-          cache-dependency-path: daily-log/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run format:check
       - run: pnpm run lint
@@ -42,18 +42,18 @@ jobs:
     name: Browser flows
     defaults:
       run:
-        working-directory: daily-log
+        working-directory: apps/daily-log
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          package_json_file: daily-log/package.json
+          package_json_file: package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
           cache: pnpm
-          cache-dependency-path: daily-log/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       # The runner image already has the libraries Chromium needs; --with-deps would apt-get them from a mirror CI cannot always reach.
       - run: pnpm exec playwright install chromium
@@ -62,7 +62,7 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: daily-log/playwright-report
+          path: apps/daily-log/playwright-report
           retention-days: 14
 
   container:
@@ -71,8 +71,8 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Validate Compose configuration
-        run: cp daily-log/.env.example daily-log/.env && docker compose config --quiet
-      - run: docker build --tag dailylog:ci ./daily-log
+        run: cp apps/daily-log/.env.example apps/daily-log/.env && docker compose config --quiet
+      - run: docker build --tag dailylog:ci --file apps/daily-log/Dockerfile .
       - name: Scan container for fixable high-severity vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

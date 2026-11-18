@@ -28,7 +28,8 @@ const config: NextConfig = {
     images: { unoptimized: true },
     env: { DAILYLOG_VERSION: version },
     turbopack: {
-        root,
+        // The workspace root, where the lockfile and pnpm store live.
+        root: path.resolve(root, "../.."),
         resolveAlias: shims,
     },
 };

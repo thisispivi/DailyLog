@@ -1,11 +1,11 @@
 ---
 name: change-database-schema
-description: Change DailyLog's SQLite schema. Use when adding a table, column, index, or CHECK constraint in daily-log/src/infrastructure/database/schema.ts, bumping SCHEMA_VERSION, or adding a field that must survive backup export and import.
+description: Change DailyLog's SQLite schema. Use when adding a table, column, index, or CHECK constraint in apps/daily-log/src/infrastructure/database/schema.ts, bumping SCHEMA_VERSION, or adding a field that must survive backup export and import.
 ---
 
 # Change the database schema
 
-Rules: CODING_GUIDELINES.md ("Database", "Runtime validation"). Paths are relative to `daily-log/`.
+Rules: CODING_GUIDELINES.md ("Database", "Runtime validation"). Paths are relative to `apps/daily-log/`.
 
 ## How migrations work here
 

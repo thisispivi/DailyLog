@@ -1,8 +1,10 @@
 services:
   dailylog:
-    build: ./daily-log
+    build:
+      context: .
+      dockerfile: apps/daily-log/Dockerfile
     env_file:
-      - ./daily-log/.env
+      - ./apps/daily-log/.env
     environment:
       DATABASE_PATH: /data/dailylog.sqlite3
     # Loopback only: other devices go through the HTTPS reverse proxy on this host.

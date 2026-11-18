@@ -1,13 +1,16 @@
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS dependencies
+# Build from the repository root: the lockfile and pnpm-workspace.yaml live there.
 WORKDIR /app
 RUN apk add --no-cache g++ make python3
 RUN npm install --global pnpm@12.21.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY apps/daily-log/package.json apps/daily-log/
+RUN pnpm install --frozen-lockfile --filter dailylog
 
 FROM dependencies AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY . .
+COPY apps/daily-log apps/daily-log
+WORKDIR /app/apps/daily-log
 RUN pnpm run build
 
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS runner
@@ -24,9 +27,10 @@ RUN apk upgrade --no-cache \
     && adduser --system --uid 1001 dailylog
 # The app stays root-owned so the server can't rewrite its own code; only the
 # database and Next's cache are writable.
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-RUN mkdir -p /data /app/.next/cache && chown dailylog:nodejs /data /app/.next/cache
+COPY --from=builder /app/apps/daily-log/.next/standalone ./
+COPY --from=builder /app/apps/daily-log/.next/static ./apps/daily-log/.next/static
+RUN mkdir -p /data /app/apps/daily-log/.next/cache && chown dailylog:nodejs /data /app/apps/daily-log/.next/cache
+WORKDIR /app/apps/daily-log
 USER dailylog
 EXPOSE 3000
 VOLUME ["/data"]

@@ -7,7 +7,7 @@ description: Run DailyLog's definition of done and diagnose failures. Use before
 
 The definition of done is `npm run quality` (AGENTS.md), plus `npm run test:e2e` when a user workflow, layout, or form changed. CI (`.github/workflows/ci.yml`) also runs `npm audit --audit-level=low`, `npm run demo:build`, a Docker build with a Trivy scan, and a Gitleaks history scan.
 
-Run everything from `daily-log/`. Use the installed dependencies; don't run `npm install` or touch `package-lock.json` just to get checks running.
+Run everything from the repository root. Use the installed dependencies; don't run `pnpm install` without `--frozen-lockfile` or touch `pnpm-lock.yaml` just to get checks running.
 
 ## Order
 

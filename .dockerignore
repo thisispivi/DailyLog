@@ -1,0 +1,23 @@
+# Docker builds from the repository root; only the app and workspace files matter.
+.git
+.github
+.githooks
+.claude
+.venv*
+assets
+docs
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+apps/daily-log/.next
+apps/daily-log/coverage
+apps/daily-log/playwright-report
+apps/daily-log/test-results
+apps/daily-log/tsconfig.tsbuildinfo
+apps/daily-log/data
+apps/daily-log/exports
+apps/daily-log/demo/.next
+apps/daily-log/demo/out
+apps/daily-log/demo/public
+apps/daily-log/demo/tsconfig.tsbuildinfo
