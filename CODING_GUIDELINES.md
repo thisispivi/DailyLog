@@ -4,7 +4,7 @@ The single source of truth for how code is organized and written here. Rules mar
 
 ## Where things go
 
-All application paths below are relative to `daily-log/`. Run pnpm commands from that directory. Repository documentation, GitHub workflows, and Git hooks remain at the repository root.
+All application paths below are relative to `apps/daily-log/`. Run pnpm commands from the repository root. Repository documentation, GitHub workflows, and Git hooks remain at the repository root.
 
 ```text
 src/
@@ -124,7 +124,7 @@ The full design system (colours, type, components, layouts, charts, copy, export
 
 ## Demo
 
-The GitHub Pages demo (`daily-log/demo/`) runs the real pages and API route handlers in the browser on SQLite compiled to WebAssembly. The demo build swaps the server-only modules listed in `demo/next.config.ts` for browser versions in `demo/shims/`. When you add an export to one of those modules, add it to its shim too, or `pnpm run demo:build` (run in CI) fails. Keep Node APIs out of everything else that pages and route handlers import; use web APIs such as `crypto.randomUUID()` instead.
+The GitHub Pages demo (`apps/daily-log/demo/`) runs the real pages and API route handlers in the browser on SQLite compiled to WebAssembly. The demo build swaps the server-only modules listed in `demo/next.config.ts` for browser versions in `demo/shims/`. When you add an export to one of those modules, add it to its shim too, or `pnpm run demo:build` (run in CI) fails. Keep Node APIs out of everything else that pages and route handlers import; use web APIs such as `crypto.randomUUID()` instead.
 
 ## Dependencies
 

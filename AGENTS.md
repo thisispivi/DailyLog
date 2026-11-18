@@ -4,7 +4,7 @@ Read [CODING_GUIDELINES.md](CODING_GUIDELINES.md) first. It is the source of tru
 
 For any UI, styling, chart, copy, or export change, also read [docs/DESIGN.md](docs/DESIGN.md). It defines how DailyLog looks and behaves: tokens, components, layouts, and interaction rules.
 
-Application paths below are relative to `daily-log/`; run pnpm commands there.
+Application paths below are relative to `apps/daily-log/`; run pnpm commands from the repository root.
 
 Key points:
 
@@ -21,7 +21,7 @@ Never commit `.env`, databases, backups, or exports. Point `DATABASE_PATH` at a 
 
 ## Versioning and releases
 
-`daily-log/package.json` holds the version, and it is what triggers a release. When
+`apps/daily-log/package.json` holds the version, and it is what triggers a release. When
 CI passes on `main` and that version has no tag yet, the Release workflow tags
 it, publishes the GitHub release with generated notes, and deploys the demo at <https://demo.dailylog.pivi.dev/>. Nobody
 releases by hand, and nothing is committed back to `main`.

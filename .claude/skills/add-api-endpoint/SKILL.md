@@ -1,11 +1,11 @@
 ---
 name: add-api-endpoint
-description: Add or change a DailyLog API route under daily-log/src/app/api. Use when creating a route.ts, adding an HTTP method to one, changing a request body or query schema, or wiring a new client mutation to the server.
+description: Add or change a DailyLog API route under apps/daily-log/src/app/api. Use when creating a route.ts, adding an HTTP method to one, changing a request body or query schema, or wiring a new client mutation to the server.
 ---
 
 # Add an API endpoint
 
-Rules come from CODING_GUIDELINES.md ("Runtime validation", "API conventions", "Database", "Demo"). Paths are relative to `daily-log/`.
+Rules come from CODING_GUIDELINES.md ("Runtime validation", "API conventions", "Database", "Demo"). Paths are relative to `apps/daily-log/`.
 
 ## Entry points
 

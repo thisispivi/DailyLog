@@ -1,3 +1,6 @@
+packages:
+  - "apps/*"
+
 # Supply chain: only install versions published at least a day ago, refuse
 # git/tarball sub-dependencies, and refuse versions with weaker provenance than
 # an earlier one. A day, not longer, so Dependabot security fixes (opened as

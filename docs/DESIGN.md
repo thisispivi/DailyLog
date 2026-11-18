@@ -1,6 +1,6 @@
 # DailyLog design system
 
-How DailyLog looks, feels, and behaves. Read this before any UI change, and follow it for new screens, components, and exports. Paths are relative to `daily-log/`.
+How DailyLog looks, feels, and behaves. Read this before any UI change, and follow it for new screens, components, and exports. Paths are relative to `apps/daily-log/`.
 
 If something you need isn't covered here, match the closest existing screen and add the rule to this file in the same change.
 

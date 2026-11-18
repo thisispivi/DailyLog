@@ -8,7 +8,7 @@ A single-owner web journal for meals, training, sleep, and body weight, built wi
 
 ![Next.js](https://img.shields.io/badge/next.js-000000.svg?style=for-the-badge&logo=nextdotjs&logoColor=white) ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB) ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white) ![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white) ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white) ![Zod](https://img.shields.io/badge/zod-3E67B1.svg?style=for-the-badge&logo=zod&logoColor=white) ![Vitest](https://img.shields.io/badge/vitest-6E9F18.svg?style=for-the-badge&logo=vitest&logoColor=white) ![Playwright](https://img.shields.io/badge/playwright-2EAD33.svg?style=for-the-badge&logo=playwright&logoColor=white) ![ESLint](https://img.shields.io/badge/eslint-4B3263.svg?style=for-the-badge&logo=eslint&logoColor=white) ![Prettier](https://img.shields.io/badge/prettier-F7B93E.svg?style=for-the-badge&logo=prettier&logoColor=black) ![Docker](https://img.shields.io/badge/docker-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white) ![GitHub Pages](https://img.shields.io/badge/github_pages-222222.svg?style=for-the-badge&logo=github&logoColor=white)
 
-The [live demo](https://demo.dailylog.pivi.dev) runs the real app in your browser with sample data. Nothing leaves the browser, and any password signs you in. [daily-log/demo/README.md](daily-log/demo/README.md) explains how it is built.
+The [live demo](https://demo.dailylog.pivi.dev) runs the real app in your browser with sample data. Nothing leaves the browser, and any password signs you in. [apps/daily-log/demo/README.md](apps/daily-log/demo/README.md) explains how it is built.
 
 ## Tech Stack
 
@@ -47,9 +47,8 @@ The [live demo](https://demo.dailylog.pivi.dev) runs the real app in your browse
 You need Node.js 22.12 or newer and pnpm 12.21 or newer.
 
 ```bash
-cd daily-log
 pnpm install
-cp .env.example .env    # then set APP_PASSWORD and SESSION_SECRET
+cp apps/daily-log/.env.example apps/daily-log/.env    # then set APP_PASSWORD and SESSION_SECRET
 pnpm run db:migrate
 pnpm run dev
 ```
@@ -60,7 +59,7 @@ Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 
 ### Configuration
 
-[`src/core/config/env.ts`](daily-log/src/core/config/env.ts) validates every variable with Zod when the server starts. An invalid value stops startup and names the variable, never its value.
+[`src/core/config/env.ts`](apps/daily-log/src/core/config/env.ts) validates every variable with Zod when the server starts. An invalid value stops startup and names the variable, never its value.
 
 | Variable          | Default                    | Notes                                                                     |
 | ----------------- | -------------------------- | ------------------------------------------------------------------------- |
@@ -75,7 +74,7 @@ Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 
 ## Development checks
 
-From `daily-log/`:
+From the repository root:
 
 ```bash
 pnpm run format:check   # Prettier
@@ -98,7 +97,7 @@ CI runs the same checks plus the demo build, Playwright, `pnpm audit`, a Trivy c
 From the repository root:
 
 ```bash
-cp daily-log/.env.example daily-log/.env    # set APP_PASSWORD and SESSION_SECRET
+cp apps/daily-log/.env.example apps/daily-log/.env    # set APP_PASSWORD and SESSION_SECRET
 docker compose up --build --detach
 ```
 
@@ -114,13 +113,13 @@ For production:
 
 ### Demo
 
-The Release workflow redeploys the demo on GitHub Pages with every release. [daily-log/demo/README.md](daily-log/demo/README.md) has the build commands.
+The Release workflow redeploys the demo on GitHub Pages with every release. [apps/daily-log/demo/README.md](apps/daily-log/demo/README.md) has the build commands.
 
 ## Architecture
 
 - Pages are Server Components that read from the repository directly. Client components only handle interaction.
-- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](daily-log/src/core/http/api.ts). The wrapper checks the origin and session and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`. `readJson` and `readQuery` parse input with the route's Zod schema.
-- [`LogbookRepository`](daily-log/src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
+- Every API route is wrapped in `authenticatedRoute` or `publicRoute` from [`src/core/http/api.ts`](apps/daily-log/src/core/http/api.ts). The wrapper checks the origin and session and maps errors to a single envelope: `{ error: { code, message, requestId, fields? } }`. `readJson` and `readQuery` parse input with the route's Zod schema.
+- [`LogbookRepository`](apps/daily-log/src/infrastructure/database/logbook-repository.ts) scopes every query by owner ID. The database also enforces the important rules: one open activity, valid ranges, and weight bounds.
 
 ESLint enforces the import direction. [CODING_GUIDELINES.md](CODING_GUIDELINES.md) has the full rules, and [docs/DESIGN.md](docs/DESIGN.md) has the design system (colours, components, layouts, copy, exports).
 
@@ -128,13 +127,13 @@ ESLint enforces the import direction. [CODING_GUIDELINES.md](CODING_GUIDELINES.m
 
 Zod validates every input that crosses a trust boundary, once, before it reaches domain code:
 
-| Boundary                              | Schema                                                                                                                                                                                                   |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Request bodies, queries, route params | The owning feature's `schemas.ts`, e.g. [`logbook`](daily-log/src/features/logbook/schemas.ts), [`auth`](daily-log/src/features/auth/schemas.ts), [`profile`](daily-log/src/features/profile/schemas.ts) |
-| Backup import                         | [`src/features/backup/schemas.ts`](daily-log/src/features/backup/schemas.ts), built from the request schemas                                                                                             |
-| Environment                           | [`src/core/config/env.ts`](daily-log/src/core/config/env.ts)                                                                                                                                             |
-| Session cookie payload                | [`src/core/security/session.ts`](daily-log/src/core/security/session.ts)                                                                                                                                 |
-| Locale and theme cookies              | [`src/core/preferences/preference-cookies.ts`](daily-log/src/core/preferences/preference-cookies.ts)                                                                                                     |
+| Boundary                              | Schema                                                                                                                                                                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request bodies, queries, route params | The owning feature's `schemas.ts`, e.g. [`logbook`](apps/daily-log/src/features/logbook/schemas.ts), [`auth`](apps/daily-log/src/features/auth/schemas.ts), [`profile`](apps/daily-log/src/features/profile/schemas.ts) |
+| Backup import                         | [`src/features/backup/schemas.ts`](apps/daily-log/src/features/backup/schemas.ts), built from the request schemas                                                                                                       |
+| Environment                           | [`src/core/config/env.ts`](apps/daily-log/src/core/config/env.ts)                                                                                                                                                       |
+| Session cookie payload                | [`src/core/security/session.ts`](apps/daily-log/src/core/security/session.ts)                                                                                                                                           |
+| Locale and theme cookies              | [`src/core/preferences/preference-cookies.ts`](apps/daily-log/src/core/preferences/preference-cookies.ts)                                                                                                               |
 
 Request schemas reject unknown keys. Larger contracts reuse smaller ones instead of repeating fields: a backup file is validated with the same entry, settings, and profile schemas the API uses. TypeScript types for validated input come from `z.infer`, so no hand-written copy can drift. Relational rows are not parsed again, because the schema's `CHECK` constraints already guarantee their shape. JSON documents stored in the database (diet, meal plan) are parsed with their Zod schemas when read.
 
@@ -151,13 +150,13 @@ Before upgrading an older database, DailyLog copies it next to the original as `
 - Pages redirect to sign-in without a valid session, checked in the proxy before anything renders. Every mutating request must come from the same origin.
 - Failed sign-ins are throttled per client (8 per 15 minutes) and globally (60 per 15 minutes). While the global cap lasts it also blocks the owner's sign-in, though existing sessions keep working. The per-client limit reads `X-Forwarded-For`, so it only holds when clients reach the app through a proxy that overwrites that header.
 - SQL is always parameterized. Exported spreadsheet cells are protected against formula injection.
-- The proxy sets a per-request CSP that only runs scripts carrying its nonce. HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](daily-log/next.config.ts).
+- The proxy sets a per-request CSP that only runs scripts carrying its nonce. HSTS (in production), frame denial, and `nosniff` are set in [`next.config.ts`](apps/daily-log/next.config.ts).
 - Logs are structured JSON and never contain journal text, weights, passwords, or cookies.
 
 ## Versioning and releases
 
 Releases are automatic and follow [Semantic Versioning](https://semver.org/).
-Every pull request that changes code bumps the version in `daily-log/package.json`, as
+Every pull request that changes code bumps the version in `apps/daily-log/package.json`, as
 [AGENTS.md](./AGENTS.md#versioning-and-releases) describes. When CI passes on
 `main`, the Release workflow tags the new version, publishes the
 [GitHub release](https://github.com/thisispivi/DailyLog/releases), and redeploys the [demo](https://demo.dailylog.pivi.dev/).
@@ -172,16 +171,16 @@ triages them.
 | [Design system](docs/DESIGN.md)                             | Colours, typography, components, layouts, charts, copy, and exports          |
 | [Agent instructions](AGENTS.md)                             | Workflow rules for coding assistants, versioning, commits, and pull requests |
 | [Security policy](SECURITY.md)                              | Reporting a vulnerability and the production deployment baseline             |
-| [Demo](daily-log/demo/README.md)                            | How the browser demo runs the real app, and its commands                     |
+| [Demo](apps/daily-log/demo/README.md)                       | How the browser demo runs the real app, and its commands                     |
 | [Architecture decisions](docs/architecture/)                | ADRs for Next.js with SQLite, owner authentication, and retiring Telegram    |
 | [Releases](https://github.com/thisispivi/DailyLog/releases) | Release notes for every version                                              |
 
 ## Project Structure
 
-The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run pnpm commands from `daily-log/`.
+The application, its dependencies, tests, build configuration, and Dockerfile live in `apps/daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run pnpm commands from the repository root.
 
 ```text
-daily-log/src/
+apps/daily-log/src/
 ├── app/              Routes: pages, layouts, API route handlers
 ├── features/<name>/  Product features: domain logic, schemas, feature UI
 ├── ui/               Shared presentational pieces: logo, record-type icons, Sheet, Select, DateTimeField, toast

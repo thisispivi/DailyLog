@@ -1,0 +1,26 @@
+{
+  "name": "dailylog-workspace",
+  "private": true,
+  "packageManager": "pnpm@12.21.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=12.21.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter dailylog dev",
+    "build": "pnpm --filter dailylog build",
+    "start": "pnpm --filter dailylog start",
+    "lint": "pnpm --filter dailylog lint",
+    "typecheck": "pnpm --filter dailylog typecheck",
+    "format": "pnpm --filter dailylog format",
+    "format:check": "pnpm --filter dailylog format:check",
+    "test": "pnpm --filter dailylog test",
+    "test:watch": "pnpm --filter dailylog test:watch",
+    "test:e2e": "pnpm --filter dailylog test:e2e",
+    "db:migrate": "pnpm --filter dailylog db:migrate",
+    "demo:build": "pnpm --filter dailylog demo:build",
+    "demo:dev": "pnpm --filter dailylog demo:dev",
+    "quality": "pnpm --filter dailylog quality",
+    "prepare": "git config core.hooksPath .githooks || exit 0"
+  }
+}
