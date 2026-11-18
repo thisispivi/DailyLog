@@ -21,7 +21,7 @@ DailyLog is a private application with a single owner. A production operator mus
 - back up the database and test restoring it;
 - run one application instance, because SQLite and the in-memory login limiter assume a single process;
 - apply dependency and application updates promptly;
-- run `npm audit` and `npm run quality` from `daily-log/` before deploying;
+- run `pnpm audit` and `pnpm run quality` from `daily-log/` before deploying;
 - keep structured operational logs without collecting private journal data.
 
 DailyLog has no public registration, password recovery, multi-user tenancy, cloud sync, or encrypted-at-rest database storage. Use disk or volume encryption when your threat model needs it.

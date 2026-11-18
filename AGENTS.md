@@ -4,7 +4,7 @@ Read [CODING_GUIDELINES.md](CODING_GUIDELINES.md) first. It is the source of tru
 
 For any UI, styling, chart, copy, or export change, also read [docs/DESIGN.md](docs/DESIGN.md). It defines how DailyLog looks and behaves: tokens, components, layouts, and interaction rules.
 
-Application paths below are relative to `daily-log/`; run npm commands there.
+Application paths below are relative to `daily-log/`; run pnpm commands there.
 
 Key points:
 
@@ -13,7 +13,7 @@ Key points:
 - Every repository query takes and filters by `userId`.
 - Add UI strings to `src/core/i18n/catalogs.ts` in English and Italian together.
 - Use the design system: tokens instead of literal colours, `data-kind` for record-type colours, and the shared `Select`, `DateTimeField`, and `Sheet` instead of native controls or custom modals.
-- Before finishing, run `npm run quality`. Do not bypass the git hooks.
+- Before finishing, run `pnpm run quality`. Do not bypass the git hooks.
 
 Project skills in `.claude/skills/` hold the step-by-step workflows: `check` (definition of done and failure diagnosis), `add-api-endpoint`, `change-database-schema`, and `fix-vulnerabilities`.
 

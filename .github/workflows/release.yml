@@ -115,13 +115,16 @@ jobs:
         with:
           ref: ${{ needs.release.outputs.sha }}
           persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: daily-log/package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: npm
-          cache-dependency-path: daily-log/package-lock.json
-      - run: npm ci
-      - run: npm run demo:build
+          cache: pnpm
+          cache-dependency-path: daily-log/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run demo:build
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
           path: daily-log/demo/out

@@ -44,19 +44,19 @@ The [live demo](https://demo.dailylog.pivi.dev) runs the real app in your browse
 
 ## Getting Started
 
-You need Node.js 22.12 or newer and npm 10 or newer.
+You need Node.js 22.12 or newer and pnpm 12.21 or newer.
 
 ```bash
 cd daily-log
-npm ci
+pnpm install
 cp .env.example .env    # then set APP_PASSWORD and SESSION_SECRET
-npm run db:migrate
-npm run dev
+pnpm run db:migrate
+pnpm run dev
 ```
 
 Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 
-`npm ci` also installs the git hooks (see [Development checks](#development-checks)).
+`pnpm install` also installs the git hooks (see [Development checks](#development-checks)).
 
 ### Configuration
 
@@ -78,18 +78,18 @@ Open http://localhost:3000. Sign-in stays disabled until `APP_PASSWORD` is set.
 From `daily-log/`:
 
 ```bash
-npm run format:check   # Prettier
-npm run lint           # ESLint, including import boundaries
-npm run typecheck      # strict TypeScript
-npm test               # Vitest unit and SQLite integration tests
-npm run test:e2e       # Playwright, desktop and mobile Chromium
-npm run build          # production build
-npm run quality        # everything above except e2e
+pnpm run format:check   # Prettier
+pnpm run lint           # ESLint, including import boundaries
+pnpm run typecheck      # strict TypeScript
+pnpm test               # Vitest unit and SQLite integration tests
+pnpm run test:e2e       # Playwright, desktop and mobile Chromium
+pnpm run build          # production build
+pnpm run quality        # everything above except e2e
 ```
 
 The git hooks in `.githooks/` run automatically. The pre-commit hook runs Prettier and ESLint on staged files, and the pre-push hook runs the format check, lint, typecheck, and unit tests.
 
-CI runs the same checks plus the demo build, Playwright, `npm audit`, a Trivy container scan with a health check, and a Gitleaks history scan.
+CI runs the same checks plus the demo build, Playwright, `pnpm audit`, a Trivy container scan with a health check, and a Gitleaks history scan.
 
 ## Deployment
 
@@ -140,7 +140,7 @@ Request schemas reject unknown keys. Larger contracts reuse smaller ones instead
 
 ## Database
 
-`npm run db:migrate` creates or upgrades the schema and prints the resulting version. The app also migrates on first database access. Migrations are additive.
+`pnpm run db:migrate` creates or upgrades the schema and prints the resulting version. The app also migrates on first database access. Migrations are additive.
 
 Before upgrading an older database, DailyLog copies it next to the original as `<file>.pre-web-v<old version>.bak`, for example `data/dailylogbot.sqlite3.pre-web-v2.bak`.
 
@@ -178,7 +178,7 @@ triages them.
 
 ## Project Structure
 
-The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run npm commands from `daily-log/`.
+The application, its dependencies, tests, build configuration, and Dockerfile live in `daily-log/`. Repository documentation, GitHub workflows, and Git hooks stay at the root. Run pnpm commands from `daily-log/`.
 
 ```text
 daily-log/src/
