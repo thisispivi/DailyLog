@@ -1,0 +1,28 @@
+# Supply chain: only install versions published at least a day ago, refuse
+# git/tarball sub-dependencies, and refuse versions with weaker provenance than
+# an earlier one. A day, not longer, so Dependabot security fixes (opened as
+# soon as a fix ships) pass CI on the next run. Dependabot's own version
+# updates wait three days (cooldown in .github/dependabot.yml).
+minimumReleaseAge: 1440
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
+
+# Packages whose install scripts may run (true) or are skipped (false).
+allowBuilds:
+  "better-sqlite3": true
+  "esbuild": true
+  "unrs-resolver": true
+
+overrides:
+  # Security floor: GHSA-g3hv-75wg-m249, typescript-estree still asks for
+  # minimatch 10. It applies only to the vulnerable range; drop it once no
+  # consumer asks for one.
+  "minimatch@>=7 <11.0.1": ^11.0.1
+
+auditConfig:
+  ignoreGhsas:
+    # picomatch ReDoS on repeated extglobs: every release up to 4.0.7 is affected
+    # and no fix exists yet. It is reached only through build and lint tooling
+    # that matches glob patterns this repository writes itself. Drop this entry
+    # once picomatch publishes a patched release.
+    - GHSA-fc5q-39xc-vjpf

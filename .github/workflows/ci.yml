@@ -21,19 +21,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: daily-log/package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: npm
-          cache-dependency-path: daily-log/package-lock.json
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm audit --audit-level=low
-      - run: npm run build
-      - run: npm run demo:build
+          cache: pnpm
+          cache-dependency-path: daily-log/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run format:check
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm audit --audit-level=low
+      - run: pnpm run build
+      - run: pnpm run demo:build
 
   browser:
     name: Browser flows
@@ -43,15 +46,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: daily-log/package.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 26
-          cache: npm
-          cache-dependency-path: daily-log/package-lock.json
-      - run: npm ci
+          cache: pnpm
+          cache-dependency-path: daily-log/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       # The runner image already has the libraries Chromium needs; --with-deps would apt-get them from a mirror CI cannot always reach.
-      - run: npx playwright install chromium
-      - run: npm run test:e2e
+      - run: pnpm exec playwright install chromium
+      - run: pnpm run test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:

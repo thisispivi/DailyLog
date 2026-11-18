@@ -4,7 +4,7 @@ set -e
 
 cd "$(git rev-parse --show-toplevel)/daily-log"
 
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
+pnpm run format:check
+pnpm run lint
+pnpm run typecheck
+pnpm test

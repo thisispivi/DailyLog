@@ -10,7 +10,7 @@ export default defineConfig({
         trace: "on-first-retry",
     },
     webServer: {
-        command: "npm run dev",
+        command: "pnpm run dev",
         env: {
             APP_PASSWORD: "dailylog-e2e-password",
             DATABASE_PATH: "data/dailylog-e2e.sqlite3",
